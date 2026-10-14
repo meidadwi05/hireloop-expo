@@ -23,6 +23,7 @@ import {Ionicons} from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
 
 import {useFonts} from 'expo-font';
+import axios from 'axios';
 
 import {
 
@@ -37,6 +38,10 @@ import {
   PlusJakartaSans_800ExtraBold,
 
 } from '@expo-google-fonts/plus-jakarta-sans';
+import LoginPage from './src/login_page/login';
+import ForgotPasswordPage from './src/login_page/forgotpassword';
+import {candidateApi, CandidateUser} from './src/api/candidateApi';
+import DashboardHome from './src/dashboard/DashboardHome';
 
 
 
@@ -58,7 +63,7 @@ const F = {
 
 
 
-type Screen = 'splash'|'onboarding'|'login'|'forgot'|'success'|'demo'|'register'|'registerSuccess'|'verify'|'verifySuccess'|'profile';
+type Screen = 'splash'|'onboarding'|'login'|'forgot'|'demo'|'dashboard'|'register'|'registerSuccess'|'verify'|'verifySuccess'|'profile';
 
 
 
@@ -90,11 +95,11 @@ const slides = [
 
 
 
-function Logo({large=false}:{large?:boolean}) {
+function Logo() {
   return (
     <Image
-      source={require('./assets/HireLoopLogo.png')}
-      style={large ? s.splashLogoImage : s.loginLogoImage}
+      source={require('./src/assets/HireLoopLogo.png')}
+      style={s.splashLogoImage}
       resizeMode="contain"
       accessibilityLabel="Logo HireLoop"
     />
@@ -108,22 +113,6 @@ function Button({label,onPress,loading=false}:{label:string;onPress:()=>void;loa
 
 
 function Link({label,onPress,light=false}:{label:string;onPress:()=>void;light?:boolean}) {return <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={s.link}><Text style={{fontFamily:F.regular,color:light?'#C7D5FF':C.blue,fontSize:12,fontWeight:'600'}}>{label}</Text></Pressable>;}
-
-
-
-function Field({label,value,onChange,password=false,error,dark=false}:{label:string;value:string;onChange:(v:string)=>void;password?:boolean;error?:string;dark?:boolean}) {
-
-
-
-  const [visible,setVisible]=useState(false);
-
-
-
-  return <View style={{gap:8}}><Text style={[s.label,dark&&{color:'white'}]}>{label}</Text><View style={[s.inputWrap,error?{borderColor:'#E25E6D'}:null]}><Ionicons name={password?'lock-closed-outline':'mail-outline'} size={18} color="#8B96AC"/><TextInput accessibilityLabel={label} style={s.input} value={value} onChangeText={onChange} placeholder={password?'Masukkan kata sandi':'nama@email.com'} placeholderTextColor="#A0A9BB" autoCapitalize="none" autoCorrect={false} keyboardType={password?'default':'email-address'} secureTextEntry={password&&!visible} textContentType={password?'password':'emailAddress'} autoComplete={password?'current-password':'email'}/>{password&&<Pressable accessibilityRole="button" accessibilityLabel={visible?'Sembunyikan kata sandi':'Tampilkan kata sandi'} hitSlop={10} onPress={()=>setVisible(!visible)}><Ionicons name={visible?'eye-off-outline':'eye-outline'} size={19} color="#8B96AC"/></Pressable>}</View>{!!error&&<Text accessibilityLiveRegion="polite" style={s.error}>{error}</Text>}</View>;
-
-
-
-}
 
 
 
@@ -185,9 +174,17 @@ export default function App(){
 
   const [errors,setErrors]=useState<{email?:string;password?:string}>({});
 
+  const [resetSent,setResetSent]=useState(false);
+
 
 
   const [remember,setRemember]=useState(false),[notice,setNotice]=useState('');
+
+  const [isLoggingIn,setIsLoggingIn]=useState(false);
+
+  const [candidateName,setCandidateName]=useState('');
+
+  const [candidateUser,setCandidateUser]=useState<CandidateUser|null>(null);
 
 
 
@@ -215,7 +212,7 @@ export default function App(){
 
 
 
-  const go=(next:Screen)=>{setErrors({});setNotice('');setScreen(next);};
+  const go=(next:Screen)=>{setErrors({});setNotice('');setResetSent(false);setScreen(next);};
 
 
 
@@ -223,19 +220,54 @@ export default function App(){
 
 
 
-  useEffect(()=>{const sub=BackHandler.addEventListener('hardwareBackPress',()=>{if(screen==='forgot'||screen==='success'||screen==='demo'||screen==='register'){go('login');return true;}if(screen==='onboarding'&&slide>0){setSlide(slide-1);return true;}return false;});return()=>sub.remove();},[screen,slide]);
+  useEffect(()=>{const sub=BackHandler.addEventListener('hardwareBackPress',()=>{if(screen==='forgot'||screen==='demo'||screen==='register'){go('login');return true;}if(screen==='onboarding'&&slide>0){setSlide(slide-1);return true;}return false;});return()=>sub.remove();},[screen,slide]);
 
 
 
-  const login=()=>{const e={email:validEmail(email)?undefined:'Masukkan alamat email yang valid.',password:password.length?undefined:'Kata sandi wajib diisi.'};setErrors(e);if(!e.email&&!e.password){setPassword('');go('demo');}};
+  const login=async()=>{
+    const e={
+      email:validEmail(email)?undefined:'Masukkan alamat email yang valid.',
+      password:password.length?undefined:'Kata sandi wajib diisi.',
+    };
+
+    setErrors(e);
+    if(e.email||e.password){return;}
+
+    setIsLoggingIn(true);
+    setNotice('');
+
+    try{
+      const candidate=await candidateApi.login(email,password,remember);
+      setCandidateName(candidate.full_name||candidate.email);
+      setCandidateUser(candidate);
+      setPassword('');
+      go('dashboard');
+    }catch(error){
+      if(axios.isAxiosError(error)){
+        const status=error.response?.status;
+        const message=error.response?.data?.message;
+
+        if(status===401){setNotice('Email atau kata sandi salah.');}
+        else if(status===403){setNotice(message??'Email belum diverifikasi atau akun tidak diizinkan.');}
+        else if(status===422){setNotice('Periksa kembali email dan kata sandi.');}
+        else if(error.code==='ECONNABORTED'){setNotice('Server terlalu lama merespons. Silakan coba lagi.');}
+        else if(!error.response){setNotice('Tidak dapat terhubung ke server HireLoop.');}
+        else{setNotice(message??'Login gagal. Silakan coba lagi.');}
+      }else{
+        setNotice(error instanceof Error?error.message:'Terjadi kesalahan saat login.');
+      }
+    }finally{
+      setIsLoggingIn(false);
+    }
+  };
 
 
 
-  const reset=()=>{if(!validEmail(resetEmail)){setErrors({email:'Masukkan alamat email yang valid.'});return;}go('success');};
+  const reset=()=>{if(!validEmail(resetEmail)){setErrors({email:'Masukkan alamat email yang valid.'});return;}setErrors({});setResetSent(true);};
 
 
 
-  const dark=screen==='splash'||screen==='login'||screen==='register'||screen==='verify'||screen==='registerSuccess'||screen==='verifySuccess'||screen==='profile'||(screen==='onboarding'&&slide%2===1);
+  const dark=screen==='splash'||screen==='login'||screen==='dashboard'||screen==='register'||screen==='verify'||screen==='registerSuccess'||screen==='verifySuccess'||screen==='profile'||(screen==='onboarding'&&slide%2===1);
 
 
 
@@ -253,11 +285,11 @@ export default function App(){
 
 
 
-  return <SafeAreaProvider><View style={s.desktop}><View style={[s.app,{backgroundColor:dark?C.navy:'#FFFFFF'}]}><StatusBar style={dark?'light':'dark'}/>{dark&&<View pointerEvents="none" style={StyleSheet.absoluteFill}><View style={s.orbitOne}/><View style={s.orbitTwo}/></View>}<SafeAreaView style={{flex:1}}><KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={{flex:1}}>
+  return <SafeAreaProvider><View style={s.desktop}><View style={[s.app,{backgroundColor:dark?C.navy:'#FFFFFF'}]}><StatusBar style={dark?'light':'dark'}/>{dark&&screen!=='dashboard'&&<View pointerEvents="none" style={StyleSheet.absoluteFill}><View style={s.orbitOne}/><View style={s.orbitTwo}/></View>}<SafeAreaView edges={screen==='dashboard'?[]:undefined} style={{flex:1}}><KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={{flex:1}}>
 
 
 
-    {screen==='splash'?<View style={s.splash}><Logo large/><View style={s.dash}/><Text style={s.splashText}>Find the right job.</Text><Text style={[s.splashText,{color:'#7AE6FF'}]}>Loop into your future</Text><ActivityIndicator style={{marginTop:44}} color={C.cyan}/></View>:
+    {screen==='splash'?<View style={s.splash}><Logo/><View style={s.dash}/><Text style={s.splashText}>Find the right job.</Text><Text style={[s.splashText,{color:'#7AE6FF'}]}>Loop into your future</Text><ActivityIndicator style={{marginTop:44}} color={C.cyan}/></View>:
 
 
 
@@ -269,7 +301,7 @@ export default function App(){
 
 
 
-        <Image source={require('./assets/Onboarding1.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi mencari pekerjaan menggunakan laptop" />
+        <Image source={require('./src/assets/Onboarding1.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi mencari pekerjaan menggunakan laptop" />
 
 
 
@@ -277,7 +309,7 @@ export default function App(){
 
 
 
-        <Image source={require('./assets/Onboarding2.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi memantau status lamaran kerja" />
+        <Image source={require('./src/assets/Onboarding2.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi memantau status lamaran kerja" />
 
 
 
@@ -285,7 +317,7 @@ export default function App(){
 
 
 
-        <Image source={require('./assets/Onboarding3.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi melamar ke banyak perusahaan" />
+        <Image source={require('./src/assets/Onboarding3.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi melamar ke banyak perusahaan" />
 
 
 
@@ -293,7 +325,7 @@ export default function App(){
 
 
 
-        <Image source={require('./assets/Onboarding4.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi rekomendasi pekerjaan" />
+        <Image source={require('./src/assets/Onboarding4.png')} style={s.onboardingImage} resizeMode="contain" accessibilityLabel="Ilustrasi rekomendasi pekerjaan" />
 
 
 
@@ -305,7 +337,7 @@ export default function App(){
 
 
 
-    screen==='login'?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.loginScroll}><View style={s.brand}><Logo/><Text style={s.tagline}>Temukan pekerjaan terbaik dan{ '\n'}pantau proses lamaranmu</Text></View><View style={s.loginCard}><View style={s.row}><View><Text style={s.welcome}>Selamat Datang!</Text><Text style={s.sub}>Masuk untuk melanjutkan</Text></View><View style={s.iconBox}><Ionicons name="lock-closed-outline" size={26} color={C.blue}/></View></View><View style={s.fields}><Field label="Email" value={email} onChange={setEmail} error={errors.email}/><Field label="Password" value={password} onChange={setPassword} password error={errors.password}/></View><View style={s.options}><Pressable accessibilityRole="checkbox" accessibilityState={{checked:remember}} onPress={()=>setRemember(!remember)} style={s.checkRow}><Ionicons name={remember?'checkbox':'square-outline'} size={18} color={remember?C.blue:'#A6B0C4'}/><Text style={s.small}>Ingat saya</Text></Pressable><Link label="Lupa kata sandi?" onPress={()=>{setResetEmail(email);go('forgot');}}/></View><Button label="Masuk" onPress={login}/><View style={s.divider}><View style={s.line}/><Text style={s.small}>atau</Text><View style={s.line}/></View><Pressable accessibilityRole="button" style={s.google} onPress={()=>setNotice('Login Google akan tersedia setelah integrasi API.')}><Text style={s.googleG}>G</Text><Text style={s.googleText}>Masuk dengan Google</Text></Pressable><View style={s.signup}><Text style={s.small}>Belum punya akun?</Text><Link label="Daftar Sekarang" onPress={()=>go('register')}/></View>{!!notice&&<Text accessibilityLiveRegion="polite" style={s.notice}>{notice}</Text>}</View><Text style={s.demoNote}>PREVIEW UI · Login masih simulasi</Text><Link label="Lihat onboarding" light onPress={()=>{setSlide(0);go('onboarding');}}/></ScrollView>:
+    screen==='login'?<LoginPage email={email} password={password} errors={errors} remember={remember} notice={notice} loading={isLoggingIn} onEmailChange={setEmail} onPasswordChange={setPassword} onRememberChange={setRemember} onNoticeChange={setNotice} onLogin={login} onForgotPassword={()=>{setResetEmail(email);go('forgot');}} onRegister={()=>go('register')} onShowOnboarding={()=>{setSlide(0);go('onboarding');}}/>:
 
 
 
@@ -329,48 +361,11 @@ export default function App(){
 
 
 
-    screen==='forgot' ? (
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.forgot}>
-        <View style={s.forgotHeader}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Kembali ke login" style={s.back} onPress={()=>go('login')}>
-            <Ionicons name="arrow-back" size={22} color={C.navy}/>
-          </Pressable>
-          <Text style={s.pageTitle}>Lupa Kata Sandi</Text>
-          <View style={{width:40}}/>
-        </View>
-        <View style={s.forgotHero}>
-          <Image source={require('./assets/Lupasandi.png')} style={s.forgotIllustration} resizeMode="contain" accessibilityLabel="Ilustrasi keamanan akun dan gembok" />
-        </View>
-        <View style={s.resetCard}>
-          <Text style={s.resetBody}>Kami akan mengirimkan tautan untuk{'\n'}mengatur ulang kata sandi Anda.</Text>
-          <Text style={s.resetLabel}>Email</Text>
-          <View style={[s.resetInputWrap, errors.email ? {borderColor:'#ED8691',borderWidth:1.5} : null]}>
-            <Ionicons name="mail-outline" size={17} color="#7B879D"/>
-            <TextInput
-              accessibilityLabel="Email terdaftar"
-              style={s.resetInput}
-              value={resetEmail}
-              onChangeText={setResetEmail}
-              placeholder="Masukkan email terdaftar"
-              placeholderTextColor="#A2AAB9"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </View>
-          {!!errors.email && <Text accessibilityLiveRegion="polite" style={s.resetError}>{errors.email}</Text>}
-          <View style={s.resetButtonSpacing}>
-            <Button label="Kirim tautan reset" onPress={reset}/>
-          </View>
-          <Pressable accessibilityRole="button" style={s.resetBack} onPress={()=>go('login')}>
-            <Text style={s.resetBackText}>Kembali ke halaman Masuk</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
-    ) :
+    screen==='forgot'?<ForgotPasswordPage email={resetEmail} error={errors.email} successVisible={resetSent} onEmailChange={setResetEmail} onSubmit={reset} onBack={()=>go('login')} onSuccessDismiss={()=>setResetSent(false)}/>:
 
-    <ScrollView contentContainerStyle={s.result}><View style={s.resultIcon}><Ionicons name={screen==='success'?'mail-open-outline':'checkmark-circle-outline'} size={52} color={C.blue}/></View><Text style={s.resultTitle}>{screen==='success'?'Preview email reset':'Preview login berhasil'}</Text><Text style={s.resultBody}>{screen==='success'?`Tampilan konfirmasi reset untuk ${resetEmail.trim()}. Pada tahap ini belum ada email yang dikirim.`:'Alur UI login sudah selesai. Dashboard dan autentikasi API dapat ditambahkan pada tahap berikutnya.'}</Text><Button label="Kembali ke Login" onPress={()=>go('login')}/></ScrollView>}
+    screen==='dashboard'&&candidateUser?<DashboardHome initialUser={candidateUser} onLogout={async()=>{await candidateApi.logout().catch(()=>undefined);setCandidateName('');setCandidateUser(null);go('login');}}/>:
+
+    <ScrollView contentContainerStyle={s.result}><View style={s.resultIcon}><Ionicons name="checkmark-circle-outline" size={52} color={C.blue}/></View><Text style={s.resultTitle}>Login berhasil</Text><Text style={s.resultBody}>{candidateName?`Selamat datang, ${candidateName}. Akun kandidat berhasil terhubung ke backend HireLoop.`:'Akun kandidat berhasil terhubung ke backend HireLoop.'}</Text><Button label="Keluar" onPress={async()=>{await candidateApi.logout().catch(()=>undefined);setCandidateName('');go('login');}}/></ScrollView>}
 
 
 
@@ -398,7 +393,7 @@ const s=StyleSheet.create({
 
 
 
- logo:{fontFamily:F.bold,fontSize:43,letterSpacing:-1.7,color:'white'},splashLogoImage:{width:304,height:75,alignSelf:'center'},loginLogoImage:{width:235,height:61,alignSelf:'center'},splash:{flex:1,justifyContent:'center',alignItems:'center',minHeight:500},dash:{width:42,height:3,borderRadius:3,backgroundColor:C.cyan,marginTop:38,marginBottom:28},splashText:{fontFamily:F.regular,color:'#D3DFF9',fontSize:16,lineHeight:27,letterSpacing:.4},
+ splashLogoImage:{width:304,height:75,alignSelf:'center'},splash:{flex:1,justifyContent:'center',alignItems:'center',minHeight:500},dash:{width:42,height:3,borderRadius:3,backgroundColor:C.cyan,marginTop:38,marginBottom:28},splashText:{fontFamily:F.regular,color:'#D3DFF9',fontSize:16,lineHeight:27,letterSpacing:.4},
 
 
 
@@ -406,24 +401,6 @@ const s=StyleSheet.create({
 
 
 
- loginScroll:{flexGrow:1,justifyContent:'center',paddingHorizontal:24,paddingVertical:35},brand:{alignItems:'center',marginBottom:30},tagline:{fontFamily:F.regular,fontSize:12,lineHeight:18,color:'#D1DAF4',textAlign:'center',marginTop:12},loginCard:{backgroundColor:'white',borderRadius:22,padding:24},row:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},welcome:{fontFamily:F.bold,color:C.blue,fontSize:22,letterSpacing:-.5},sub:{fontFamily:F.regular,fontSize:12,color:C.muted,marginTop:6},iconBox:{width:42,height:46,borderRadius:12,backgroundColor:'#ECF3FF',justifyContent:'center',alignItems:'center'},fields:{gap:19,marginTop:28},label:{fontFamily:F.medium,fontSize:12,color:'#49536A'},inputWrap:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:'#E4E9F2',borderRadius:8,paddingHorizontal:12,backgroundColor:'white',minHeight:48},input:{fontFamily:F.regular,flex:1,minWidth:0,paddingVertical:13,fontSize:13,color:C.ink,outlineWidth:0} as any,error:{fontFamily:F.regular,fontSize:11,color:'#DE5364',lineHeight:16},options:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:6,marginBottom:12,flexWrap:'wrap'},checkRow:{flexDirection:'row',alignItems:'center',gap:6,minHeight:44},small:{fontFamily:F.regular,fontSize:11,color:C.muted},divider:{flexDirection:'row',gap:14,alignItems:'center',marginVertical:21},line:{height:1,backgroundColor:'#EDF0F6',flex:1},google:{minHeight:48,borderColor:'#E5EAF3',borderWidth:1,borderRadius:8,flexDirection:'row',gap:12,alignItems:'center',justifyContent:'center'},googleG:{fontFamily:F.bold,color:'#4285F4',fontSize:21},googleText:{fontFamily:F.semibold,color:C.ink,fontSize:12,},signup:{flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center',marginTop:10,flexWrap:'wrap'},notice:{fontFamily:F.regular,fontSize:12,lineHeight:19,backgroundColor:'#EDF5FF',padding:12,borderRadius:8,color:'#275DA8',marginTop:8},demoNote:{fontFamily:F.medium,fontSize:10,letterSpacing:1.1,color:'#8D9BC6',textAlign:'center',marginTop:24},
-
-
-
- forgot:{flexGrow:1,paddingHorizontal:18,paddingTop:7,paddingBottom:35,backgroundColor:'#FFFFFF'},
- forgotHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',height:57},
- pageTitle:{fontFamily:F.bold,fontSize:18,color:'#0069FF'},
- forgotHero:{height:205,alignItems:'center',justifyContent:'flex-end',marginTop:13},
- forgotIllustration:{width:'100%',height:202},
- resetCard:{backgroundColor:C.navy,borderRadius:16,paddingHorizontal:19,paddingTop:27,paddingBottom:20,marginTop:-4},
- resetBody:{fontFamily:F.regular,color:'#E0E6F9',fontSize:12,lineHeight:18,textAlign:'center',marginBottom:26},
- resetLabel:{fontFamily:F.medium,color:'white',fontSize:11,marginBottom:7},
- resetInputWrap:{minHeight:43,flexDirection:'row',alignItems:'center',gap:8,backgroundColor:'white',borderRadius:7,paddingHorizontal:11},
- resetInput:{fontFamily:F.regular,color:C.ink,flex:1,fontSize:11,paddingVertical:10},
- resetError:{fontFamily:F.regular,color:'#FFADB7',fontSize:11,marginTop:7},
- resetButtonSpacing:{marginTop:24},
- resetBack:{alignItems:'center',paddingVertical:14,marginTop:3},
- resetBackText:{fontFamily:F.regular,color:'#E5EBFB',fontSize:11},
  result:{flexGrow:1,justifyContent:'center',padding:32},resultIcon:{alignSelf:'center',padding:25,backgroundColor:'#EEF4FF',borderRadius:60,marginBottom:25},resultTitle:{fontFamily:F.bold,fontSize:26,textAlign:'center',color:C.ink},resultBody:{fontFamily:F.regular,fontSize:14,lineHeight:23,textAlign:'center',color:C.muted,marginTop:16,marginBottom:30},
 
 

@@ -15,22 +15,22 @@ export function Artwork({
   const getImage = () => {
     switch (variant) {
       case 0:
-        return require('../../assets/Onboarding1.png');
+        return require('../assets/Onboarding1.png');
 
       case 1:
-        return require('../../assets/Onboarding2.png');
+        return require('../assets/Onboarding2.png');
 
       case 2:
-        return require('../../assets/Onboarding1.png');
+        return require('../assets/Onboarding1.png');
 
       case 3:
-        return require('../../assets/Onboarding2.png');
+        return require('../assets/Onboarding2.png');
 
       case 4:
-        return require('../../assets/Onboarding1.png');
+        return require('../assets/Onboarding1.png');
 
       default:
-        return require('../../assets/Onboarding1.png');
+        return require('../assets/Onboarding1.png');
     }
   };
 
