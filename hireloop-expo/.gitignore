@@ -33,7 +33,8 @@ yarn-error.*
 
 # local env files
 .env*.local
-
+.env.production
+.env.production.example
 
 #md
 desain.md

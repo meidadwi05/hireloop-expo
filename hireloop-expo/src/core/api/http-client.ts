@@ -8,9 +8,10 @@ type UnauthorizedListener = () => void;
 
 let refreshPromise: Promise<string> | null = null;
 const unauthorizedListeners = new Set<UnauthorizedListener>();
+const baseURL = requireApiUrl();
 
 export const httpClient = create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL?.trim(),
+  baseURL,
   timeout: 15_000,
   headers: {
     Accept: 'application/json',
@@ -19,7 +20,7 @@ export const httpClient = create({
 });
 
 const refreshClient = create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL?.trim(),
+  baseURL,
   timeout: 15_000,
   headers: {Accept: 'application/json'},
 });
@@ -51,7 +52,6 @@ async function refreshAccessToken(): Promise<string> {
 }
 
 httpClient.interceptors.request.use(async config => {
-  config.baseURL = requireApiUrl();
   const token = await tokenStorage.get();
 
   if (token) config.headers.Authorization = `Bearer ${token}`;

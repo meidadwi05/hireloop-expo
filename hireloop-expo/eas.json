@@ -20,7 +20,10 @@
     },
     "production": {
       "channel": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://hireloop.superapp-provenforceindonesia.com/api"
+      }
     }
   },
   "submit": {
