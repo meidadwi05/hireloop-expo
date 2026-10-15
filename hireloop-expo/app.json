@@ -2,6 +2,7 @@
   "expo": {
     "name": "HireLoop",
     "slug": "hireloop-ui",
+    "scheme": "hireloop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
@@ -24,7 +25,12 @@
     },
     "plugins": [
       "expo-font",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "expo-router",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

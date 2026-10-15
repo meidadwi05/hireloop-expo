@@ -1,5 +1,5 @@
 import {Ionicons} from '@expo/vector-icons';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,10 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import {candidateApi, CandidateUser} from '../api/candidateApi';
+import type {CandidateUser} from '../features/auth/auth.types';
+import type {DashboardInterview} from '../features/dashboard/dashboard.types';
+import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
+import type {JobCardModel} from '../features/jobs/jobs.types';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -47,38 +50,12 @@ type DashboardHomeProps = {
   onLogout: () => Promise<void> | void;
 };
 
-type Interview = {
-  id: number | string;
-  date: string;
-  agenda: string;
-  time: string | null;
-  mode: 'online' | 'offline';
-  location: string | null;
-  meeting_link: string | null;
-  role_taxonomy_name: string;
-  candidate_name: string;
-};
-
-type JobCardData = {
-  id: string;
-  source: string;
-  title: string;
-  company: string;
-  location: string;
-  workType: string;
-  salary: string;
-  urgent: boolean;
-  skills: string[];
-  publishedLabel: string;
-  updatedLabel: string;
-};
-
 type CareerTab = 'progress' | 'interview' | 'announcement';
 
-const shortcutItems: Array<{
+const shortcutItems: {
   label: string;
   source: ImageSourcePropType;
-}> = [
+}[] = [
   {label: 'Lowongan', source: require('../assets/shortcut_lowongan.png')},
   {label: 'Lamaran', source: require('../assets/shortcut_lamaran.png')},
   {label: 'Interview', source: require('../assets/shortcut_interview.png')},
@@ -86,15 +63,6 @@ const shortcutItems: Array<{
 ];
 
 const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
-
-function asRecord(value: unknown): Record<string, any> {
-  return value && typeof value === 'object' ? value as Record<string, any> : {};
-}
-
-function asText(...values: unknown[]): string {
-  const value = values.find(item => typeof item === 'string' && item.trim());
-  return typeof value === 'string' ? value.trim() : '';
-}
 
 function resolveMediaUrl(value: string | null): string | null {
   if (!value) return null;
@@ -104,47 +72,12 @@ function resolveMediaUrl(value: string | null): string | null {
   return serverUrl ? `${serverUrl}/${value.replace(/^\//, '')}` : null;
 }
 
-function normalizeJob(entry: unknown, index: number): JobCardData {
-  const wrapper = asRecord(entry);
-  const job = asRecord(wrapper.job ?? wrapper);
-  const project = asRecord(job.project);
-  const companyUser = asRecord(job.user);
-  const source = asText(wrapper.source, job.source) || 'job';
-  const skillsRaw = Array.isArray(job.skills) ? job.skills : [];
-  const skills = skillsRaw
-    .map((skill: unknown) => {
-      if (typeof skill === 'string') return skill;
-      const item = asRecord(skill);
-      return asText(item.name, item.skill_name, item.nama_skill);
-    })
-    .filter(Boolean)
-    .slice(0, 5);
-
-  const salaryMin = job.salary_min ?? job.gaji_min ?? job.min_salary;
-  const salaryMax = job.salary_max ?? job.gaji_max ?? job.max_salary;
-  const salary = asText(job.salary, job.salary_range, job.rentang_gaji)
-    || (salaryMin && salaryMax
-      ? `Rp${Number(salaryMin).toLocaleString('id-ID')} – Rp${Number(salaryMax).toLocaleString('id-ID')} / bulan`
-      : 'Gaji tidak disebutkan');
-
-  return {
-    id: `${source}-${job.id ?? index}`,
-    source,
-    title: asText(job.title, job.nama_lowongan, job.posisi, job.jabatan) || 'Posisi Pekerjaan',
-    company: asText(job.company_name, project.client, project.nama_project, companyUser.company_name) || 'Perusahaan HireLoop',
-    location: asText(job.location, job.lokasi_kerja, job.city) || 'Indonesia',
-    workType: asText(job.work_type, job.employment_type, job.sistem_kerja, job.tipe_pekerjaan) || 'On-site',
-    salary,
-    urgent: Boolean(job.is_urgent) || ['high', 'urgent'].includes(String(job.prioritas_hiring ?? '').toLowerCase()),
-    skills: skills.length ? skills : ['Komunikasi', 'Kolaborasi'],
-    publishedLabel: 'Tayang baru-baru ini',
-    updatedLabel: 'Diperbarui terbaru',
-  };
-}
-
 function applicationStatus(application: unknown): string {
-  const item = asRecord(application);
-  return asText(item.status, item.application_status, item.stage_status).toLowerCase();
+  if (!application || typeof application !== 'object') return '';
+  const item = application as Record<string, unknown>;
+  const status = [item.status, item.application_status, item.stage_status]
+    .find(value => typeof value === 'string');
+  return typeof status === 'string' ? status.toLowerCase() : '';
 }
 
 function SectionHeader({title, onPress}: {title: string; onPress: () => void}) {
@@ -222,7 +155,7 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
   );
 }
 
-function SummaryCard({applications, interviews}: {applications: unknown[]; interviews: Interview[]}) {
+function SummaryCard({applications, interviews}: {applications: unknown[]; interviews: DashboardInterview[]}) {
   const processing = applications.filter(application => {
     const status = applicationStatus(application);
     return status && !['rejected', 'hired', 'cancelled', 'canceled'].includes(status);
@@ -298,7 +231,7 @@ function ProfileCompletionCard({completion}: {completion: number}) {
   );
 }
 
-function InterviewContent({interview}: {interview?: Interview}) {
+function InterviewContent({interview}: {interview?: DashboardInterview}) {
   if (!interview) {
     return (
       <View style={styles.emptyActivity}>
@@ -343,9 +276,9 @@ function InterviewContent({interview}: {interview?: Interview}) {
   );
 }
 
-function CareerActivityCard({interviews}: {interviews: Interview[]}) {
+function CareerActivityCard({interviews}: {interviews: DashboardInterview[]}) {
   const [activeTab, setActiveTab] = useState<CareerTab>('progress');
-  const tabs: Array<{key: CareerTab; label: string}> = [
+  const tabs: {key: CareerTab; label: string}[] = [
     {key: 'progress', label: 'Progress Lamaran'},
     {key: 'interview', label: 'Interview Mendatang'},
     {key: 'announcement', label: 'Pengumuman'},
@@ -411,7 +344,7 @@ function ShortcutGrid() {
   );
 }
 
-function JobCard({job, width}: {job: JobCardData; width: number}) {
+function JobCard({job, width}: {job: JobCardModel; width: number}) {
   const [saved, setSaved] = useState(false);
   const visibleSkills = job.skills.slice(0, 5);
 
@@ -498,102 +431,15 @@ function JobCard({job, width}: {job: JobCardData; width: number}) {
   );
 }
 
-function BottomNavigation({unread, onLogout}: {unread: number; onLogout: () => Promise<void> | void}) {
-  const insets = useSafeAreaInsets();
-  const items = [
-    {label: 'Beranda', icon: 'home' as const, active: true},
-    {label: 'Lowongan', icon: 'briefcase-outline' as const},
-    {label: 'Karir', icon: 'trending-up-outline' as const},
-    {label: 'Notifikasi', icon: 'notifications-outline' as const},
-    {label: 'Profil', icon: 'person-outline' as const},
-  ];
-
-  return (
-    <View style={[styles.bottomNav, {paddingBottom: Math.max(insets.bottom, 8)}]}>
-      {items.map(item => (
-        <Pressable
-          key={item.label}
-          accessibilityRole="button"
-          accessibilityState={{selected: Boolean(item.active)}}
-          onLongPress={item.label === 'Profil' ? () => void onLogout() : undefined}
-          onPress={() => item.active ? undefined : Alert.alert(item.label, `Halaman ${item.label} akan tersedia pada tahap berikutnya.`)}
-          style={styles.bottomNavItem}
-        >
-          <View>
-            <Ionicons name={item.icon} size={23} color={item.active ? C.blue : '#A1A7B2'} />
-            {item.label === 'Notifikasi' && unread > 0 && <View style={styles.bottomBadge} />}
-          </View>
-          <Text style={[styles.bottomLabel, item.active && styles.bottomLabelActive]}>{item.label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export default function DashboardHome({initialUser, onLogout}: DashboardHomeProps) {
   const {width} = useWindowDimensions();
-  const [user, setUser] = useState(initialUser);
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [jobs, setJobs] = useState<JobCardData[]>([]);
-  const [unread, setUnread] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-
-  const applications = Array.isArray(user.job_applications) ? user.job_applications : [];
-  const profileCompletion = user.profile_completed_at ? 100 : 75;
+  const {interviews, jobs, unread, jobsLoading, refreshing, error, refresh} = useDashboardHome();
+  const applications = initialUser.job_applications;
+  const profileCompletion = initialUser.profile_completed_at ? 100 : 75;
   const cardWidth = Math.min(Math.max(width * 0.84, 280), 370);
 
-  const loadDashboard = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
-
-    const results = await Promise.allSettled([
-      candidateApi.getCurrentUser(),
-      candidateApi.getDashboard(),
-      candidateApi.getJobs({priority: 'all', page: 1, per_page: 8}),
-      candidateApi.getUnreadNotificationCount(),
-    ]);
-
-    const [userResult, dashboardResult, jobsResult, unreadResult] = results;
-
-    if (userResult.status === 'fulfilled') {
-      setUser(userResult.value);
-    }
-
-    if (dashboardResult.status === 'fulfilled') {
-      const payload = asRecord(dashboardResult.value);
-      const data = asRecord(payload.data);
-      setInterviews(Array.isArray(data.interviews) ? data.interviews as Interview[] : []);
-    }
-
-    if (jobsResult.status === 'fulfilled') {
-      const payload = asRecord(jobsResult.value);
-      const items = Array.isArray(payload.data) ? payload.data : [];
-      setJobs(items.map(normalizeJob));
-    }
-
-    if (unreadResult.status === 'fulfilled') {
-      const payload = asRecord(unreadResult.value);
-      setUnread(Number(payload.count) || 0);
-    }
-
-    const failed = results.filter(result => result.status === 'rejected').length;
-    setError(failed === results.length
-      ? 'Dashboard belum dapat dimuat. Periksa koneksi Anda dan coba lagi.'
-      : failed > 0
-        ? 'Sebagian data belum dapat dimuat. Tarik ke bawah untuk mencoba lagi.'
-        : '');
-
-    setLoading(false);
-    setRefreshing(false);
-  }, []);
-
-  useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
-
   const recommendationContent = useMemo(() => {
-    if (loading) {
+    if (jobsLoading) {
       return <View style={styles.loadingJobs}><ActivityIndicator color={C.blue} /><Text style={styles.loadingText}>Memuat rekomendasi...</Text></View>;
     }
 
@@ -618,21 +464,21 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
         {jobs.map(job => <JobCard key={job.id} job={job} width={cardWidth} />)}
       </ScrollView>
     );
-  }, [cardWidth, jobs, loading]);
+  }, [cardWidth, jobs, jobsLoading]);
 
   return (
     <View style={styles.screen}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadDashboard(true)} tintColor={C.blue} colors={[C.blue]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={C.blue} colors={[C.blue]} />}
         contentContainerStyle={styles.scrollContent}
       >
-        <DashboardHero user={user} unread={unread} />
+        <DashboardHero user={initialUser} unread={unread} />
         <View style={styles.content}>
           <SummaryCard applications={applications} interviews={interviews} />
 
           {!!error && (
-            <Pressable accessibilityRole="button" onPress={() => void loadDashboard()} style={styles.errorBanner}>
+            <Pressable accessibilityRole="button" onPress={() => void refresh()} style={styles.errorBanner}>
               <Ionicons name="cloud-offline-outline" size={20} color="#A35A00" />
               <Text style={styles.errorText}>{error}</Text>
               <Text style={styles.retryText}>Coba lagi</Text>
@@ -654,7 +500,6 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
           </Pressable>
         </View>
       </ScrollView>
-      <BottomNavigation unread={unread} onLogout={onLogout} />
     </View>
   );
 }
