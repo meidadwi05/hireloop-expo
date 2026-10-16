@@ -1,58 +1,102 @@
-# HireLoop — Expo UI
+# HireLoop Mobile
 
-Implementasi frontend React Native + Expo + TypeScript untuk desain awal HireLoop.
+Aplikasi kandidat HireLoop berbasis Expo, React Native, TypeScript, Expo Router, Axios, dan TanStack Query.
 
-## Menjalankan
+## Persyaratan
 
-Gunakan Node.js 22.13+ (Node 24 LTS disarankan).
+- Node.js 22.13 atau lebih baru
+- Expo Go yang kompatibel dengan SDK 57 untuk fitur biasa
+- Development build atau APK untuk menguji Google Login
+- Backend Laravel HireLoop
+- MySQL untuk backend local
 
-```sh
+## Menjalankan dengan backend local
+
+Gunakan alamat IPv4 komputer, bukan `127.0.0.1`, saat aplikasi dibuka dari ponsel.
+
+```env
+# .env.local
+EXPO_PUBLIC_API_URL=http://192.168.0.109:8000/api
+REACT_NATIVE_PACKAGER_HOSTNAME=192.168.0.109
+```
+
+Laravel development server menggunakan HTTP. Jalankan backend agar dapat dijangkau melalui jaringan lokal:
+
+```powershell
+cd D:\Hireloop\hireloop-talentpool-BackEnd
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+Pastikan MySQL aktif, kemudian jalankan aplikasi:
+
+```powershell
+cd D:\Hireloop\hireloop-expo\hireloop-expo
 npm ci
-npm run web
+npx expo start --clear
 ```
 
-Untuk perangkat: `npm start`, lalu buka dengan Expo Go yang mendukung SDK 57; atau jalankan `npm run android` dengan emulator Android. Simulator iOS memerlukan macOS. Jika versi Expo Go tidak sesuai, gunakan development build untuk SDK proyek ini.
+Perangkat dan komputer harus berada pada jaringan yang sama. Firewall Windows perlu mengizinkan port `8000` dan port Metro.
 
-```sh
-npm run typecheck
-npm run build:web
+## Production
+
+Build production memperoleh URL API dari profil `production` atau `production-apk` di `eas.json`:
+
+```text
+https://hireloop.superapp-provenforceindonesia.com/api
 ```
 
-## Cakupan UI
+`.env.local` tidak dikirim ke EAS dan tidak boleh menjadi sumber konfigurasi build production.
 
-- Splash otomatis menuju onboarding setelah 1,8 detik.
-- Empat onboarding: lanjut, kembali, lewati, dan pemilih halaman.
-- Login: email, password, toggle visibilitas, checkbox ingat saya, validasi wajib isi.
-- Lupa password: validasi email dan halaman konfirmasi simulasi.
-- Layar konfirmasi login simulasi; dashboard belum dibuat.
-- Login Google dan daftar menampilkan informasi fitur yang belum diimplementasikan.
-- Tombol kembali Android ditangani untuk onboarding, reset, dan konfirmasi.
-- Layout mobile dengan batas lebar 440 px di browser desktop; form bisa digulir.
+## Alur autentikasi kandidat
 
-## Batasan yang disengaja
+1. `POST /login`
+2. Validasi token pada respons
+3. Simpan token melalui Expo SecureStore
+4. `GET /auth/me` dengan header Bearer
+5. Pastikan akun memiliki role `user`
+6. Arahkan kandidat ke onboarding atau dashboard
 
-Belum ada request API, autentikasi, penyimpanan token, persistensi sesi, atau email yang dikirim. Login menerima email berformat valid dan password tidak kosong, khusus untuk demonstrasi UI. Ingat saya hanya state UI. Jangan gunakan versi ini untuk autentikasi produksi.
+Error setiap tahap dibedakan agar kegagalan kredensial tidak tertukar dengan token yang ditolak oleh `/auth/me`.
 
-Ilustrasi menggunakan gambar referensi yang diberikan, ditampilkan melalui viewport terpotong di `src/components/Artwork.tsx`. Berkas gambar asli disertakan di `assets/design-reference.png`. Resolusi sumber 1040 × 355 px memuat tujuh layar, sehingga ilustrasi tampak buram saat diperbesar. Ganti dengan ekspor PNG/SVG tiap ilustrasi dari Figma untuk ketajaman penuh. Logo berupa teks pendekatan desain.
+### Google Login
 
-Onboarding ditampilkan ulang setelah reload. PWA install/offline (manifest dan service worker) belum termasuk tahap UI ini. Versi web dapat diekspor tetapi belum merupakan PWA offline siap produksi.
+Google Login menggunakan alur OAuth berikut:
 
-## Struktur
+1. `GET /google/mobile/redirect?return_url=hireloop://auth/google/callback`
+2. Browser membuka halaman persetujuan Google.
+3. Backend memvalidasi `state`, lalu mengarahkan aplikasi dengan kode sekali pakai.
+4. Aplikasi menukar kode melalui `POST /google/mobile/exchange`.
+5. Token Sanctum disimpan, lalu diverifikasi melalui `GET /auth/me` dan role `user`.
 
-- `App.tsx`: komponen UI, state layar, form, dan gaya.
-- `src/components/Artwork.tsx`: viewport ilustrasi referensi untuk onboarding dan reset.
-- `app.json`: konfigurasi Expo.
-- `package-lock.json`: versi dependensi terkunci.
+Token Sanctum tidak dikirim melalui URL. Kode callback berlaku dua menit dan hanya dapat dipakai sekali.
 
-## Integrasi API tahap berikutnya
+Backend harus mengatur konfigurasi berikut dan callback Google Console tetap menunjuk ke endpoint Laravel:
 
-Ganti handler `login` dan `reset` di App.tsx dengan pemanggilan service API, tambahkan status loading/error, lalu arahkan login sukses ke dashboard. Konfigurasikan base URL melalui variabel `EXPO_PUBLIC_API_URL` (nilai publik, bukan secret). Metode autentikasi serta penyimpanan sesi mengikuti kontrak backend. Jangan cache respons autentikasi di service worker.
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=https://domain-backend/api/google/callback
+GOOGLE_MOBILE_CALLBACK=hireloop://auth/google/callback
+GOOGLE_ALLOWED_RETURN_URLS=hireloop://auth/google/callback,http://localhost:8081/auth/google/callback
+```
 
-Dokumentasi Expo: https://docs.expo.dev/workflow/web/
+Untuk pengujian dari ponsel dengan backend local, jangan memakai `127.0.0.1` sebagai `GOOGLE_REDIRECT_URI` karena alamat itu menunjuk ke ponsel. Publikasikan callback Laravel melalui HTTPS tunnel, daftarkan URL persisnya di Google Cloud Console, lalu gunakan URL tunnel tersebut sebagai `GOOGLE_REDIRECT_URI`. API aplikasi masih dapat memakai IPv4 LAN komputer.
 
-## Verifikasi versi ini
+Google Login tidak dijalankan di Expo Go karena callback OAuth dengan custom scheme tidak stabil di sana. Gunakan development build atau APK baru. Karena `expo-web-browser` adalah modul native, APK lama perlu dibangun ulang.
 
-- TypeScript `tsc --noEmit`: berhasil.
-- Ekspor web `expo export --platform web`: berhasil.
-- Pengujian interaksi browser belum dilakukan karena unduhan browser pengujian gagal di lingkungan pembuatan.
-- Android/iOS belum diuji pada emulator/perangkat; jalankan smoke test di perangkat sebelum integrasi API.
+## Validasi
+
+```powershell
+npm run validate
+npx expo-doctor
+```
+
+`npm run validate` menjalankan lint, pemeriksaan TypeScript, dan test Jest.
+
+## Build APK
+
+```powershell
+npx eas-cli@latest build --platform android --profile production-apk --non-interactive
+```
+
+Sebelum mendistribusikan APK, lakukan smoke test login, pemulihan session, onboarding, dan pemuatan dashboard pada perangkat Android fisik.

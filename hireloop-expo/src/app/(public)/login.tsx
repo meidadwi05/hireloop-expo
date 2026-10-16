@@ -1,23 +1,29 @@
 import {router} from 'expo-router';
-import React, {useState} from 'react';
+import React, {useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 
-import {toAppApiError} from '../../core/api/api-error';
+import {env} from '../../core/config/env';
+import {getGoogleLoginErrorMessage, getLoginErrorMessage} from '../../features/auth/auth.errors';
 import {useAuth} from '../../features/auth/auth-provider';
 import LoginPage from '../../login_page/login';
 
 const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 export default function LoginRoute() {
-  const {login} = useAuth();
+  const {login, loginWithGoogle} = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<{email?: string; password?: string}>({});
+  const submittingRef = useRef(false);
+  const googleSubmittingRef = useRef(false);
 
   const submit = async () => {
+    if (submittingRef.current) return;
+
     const nextErrors = {
       email: validEmail(email) ? undefined : 'Masukkan alamat email yang valid.',
       password: password ? undefined : 'Kata sandi wajib diisi.',
@@ -25,22 +31,34 @@ export default function LoginRoute() {
     setErrors(nextErrors);
     if (nextErrors.email || nextErrors.password) return;
 
+    submittingRef.current = true;
     setLoading(true);
     setNotice('');
     try {
       await login({email, password, remember});
       router.replace('/');
     } catch (error) {
-      const apiError = toAppApiError(error);
-      if (apiError.status === 401) {
-        setNotice('Email atau kata sandi salah.');
-      } else if (apiError.status === 403) {
-        setNotice('Akun belum diverifikasi atau tidak memiliki akses kandidat.');
-      } else {
-        setNotice(apiError.message);
-      }
+      setNotice(getLoginErrorMessage(error, {apiUrl: env.apiUrl, isDevelopment: __DEV__}));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
+    }
+  };
+
+  const submitGoogle = async () => {
+    if (googleSubmittingRef.current || submittingRef.current) return;
+
+    googleSubmittingRef.current = true;
+    setGoogleLoading(true);
+    setNotice('');
+    try {
+      const completed = await loginWithGoogle();
+      if (completed) router.replace('/');
+    } catch (error) {
+      setNotice(getGoogleLoginErrorMessage(error, {apiUrl: env.apiUrl, isDevelopment: __DEV__}));
+    } finally {
+      googleSubmittingRef.current = false;
+      setGoogleLoading(false);
     }
   };
 
@@ -53,11 +71,12 @@ export default function LoginRoute() {
         remember={remember}
         notice={notice}
         loading={loading}
+        googleLoading={googleLoading}
         onEmailChange={setEmail}
         onPasswordChange={setPassword}
         onRememberChange={setRemember}
-        onNoticeChange={setNotice}
         onLogin={() => void submit()}
+        onGoogleLogin={() => void submitGoogle()}
         onForgotPassword={() => router.push({pathname: '/(public)/forgot-password', params: {email}})}
         onRegister={() => router.push('/(public)/register')}
         onShowOnboarding={() => router.push('/(public)/welcome')}

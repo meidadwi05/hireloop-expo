@@ -1,10 +1,14 @@
-const PUBLIC_AUTH_PATHS = new Set([
+const NO_REFRESH_PATHS = new Set([
   '/login',
   '/register',
   '/verify-otp',
   '/resend-otp',
   '/forgot-password',
   '/reset-password',
+  '/google/mobile/redirect',
+  '/google/mobile/exchange',
+  '/auth/me',
+  '/auth/refresh',
 ]);
 
 type RefreshDecisionInput = {
@@ -34,5 +38,5 @@ export function shouldAttemptTokenRefresh({
   if (status !== 401 || !hasRequest || retried) return false;
 
   const path = getApiRelativePath(url);
-  return path !== '/auth/refresh' && !PUBLIC_AUTH_PATHS.has(path);
+  return !NO_REFRESH_PATHS.has(path);
 }

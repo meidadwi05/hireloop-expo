@@ -28,11 +28,13 @@ type LoginPageProps = {
   remember: boolean;
   notice: string;
   loading: boolean;
+  googleLoading?: boolean;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onRememberChange: (value: boolean) => void;
-  onNoticeChange: (value: string) => void;
+  onNoticeChange?: (value: string) => void;
   onLogin: () => void;
+  onGoogleLogin?: () => void;
   onForgotPassword: () => void;
   onRegister: () => void;
   onShowOnboarding: () => void;
@@ -156,11 +158,12 @@ export default function LoginPage({
   remember,
   notice,
   loading,
+  googleLoading = false,
   onEmailChange,
   onPasswordChange,
   onRememberChange,
-  onNoticeChange,
   onLogin,
+  onGoogleLogin,
   onForgotPassword,
   onRegister,
   onShowOnboarding,
@@ -225,11 +228,15 @@ export default function LoginPage({
 
         <Pressable
           accessibilityRole="button"
-          style={styles.google}
-          onPress={() => onNoticeChange('Login Google akan tersedia setelah integrasi API.')}
+          accessibilityState={{busy: googleLoading, disabled: loading || googleLoading}}
+          disabled={loading || googleLoading}
+          style={({pressed}) => [styles.google, pressed && styles.pressed]}
+          onPress={onGoogleLogin}
         >
           <Text style={styles.googleG}>G</Text>
-          <Text style={styles.googleText}>Masuk dengan Google</Text>
+          <Text style={styles.googleText}>
+            {googleLoading ? 'Menghubungkan ke Google...' : 'Masuk dengan Google'}
+          </Text>
         </Pressable>
 
         <View style={styles.signup}>

@@ -20,6 +20,16 @@ export const loginResponseSchema = z.object({
   token: z.string().min(1),
 });
 
+export const googleAuthorizationResponseSchema = z.object({
+  success: z.literal(true),
+  url: z.url(),
+});
+
+export const googleExchangeResponseSchema = z.object({
+  success: z.literal(true),
+  token: z.string().min(1),
+});
+
 export const authMessageResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),

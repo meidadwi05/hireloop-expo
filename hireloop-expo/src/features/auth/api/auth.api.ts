@@ -6,31 +6,58 @@ import {
   loginResponseSchema,
   verifyOtpResponseSchema,
 } from '../auth.schemas';
+import {AuthFlowError} from '../auth.errors';
 import type {CandidateUser, LoginInput, RegisterInput} from '../auth.types';
+
+async function getCurrentUser(): Promise<CandidateUser> {
+  const response = await httpClient.get('/auth/me');
+  return currentUserResponseSchema.parse(response.data).data;
+}
+
+async function clearTokenSafely(): Promise<void> {
+  await tokenStorage.remove().catch(() => undefined);
+}
+
+async function establishCandidateSession(token: string, persistent: boolean): Promise<CandidateUser> {
+  try {
+    await tokenStorage.set(token, persistent);
+  } catch (error) {
+    await clearTokenSafely();
+    throw new AuthFlowError('token-storage', error);
+  }
+
+  try {
+    const user = await getCurrentUser();
+    if (!user.roles.includes('user')) {
+      throw new AuthFlowError('candidate-role', new Error('Candidate role is missing.'));
+    }
+    return user;
+  } catch (error) {
+    await clearTokenSafely();
+    throw error instanceof AuthFlowError ? error : new AuthFlowError('current-user', error);
+  }
+}
 
 export const authApi = {
   async login(input: LoginInput): Promise<CandidateUser> {
-    const response = await httpClient.post('/login', {
-      email: input.email.trim().toLowerCase(),
-      password: input.password,
-    });
-    const login = loginResponseSchema.parse(response.data);
-    await tokenStorage.set(login.token, input.remember);
+    let token: string;
 
     try {
-      const user = await this.getCurrentUser();
-      if (!user.roles.includes('user')) throw new Error('Akun ini bukan akun kandidat.');
-      return user;
+      const response = await httpClient.post('/login', {
+        email: input.email.trim().toLowerCase(),
+        password: input.password,
+      });
+      token = loginResponseSchema.parse(response.data).token;
     } catch (error) {
-      await tokenStorage.remove();
-      throw error;
+      throw new AuthFlowError('login', error);
     }
+
+    return establishCandidateSession(token, input.remember);
   },
 
-  async getCurrentUser(): Promise<CandidateUser> {
-    const response = await httpClient.get('/auth/me');
-    return currentUserResponseSchema.parse(response.data).data;
-  },
+  establishCandidateSession,
+
+  getCurrentUser,
 
   async forgotPassword(email: string): Promise<void> {
     await httpClient.post('/forgot-password', {email: email.trim().toLowerCase()});

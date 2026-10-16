@@ -15,6 +15,8 @@ describe('shouldAttemptTokenRefresh', () => {
     '/resend-otp',
     '/forgot-password',
     '/reset-password',
+    '/google/mobile/redirect',
+    '/google/mobile/exchange',
     'https://hireloop.superapp-provenforceindonesia.com/api/login',
   ])('does not refresh a public authentication request: %s', url => {
     expect(shouldAttemptTokenRefresh({...protectedRequest, url})).toBe(false);
@@ -22,6 +24,14 @@ describe('shouldAttemptTokenRefresh', () => {
 
   it('does not recursively refresh the refresh endpoint', () => {
     expect(shouldAttemptTokenRefresh({...protectedRequest, url: '/auth/refresh'})).toBe(false);
+  });
+
+  it('preserves the original authentication error from the current-user endpoint', () => {
+    expect(shouldAttemptTokenRefresh({...protectedRequest, url: '/auth/me'})).toBe(false);
+    expect(shouldAttemptTokenRefresh({
+      ...protectedRequest,
+      url: 'https://hireloop.superapp-provenforceindonesia.com/api/auth/me',
+    })).toBe(false);
   });
 
   it('refreshes a protected endpoint after its first 401 response', () => {

@@ -4,14 +4,17 @@ import React, {createContext, PropsWithChildren, useCallback, useContext, useEff
 import {tokenStorage} from '../../api/tokenStorage';
 import {subscribeUnauthorized} from '../../core/api/http-client';
 import {authApi} from './api/auth.api';
+import {completeGoogleLogin as completeGoogleSession, startGoogleLogin} from './google-auth.service';
 import type {CandidateUser, LoginInput} from './auth.types';
 
-type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+export type AuthStatus = 'loading' | 'authenticating' | 'authenticated' | 'unauthenticated';
 
 type AuthContextValue = {
   status: AuthStatus;
   user: CandidateUser | null;
   login: (input: LoginInput) => Promise<void>;
+  loginWithGoogle: () => Promise<boolean>;
+  completeGoogleLogin: (code: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<CandidateUser | null>;
 };
@@ -55,9 +58,49 @@ export function AuthProvider({children}: PropsWithChildren) {
   }, [clearSession, refreshUser]);
 
   const login = useCallback(async (input: LoginInput) => {
-    const nextUser = await authApi.login(input);
-    setUser(nextUser);
-    setStatus('authenticated');
+    setStatus('authenticating');
+    try {
+      const nextUser = await authApi.login(input);
+      setUser(nextUser);
+      setStatus('authenticated');
+    } catch (error) {
+      setUser(null);
+      setStatus('unauthenticated');
+      throw error;
+    }
+  }, []);
+
+  const completeGoogleLogin = useCallback(async (code: string) => {
+    setStatus('authenticating');
+    try {
+      const nextUser = await completeGoogleSession(code);
+      setUser(nextUser);
+      setStatus('authenticated');
+    } catch (error) {
+      setUser(null);
+      setStatus('unauthenticated');
+      throw error;
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    setStatus('authenticating');
+    try {
+      const result = await startGoogleLogin();
+      if (result.status === 'cancelled') {
+        setStatus('unauthenticated');
+        return false;
+      }
+
+      const nextUser = await completeGoogleSession(result.code);
+      setUser(nextUser);
+      setStatus('authenticated');
+      return true;
+    } catch (error) {
+      setUser(null);
+      setStatus('unauthenticated');
+      throw error;
+    }
   }, []);
 
   const logout = useCallback(async () => {
@@ -65,7 +108,10 @@ export function AuthProvider({children}: PropsWithChildren) {
     clearSession();
   }, [clearSession]);
 
-  const value = useMemo(() => ({status, user, login, logout, refreshUser}), [status, user, login, logout, refreshUser]);
+  const value = useMemo(
+    () => ({status, user, login, loginWithGoogle, completeGoogleLogin, logout, refreshUser}),
+    [status, user, login, loginWithGoogle, completeGoogleLogin, logout, refreshUser],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
