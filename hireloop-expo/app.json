@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "HireLoop",
-    "slug": "hireloop-ui",
+    "slug": "hireloop-test",
     "scheme": "hireloop",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.provenforceindonesia.hireloop",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./src/assets/android-icon-foreground.png",
@@ -31,6 +32,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "80eeeae9-1a54-4250-af42-3251349a0804"
+      }
+    },
+    "owner": "axlastrs-team"
   }
 }

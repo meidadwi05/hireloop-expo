@@ -1,0 +1,35 @@
+# Dependencies and generated Expo output
+node_modules/
+.expo/
+dist/
+dist-*/
+web-build/
+artifacts/
+expo-env.d.ts
+
+# Generated native projects and build artifacts
+android/
+ios/
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Local caches and logs
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.tsbuildinfo
+.DS_Store
+*.pem
+
+# Local-only configuration and design documentation
+.env*.local
+.env.production
+.env.production.example
+desain.md
+structurefile.md

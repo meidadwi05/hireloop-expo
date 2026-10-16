@@ -32,7 +32,13 @@ export default function LoginRoute() {
       router.replace('/');
     } catch (error) {
       const apiError = toAppApiError(error);
-      setNotice(apiError.status === 401 ? 'Email atau kata sandi salah.' : apiError.message);
+      if (apiError.status === 401) {
+        setNotice('Email atau kata sandi salah.');
+      } else if (apiError.status === 403) {
+        setNotice('Akun belum diverifikasi atau tidak memiliki akses kandidat.');
+      } else {
+        setNotice(apiError.message);
+      }
     } finally {
       setLoading(false);
     }

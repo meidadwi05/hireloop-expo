@@ -2,6 +2,7 @@ import {AxiosError, InternalAxiosRequestConfig, create} from 'axios';
 
 import {tokenStorage} from '../../api/tokenStorage';
 import {requireApiUrl} from '../config/env';
+import {shouldAttemptTokenRefresh} from './http-refresh-policy';
 
 type RetryableRequest = InternalAxiosRequestConfig & {_retry?: boolean};
 type UnauthorizedListener = () => void;
@@ -29,16 +30,13 @@ function notifyUnauthorized() {
   unauthorizedListeners.forEach(listener => listener());
 }
 
-async function refreshAccessToken(): Promise<string> {
+async function refreshAccessToken(currentToken: string): Promise<string> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      const token = await tokenStorage.get();
-      if (!token) throw new Error('Session tidak tersedia.');
-
       const response = await refreshClient.post<{token: string}>(
         '/auth/refresh',
         undefined,
-        {headers: {Authorization: `Bearer ${token}`}},
+        {headers: {Authorization: `Bearer ${currentToken}`}},
       );
 
       await tokenStorage.replace(response.data.token);
@@ -62,16 +60,26 @@ httpClient.interceptors.response.use(
   response => response,
   async (error: AxiosError) => {
     const request = error.config as RetryableRequest | undefined;
-    const isRefreshRequest = request?.url?.includes('/auth/refresh');
 
-    if (error.response?.status !== 401 || !request || request._retry || isRefreshRequest) {
+    if (
+      !shouldAttemptTokenRefresh({
+        hasRequest: Boolean(request),
+        retried: Boolean(request?._retry),
+        status: error.response?.status,
+        url: request?.url,
+      }) ||
+      !request
+    ) {
       return Promise.reject(error);
     }
+
+    const currentToken = await tokenStorage.get();
+    if (!currentToken) return Promise.reject(error);
 
     request._retry = true;
 
     try {
-      const token = await refreshAccessToken();
+      const token = await refreshAccessToken(currentToken);
       request.headers.Authorization = `Bearer ${token}`;
       return await httpClient.request(request);
     } catch (refreshError) {
