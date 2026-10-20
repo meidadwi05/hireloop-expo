@@ -1,0 +1,51 @@
+# This repository contains the Expo app in ./hireloop-expo.
+# Keep this file at the Git root because EAS archives from the repository root.
+
+# Dependencies are installed again by EAS.
+node_modules/
+hireloop-expo/node_modules/
+
+# Expo/Metro caches and generated output.
+hireloop-expo/.expo/
+hireloop-expo/expo-env.d.ts
+hireloop-expo/.metro-health-check*
+hireloop-expo/dist/
+hireloop-expo/dist-*/
+hireloop-expo/web-build/
+
+# Old release artifacts must never enter an EAS archive.
+hireloop-expo/artifacts/
+hireloop-expo/**/*.apk
+hireloop-expo/**/*.aab
+
+# Generated native projects and local build output.
+hireloop-expo/android/
+hireloop-expo/ios/
+hireloop-expo/.kotlin/
+hireloop-expo/*.orig.*
+
+# Signing material and secrets.
+hireloop-expo/*.jks
+hireloop-expo/*.p8
+hireloop-expo/*.p12
+hireloop-expo/*.key
+hireloop-expo/*.mobileprovision
+hireloop-expo/*.pem
+
+# Local-only environment files. Production API URL comes from eas.json/EAS.
+hireloop-expo/.env*.local
+hireloop-expo/.env.production
+hireloop-expo/.env.production.example
+
+# Logs and local caches.
+hireloop-expo/npm-debug.*
+hireloop-expo/yarn-debug.*
+hireloop-expo/yarn-error.*
+hireloop-expo/*.tsbuildinfo
+hireloop-expo/.DS_Store
+
+# Design and implementation notes are not runtime inputs.
+hireloop-expo/desain.md
+hireloop-expo/structurefile.md
+hireloop-expo/implementation.md
+hireloop-expo/AGENT.md

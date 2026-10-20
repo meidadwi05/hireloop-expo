@@ -40,6 +40,8 @@ yarn-error.*
 #md
 desain.md
 structurefile.md
+AGENT.md
+implementation.md
 
 
 # typescript
