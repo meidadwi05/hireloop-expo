@@ -9,6 +9,8 @@ import {
 import {AuthFlowError} from '../auth.errors';
 import type {CandidateUser, LoginInput, RegisterInput} from '../auth.types';
 
+export const AUTH_CLIENT_TYPE = 'mobile' as const;
+
 async function getCurrentUser(): Promise<CandidateUser> {
   const response = await httpClient.get('/auth/me');
   return currentUserResponseSchema.parse(response.data).data;
@@ -46,6 +48,7 @@ export const authApi = {
       const response = await httpClient.post('/login', {
         email: input.email.trim().toLowerCase(),
         password: input.password,
+        client_type: AUTH_CLIENT_TYPE,
       });
       token = loginResponseSchema.parse(response.data).token;
     } catch (error) {
@@ -78,6 +81,7 @@ export const authApi = {
     const response = await httpClient.post('/verify-otp', {
       email: email.trim().toLowerCase(),
       code: code.trim(),
+      client_type: AUTH_CLIENT_TYPE,
     });
     const result = verifyOtpResponseSchema.parse(response.data);
     await tokenStorage.set(result.token, true);

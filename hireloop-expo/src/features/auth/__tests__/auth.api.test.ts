@@ -27,7 +27,7 @@ const candidate = {
   roles: ['user'],
 };
 
-describe('authApi.login', () => {
+describe('authApi', () => {
   const post = jest.mocked(httpClient.post);
   const get = jest.mocked(httpClient.get);
   const setToken = jest.mocked(tokenStorage.set);
@@ -52,6 +52,7 @@ describe('authApi.login', () => {
     expect(post).toHaveBeenCalledWith('/login', {
       email: 'andi@example.com',
       password: 'secret',
+      client_type: 'mobile',
     });
     expect(setToken).toHaveBeenCalledWith('candidate-token', true);
     expect(get).toHaveBeenCalledWith('/auth/me');
@@ -93,5 +94,18 @@ describe('authApi.login', () => {
       remember: true,
     })).rejects.toMatchObject({stage: 'candidate-role'} satisfies Partial<AuthFlowError>);
     expect(removeToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks OTP-created sessions as mobile', async () => {
+    post.mockResolvedValue({data: {success: true, token: 'registration-token'}});
+
+    await authApi.verifyRegistrationOtp(' ANDI@EXAMPLE.COM ', ' 123456 ');
+
+    expect(post).toHaveBeenCalledWith('/verify-otp', {
+      email: 'andi@example.com',
+      code: '123456',
+      client_type: 'mobile',
+    });
+    expect(setToken).toHaveBeenCalledWith('registration-token', true);
   });
 });
