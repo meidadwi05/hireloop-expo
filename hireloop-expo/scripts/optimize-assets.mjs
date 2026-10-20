@@ -19,9 +19,17 @@ const targets = [
   ['lockcheck.png', 384],
   ['Lupasandi.png', 800],
   ['HireLoopLogo.png', 1000],
+  ['register_icon.png', 960, true],
+  ['register_onboarding.png', 960, true],
+  ['onboarding_experience.png', 960, true],
 ];
 
-for (const [filename, maxDimension] of targets) {
+const requestedFilenames = new Set(process.argv.slice(2));
+const selectedTargets = requestedFilenames.size > 0
+  ? targets.filter(([filename]) => requestedFilenames.has(filename))
+  : targets;
+
+for (const [filename, maxDimension, usePalette = false] of selectedTargets) {
   const source = path.join(assetDirectory, filename);
   const temporary = `${source}.optimized`;
   const before = (await stat(source)).size;
@@ -34,7 +42,9 @@ for (const [filename, maxDimension] of targets) {
       withoutEnlargement: true,
       kernel: sharp.kernel.lanczos3,
     })
-    .png({compressionLevel: 9, adaptiveFiltering: true, palette: false})
+    .png(usePalette
+      ? {compressionLevel: 9, adaptiveFiltering: true, palette: true, colours: 256, quality: 90, effort: 10}
+      : {compressionLevel: 9, adaptiveFiltering: true, palette: false})
     .toFile(temporary);
 
   const metadata = await sharp(temporary).metadata();
