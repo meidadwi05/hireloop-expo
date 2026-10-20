@@ -37,7 +37,9 @@
     "eslint-config-expo": "~57.0.2",
     "jest-expo": "~57.0.6",
     "react-test-renderer": "19.2.3",
-    "typescript": "~6.0.3"
+    "sharp": "^0.35.5",
+    "typescript": "~6.0.3",
+    "workbox-build": "^7.4.1"
   },
   "scripts": {
     "start": "expo start",
@@ -49,7 +51,11 @@
     "test": "jest --runInBand",
     "validate": "npm run lint && npm run typecheck && npm run test",
     "preflight:production": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/production-preflight.ps1",
-    "build:web": "expo export --platform web",
+    "build:web": "expo export --platform web --clear",
+    "build:pwa": "npm run build:web && node scripts/generate-service-worker.mjs && npm run check:pwa-size",
+    "build:pwa:production": "node scripts/build-pwa-production.mjs",
+    "check:pwa-size": "node scripts/check-pwa-size.mjs",
+    "optimize:assets": "node scripts/optimize-assets.mjs",
     "doctor": "npx expo-doctor"
   },
   "private": true,

@@ -1,5 +1,6 @@
 import {httpClient} from '../../../core/api/http-client';
 import {tokenStorage} from '../../../api/tokenStorage';
+import {Platform} from 'react-native';
 import {
   authMessageResponseSchema,
   currentUserResponseSchema,
@@ -9,7 +10,13 @@ import {
 import {AuthFlowError} from '../auth.errors';
 import type {CandidateUser, LoginInput, RegisterInput} from '../auth.types';
 
-export const AUTH_CLIENT_TYPE = 'mobile' as const;
+export type AuthClientType = 'web' | 'mobile';
+
+export function resolveAuthClientType(platform: string = Platform.OS): AuthClientType {
+  return platform === 'web' ? 'web' : 'mobile';
+}
+
+export const AUTH_CLIENT_TYPE = resolveAuthClientType();
 
 async function getCurrentUser(): Promise<CandidateUser> {
   const response = await httpClient.get('/auth/me');

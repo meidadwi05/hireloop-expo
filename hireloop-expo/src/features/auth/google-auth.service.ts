@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import {Platform} from 'react-native';
 
-import {authApi} from './api/auth.api';
+import {AUTH_CLIENT_TYPE, authApi} from './api/auth.api';
 import {googleAuthApi} from './api/google-auth.api';
 import {AuthFlowError} from './auth.errors';
 import type {CandidateUser} from './auth.types';
@@ -43,7 +43,7 @@ export async function startGoogleLogin(): Promise<GoogleLoginResult> {
   let authorizationUrl: string;
 
   try {
-    authorizationUrl = await googleAuthApi.getAuthorizationUrl(returnUrl);
+    authorizationUrl = await googleAuthApi.getAuthorizationUrl(returnUrl, AUTH_CLIENT_TYPE);
   } catch (error) {
     throw new AuthFlowError('google-start', error);
   }

@@ -3,11 +3,12 @@ import {
   googleAuthorizationResponseSchema,
   googleExchangeResponseSchema,
 } from '../auth.schemas';
+import type {AuthClientType} from './auth.api';
 
 export const googleAuthApi = {
-  async getAuthorizationUrl(returnUrl: string): Promise<string> {
+  async getAuthorizationUrl(returnUrl: string, clientType: AuthClientType): Promise<string> {
     const response = await httpClient.get('/google/mobile/redirect', {
-      params: {return_url: returnUrl},
+      params: {return_url: returnUrl, client_type: clientType},
     });
 
     return googleAuthorizationResponseSchema.parse(response.data).url;

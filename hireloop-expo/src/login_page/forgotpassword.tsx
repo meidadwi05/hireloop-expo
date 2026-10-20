@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import {LinearGradient} from 'expo-linear-gradient';
 

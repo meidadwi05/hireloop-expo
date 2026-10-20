@@ -1,6 +1,7 @@
 import {httpClient} from '../../../core/api/http-client';
 import {tokenStorage} from '../../../api/tokenStorage';
-import {authApi} from '../api/auth.api';
+import {authApi, resolveAuthClientType} from '../api/auth.api';
+import {googleAuthApi} from '../api/google-auth.api';
 import {AuthFlowError} from '../auth.errors';
 
 jest.mock('../../../core/api/http-client', () => ({
@@ -107,5 +108,31 @@ describe('authApi', () => {
       client_type: 'mobile',
     });
     expect(setToken).toHaveBeenCalledWith('registration-token', true);
+  });
+
+  it('uses a web token lifecycle for PWA and mobile for native platforms', () => {
+    expect(resolveAuthClientType('web')).toBe('web');
+    expect(resolveAuthClientType('android')).toBe('mobile');
+    expect(resolveAuthClientType('ios')).toBe('mobile');
+  });
+
+  it('sends the trusted client type when starting Google OAuth', async () => {
+    get.mockResolvedValue({
+      data: {success: true, url: 'https://accounts.google.com/o/oauth2/auth'},
+    });
+
+    await expect(
+      googleAuthApi.getAuthorizationUrl(
+        'https://pwa.example/auth/google/callback',
+        'web',
+      ),
+    ).resolves.toBe('https://accounts.google.com/o/oauth2/auth');
+
+    expect(get).toHaveBeenCalledWith('/google/mobile/redirect', {
+      params: {
+        return_url: 'https://pwa.example/auth/google/callback',
+        client_type: 'web',
+      },
+    });
   });
 });
