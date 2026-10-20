@@ -1,6 +1,21 @@
 import {router} from 'expo-router';
+import {StatusBar} from 'expo-status-bar';
 import React, {useState} from 'react';
 import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+
+const COLORS = {
+  cyan: '#00CBEA',
+  lightBackground: '#FFFFFF',
+  lightBody: '#67748E',
+  lightDot: '#D9E2F3',
+  navy: '#050D49',
+  navyText: '#00195E',
+  darkBody: '#C3CCE7',
+  darkDot: '#4C5A92',
+  primary: '#0865FF',
+  white: '#FFFFFF',
+} as const;
 
 const slides = [
   {image: require('../../assets/Onboarding1.png'), title: 'Temukan pekerjaan terbaik', body: 'Cari peluang yang sesuai dengan kemampuan dan tujuan kariermu.'},
@@ -12,26 +27,61 @@ const slides = [
 export default function WelcomeRoute() {
   const [index, setIndex] = useState(0);
   const slide = slides[index];
+  const isLightSlide = index % 2 === 0;
+
   return (
-    <View style={styles.screen}>
-      <Pressable onPress={() => router.replace('/(public)/login')} style={styles.skip}><Text style={styles.skipText}>Lewati</Text></Pressable>
+    <SafeAreaView
+      edges={['top', 'right', 'bottom', 'left']}
+      style={[styles.screen, {backgroundColor: isLightSlide ? COLORS.lightBackground : COLORS.navy}]}
+    >
+      <StatusBar animated style={isLightSlide ? 'dark' : 'light'} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Lewati onboarding"
+        onPress={() => router.replace('/(public)/login')}
+        style={styles.skip}
+      >
+        <Text style={[styles.skipText, {color: isLightSlide ? COLORS.navyText : COLORS.white}]}>Lewati</Text>
+      </Pressable>
       <Image source={slide.image} style={styles.image} resizeMode="contain" />
-      <Text style={styles.title}>{slide.title}</Text>
-      <Text style={styles.body}>{slide.body}</Text>
-      <View style={styles.dots}>{slides.map((_, itemIndex) => <View key={itemIndex} style={[styles.dot, itemIndex === index && styles.dotActive]} />)}</View>
-      <Pressable onPress={() => index === slides.length - 1 ? router.replace('/(public)/login') : setIndex(index + 1)} style={styles.button}>
+      <Text style={[styles.title, {color: isLightSlide ? COLORS.navyText : COLORS.white}]}>{slide.title}</Text>
+      <Text style={[styles.body, {color: isLightSlide ? COLORS.lightBody : COLORS.darkBody}]}>{slide.body}</Text>
+      <View style={styles.dots} accessibilityRole="tablist">
+        {slides.map((_, itemIndex) => (
+          <View
+            key={itemIndex}
+            accessibilityRole="tab"
+            accessibilityLabel={`Halaman onboarding ${itemIndex + 1}`}
+            accessibilityState={{selected: itemIndex === index}}
+            style={[
+              styles.dot,
+              {backgroundColor: isLightSlide ? COLORS.lightDot : COLORS.darkDot},
+              itemIndex === index && styles.dotActive,
+            ]}
+          />
+        ))}
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => index === slides.length - 1 ? router.replace('/(public)/login') : setIndex(index + 1)}
+        style={styles.button}
+      >
         <Text style={styles.buttonText}>{index === slides.length - 1 ? 'Mulai Sekarang' : 'Lanjut'}</Text>
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {flex: 1, backgroundColor: '#050D49', alignItems: 'center', paddingHorizontal: 28, paddingVertical: 34},
-  skip: {alignSelf: 'flex-end', padding: 10}, skipText: {fontFamily: 'PlusJakartaSans_500Medium', color: '#C7D5FF', fontSize: 12},
-  image: {width: '100%', height: '48%', marginTop: 12}, title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 26, color: 'white', textAlign: 'center', marginTop: 18},
-  body: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, lineHeight: 21, color: '#CCD7F3', textAlign: 'center', marginTop: 12},
-  dots: {flexDirection: 'row', gap: 7, marginTop: 24}, dot: {width: 7, height: 7, borderRadius: 4, backgroundColor: '#40527F'}, dotActive: {width: 24, backgroundColor: '#00CBEA'},
-  button: {height: 52, width: '100%', borderRadius: 12, backgroundColor: '#0865FF', alignItems: 'center', justifyContent: 'center', marginTop: 'auto'},
-  buttonText: {fontFamily: 'PlusJakartaSans_700Bold', color: 'white', fontSize: 14},
+  screen: {flex: 1, alignItems: 'center', paddingHorizontal: 28, paddingVertical: 18},
+  skip: {alignSelf: 'flex-end', minHeight: 44, minWidth: 44, padding: 10, alignItems: 'center', justifyContent: 'center'},
+  skipText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12},
+  image: {width: '100%', height: '48%', marginTop: 12},
+  title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 26, textAlign: 'center', marginTop: 18},
+  body: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 12},
+  dots: {flexDirection: 'row', gap: 7, marginTop: 24},
+  dot: {width: 7, height: 7, borderRadius: 4},
+  dotActive: {width: 24, backgroundColor: COLORS.cyan},
+  button: {height: 52, width: '100%', borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginTop: 'auto'},
+  buttonText: {fontFamily: 'PlusJakartaSans_700Bold', color: COLORS.white, fontSize: 14},
 });
