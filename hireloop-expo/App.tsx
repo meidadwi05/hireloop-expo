@@ -361,7 +361,7 @@ export default function App(){
 
 
 
-    screen==='forgot'?<ForgotPasswordPage email={resetEmail} error={errors.email} successVisible={resetSent} onEmailChange={setResetEmail} onSubmit={reset} onBack={()=>go('login')} onSuccessDismiss={()=>setResetSent(false)}/>:
+    screen==='forgot'?<ForgotPasswordPage email={resetEmail} error={errors.email} isSubmitting={false} successVisible={resetSent} onEmailChange={setResetEmail} onSubmit={reset} onBack={()=>go('login')} onSuccessDismiss={()=>setResetSent(false)}/>:
 
     screen==='dashboard'&&candidateUser?<DashboardHome initialUser={candidateUser} onLogout={async()=>{await candidateApi.logout().catch(()=>undefined);setCandidateName('');setCandidateUser(null);go('login');}}/>:
 

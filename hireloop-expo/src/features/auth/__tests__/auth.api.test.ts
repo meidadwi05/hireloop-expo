@@ -110,6 +110,24 @@ describe('authApi', () => {
     expect(setToken).toHaveBeenCalledWith('registration-token', true);
   });
 
+  it('submits the existing backend reset-password contract', async () => {
+    post.mockResolvedValue({data: {success: true, message: 'Password reset.'}});
+
+    await expect(authApi.resetPassword({
+      email: ' ANDI@EXAMPLE.COM ',
+      token: 'secret-reset-token',
+      password: 'Hireloop1',
+      passwordConfirmation: 'Hireloop1',
+    })).resolves.toBe('Password reset.');
+
+    expect(post).toHaveBeenCalledWith('/reset-password', {
+      email: 'andi@example.com',
+      token: 'secret-reset-token',
+      password: 'Hireloop1',
+      password_confirmation: 'Hireloop1',
+    });
+  });
+
   it('uses a web token lifecycle for PWA and mobile for native platforms', () => {
     expect(resolveAuthClientType('web')).toBe('web');
     expect(resolveAuthClientType('android')).toBe('mobile');

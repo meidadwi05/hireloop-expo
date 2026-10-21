@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -25,6 +26,7 @@ const RESET_AUTH_ICON = require('../assets/reset_auth.png');
 type ForgotPasswordPageProps = {
   email: string;
   error?: string;
+  isSubmitting: boolean;
   successVisible: boolean;
   onEmailChange: (value: string) => void;
   onSubmit: () => void;
@@ -49,12 +51,14 @@ function GradientTitle() {
   );
 }
 
-function SubmitButton({onPress}: {onPress: () => void}) {
+function SubmitButton({isSubmitting, onPress}: {isSubmitting: boolean; onPress: () => void}) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{busy: isSubmitting, disabled: isSubmitting}}
+      disabled={isSubmitting}
       onPress={onPress}
-      style={({pressed}) => [styles.button, pressed && styles.pressed]}
+      style={({pressed}) => [styles.button, isSubmitting && styles.buttonDisabled, pressed && styles.pressed]}
     >
       <LinearGradient
         colors={[C.blue, C.cyan]}
@@ -62,8 +66,14 @@ function SubmitButton({onPress}: {onPress: () => void}) {
         end={{x: 1, y: 0}}
         style={styles.buttonInner}
       >
-        <Text style={styles.buttonText}>Kirim tautan reset</Text>
-        <Ionicons name="arrow-forward" size={19} color="white"/>
+        {isSubmitting ? (
+          <ActivityIndicator color="white"/>
+        ) : (
+          <>
+            <Text style={styles.buttonText}>Kirim tautan reset</Text>
+            <Ionicons name="arrow-forward" size={19} color="white"/>
+          </>
+        )}
       </LinearGradient>
     </Pressable>
   );
@@ -108,6 +118,7 @@ function SuccessButton({onPress}: {onPress: () => void}) {
 export default function ForgotPasswordPage({
   email,
   error,
+  isSubmitting,
   successVisible,
   onEmailChange,
   onSubmit,
@@ -159,7 +170,7 @@ export default function ForgotPasswordPage({
           </View>
           {!!error && <Text accessibilityLiveRegion="polite" style={styles.resetError}>{error}</Text>}
           <View style={styles.resetButtonSpacing}>
-            <SubmitButton onPress={onSubmit}/>
+            <SubmitButton isSubmitting={isSubmitting} onPress={onSubmit}/>
           </View>
           <Pressable accessibilityRole="button" style={styles.resetBack} onPress={onBack}>
             <Text style={styles.resetBackText}>Kembali ke halaman Masuk</Text>
@@ -226,6 +237,7 @@ const styles = StyleSheet.create({
   resetBack: {alignItems: 'center', paddingVertical: 14, marginTop: 3},
   resetBackText: {fontFamily: F.regular, color: '#E5EBFB', fontSize: 11},
   button: {borderRadius: 10, overflow: 'hidden'},
+  buttonDisabled: {opacity: 0.6},
   pressed: {opacity: 0.82},
   buttonInner: {height: 52, paddingHorizontal: 22, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16},
   buttonText: {fontFamily: F.bold, color: 'white', fontSize: 14},

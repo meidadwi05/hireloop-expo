@@ -26,3 +26,10 @@ export type RegisterInput = {
   password: string;
   passwordConfirmation: string;
 };
+
+export type ResetPasswordInput = {
+  email: string;
+  token: string;
+  password: string;
+  passwordConfirmation: string;
+};

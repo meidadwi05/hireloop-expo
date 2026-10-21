@@ -12,6 +12,7 @@ export default function ForgotPasswordRoute() {
   const [email, setEmail] = useState(params.email ?? '');
   const [error, setError] = useState<string>();
   const [successVisible, setSuccessVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submit = async () => {
     if (!validEmail(email)) {
@@ -19,12 +20,17 @@ export default function ForgotPasswordRoute() {
       return;
     }
 
+    if (isSubmitting) return;
+
     setError(undefined);
+    setIsSubmitting(true);
     try {
       await authApi.forgotPassword(email);
       setSuccessVisible(true);
     } catch (submitError) {
       setError(toAppApiError(submitError).message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -32,6 +38,7 @@ export default function ForgotPasswordRoute() {
     <ForgotPasswordPage
       email={email}
       error={error}
+      isSubmitting={isSubmitting}
       successVisible={successVisible}
       onEmailChange={setEmail}
       onSubmit={() => void submit()}

@@ -8,7 +8,7 @@ import {
   verifyOtpResponseSchema,
 } from '../auth.schemas';
 import {AuthFlowError} from '../auth.errors';
-import type {CandidateUser, LoginInput, RegisterInput} from '../auth.types';
+import type {CandidateUser, LoginInput, RegisterInput, ResetPasswordInput} from '../auth.types';
 
 export type AuthClientType = 'web' | 'mobile';
 
@@ -71,6 +71,16 @@ export const authApi = {
 
   async forgotPassword(email: string): Promise<void> {
     await httpClient.post('/forgot-password', {email: email.trim().toLowerCase()});
+  },
+
+  async resetPassword(input: ResetPasswordInput): Promise<string | undefined> {
+    const response = await httpClient.post('/reset-password', {
+      email: input.email.trim().toLowerCase(),
+      token: input.token,
+      password: input.password,
+      password_confirmation: input.passwordConfirmation,
+    });
+    return authMessageResponseSchema.parse(response.data).message;
   },
 
   async register(input: RegisterInput): Promise<string | undefined> {

@@ -17,4 +17,14 @@ export const masterDataApi = {
     const response = await httpClient.get(`/regions/regencies/${provinceCode}`);
     return response.data;
   },
+
+  async districts(regencyCode: string): Promise<unknown> {
+    const response = await httpClient.get(`/regions/districts/${regencyCode}`);
+    return response.data;
+  },
+
+  async villages(districtCode: string): Promise<unknown> {
+    const response = await httpClient.get(`/regions/villages/${districtCode}`);
+    return response.data;
+  },
 };

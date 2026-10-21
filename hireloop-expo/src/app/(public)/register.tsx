@@ -21,13 +21,13 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {toAppApiError} from '../../core/api/api-error';
 import {authApi} from '../../features/auth/api/auth.api';
 import {useAuth} from '../../features/auth/auth-provider';
+import {type RegisterFormErrors, validateRegisterForm} from '../../features/auth/register-validation';
 
-type FieldErrors = Partial<Record<'firstName' | 'lastName' | 'phone' | 'email' | 'password' | 'confirmation' | 'otp', string>>;
+type FieldErrors = RegisterFormErrors & {otp?: string};
 type Dialog = 'registerSuccess' | 'otp' | 'verifySuccess' | null;
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const OTP_RESEND_SECONDS = 120;
-const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
@@ -67,15 +67,7 @@ export default function RegisterRoute() {
   }, [countdown, dialog]);
 
   const submitRegister = async () => {
-    const normalizedPhone = phone.replace(/[\s-]/g, '');
-    const nextErrors: FieldErrors = {
-      firstName: firstName.trim() ? undefined : 'Masukkan nama depan.',
-      lastName: lastName.trim() ? undefined : 'Masukkan nama belakang.',
-      phone: /^(?:\+62|62|0)8\d{8,12}$/.test(normalizedPhone) ? undefined : 'Masukkan nomor handphone Indonesia yang valid.',
-      email: validEmail(email) ? undefined : 'Masukkan alamat email yang valid.',
-      password: password.length >= 6 ? undefined : 'Kata sandi minimal 6 karakter.',
-      confirmation: confirmation === password ? undefined : 'Konfirmasi kata sandi tidak sama.',
-    };
+    const nextErrors: FieldErrors = validateRegisterForm({firstName, lastName, phone, email, password, confirmation});
     setErrors(nextErrors);
     setNotice('');
     if (Object.values(nextErrors).some(Boolean)) return;
@@ -269,12 +261,16 @@ type RegisterInputProps = {
 };
 
 function RegisterInput({label, value, onChange, placeholder, icon, keyboardType = 'default', secureTextEntry, onToggleSecure, error}: RegisterInputProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputWrap, error && styles.inputError]}>
+      <Text style={styles.label}>
+        {label}<Text style={styles.requiredMark}> *</Text>
+      </Text>
+      <View style={[styles.inputWrap, focused && styles.inputFocused, error && styles.inputError]}>
         <Ionicons name={icon} size={21} color="#7C828A" />
-        <TextInput accessibilityLabel={label} autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'} autoCorrect={false} keyboardType={keyboardType} onChangeText={onChange} placeholder={placeholder} placeholderTextColor="#B3B8C0" secureTextEntry={secureTextEntry} style={styles.input} value={value} />
+        <TextInput accessibilityLabel={`${label}, wajib diisi`} autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'} autoCorrect={false} keyboardType={keyboardType} onBlur={() => setFocused(false)} onChangeText={onChange} onFocus={() => setFocused(true)} placeholder={placeholder} placeholderTextColor="#B3B8C0" secureTextEntry={secureTextEntry} style={styles.input} underlineColorAndroid="transparent" value={value} />
         {!!onToggleSecure && (
           <Pressable accessibilityRole="button" accessibilityLabel={secureTextEntry ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi'} hitSlop={10} onPress={onToggleSecure} style={styles.eyeButton}>
             <Ionicons name={secureTextEntry ? 'eye-off-outline' : 'eye-outline'} size={21} color="#A8AFB8" />
@@ -302,14 +298,16 @@ const styles = StyleSheet.create({
   hero: {width: '100%', aspectRatio: 1.6, minHeight: 245, backgroundColor: '#020B38', overflow: 'hidden'},
   heroImage: {position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%'},
   back: {position: 'absolute', top: 12, left: 18, width: 48, height: 48, alignItems: 'center', justifyContent: 'center'},
-  heroCopy: {position: 'absolute', left: 28, right: 28, bottom: 26, maxWidth: 285},
+  heroCopy: {position: 'absolute', left: 28, right: 28, bottom: 44, maxWidth: 285},
   title: {fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 34, color: 'white', lineHeight: 43},
   description: {fontFamily: 'PlusJakartaSans_400Regular', color: '#F0F4FF', fontSize: 14, lineHeight: 21, marginTop: 8, maxWidth: 250},
   card: {borderRadius: 30, backgroundColor: '#061A50', paddingHorizontal: 24, paddingTop: 26, paddingBottom: 30, marginHorizontal: 20, marginTop: -18},
   inputGroup: {marginBottom: 16},
   label: {fontFamily: 'PlusJakartaSans_500Medium', color: '#FFFFFF', fontSize: 13, marginBottom: 8},
+  requiredMark: {color: '#FF9FA9'},
   inputWrap: {minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 12, paddingHorizontal: 14, borderWidth: 1.5, borderColor: '#DDE3EA'},
-  input: {fontFamily: 'PlusJakartaSans_400Regular', flex: 1, minHeight: 50, fontSize: 13, color: '#121B35', paddingVertical: 0},
+  inputFocused: {borderWidth: 2, borderColor: '#0B63FF'},
+  input: {fontFamily: 'PlusJakartaSans_400Regular', flex: 1, minHeight: 50, fontSize: 13, color: '#121B35', paddingVertical: 0, outlineWidth: 0, outlineColor: 'transparent'},
   inputError: {borderColor: '#FF6978'},
   eyeButton: {width: 36, height: 44, alignItems: 'center', justifyContent: 'center'},
   fieldError: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FF9FA9', fontSize: 11, lineHeight: 17, marginTop: 5},

@@ -1,3 +1,5 @@
+import MaskedView from '@react-native-masked-view/masked-view';
+import {LinearGradient} from 'expo-linear-gradient';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
 import React, {useState} from 'react';
@@ -24,6 +26,16 @@ const slides = [
   {image: require('../../assets/Onboarding4.png'), title: 'Rekomendasi personal', body: 'Dapatkan lowongan yang relevan untuk perjalanan kariermu.'},
 ];
 
+function GradientTitle({children}: {children: string}) {
+  return (
+    <MaskedView style={styles.titleMask} maskElement={<Text style={styles.title}>{children}</Text>}>
+      <LinearGradient colors={['#0051FD', '#00DAFD']} start={{x: 0, y: 0.5}} end={{x: 1, y: 0.5}}>
+        <Text style={[styles.title, styles.transparentTitle]}>{children}</Text>
+      </LinearGradient>
+    </MaskedView>
+  );
+}
+
 export default function WelcomeRoute() {
   const [index, setIndex] = useState(0);
   const slide = slides[index];
@@ -44,7 +56,9 @@ export default function WelcomeRoute() {
         <Text style={[styles.skipText, {color: isLightSlide ? COLORS.navyText : COLORS.white}]}>Lewati</Text>
       </Pressable>
       <Image source={slide.image} style={styles.image} resizeMode="contain" />
-      <Text style={[styles.title, {color: isLightSlide ? COLORS.navyText : COLORS.white}]}>{slide.title}</Text>
+      {isLightSlide
+        ? <GradientTitle>{slide.title}</GradientTitle>
+        : <Text style={[styles.title, styles.darkTitle]}>{slide.title}</Text>}
       <Text style={[styles.body, {color: isLightSlide ? COLORS.lightBody : COLORS.darkBody}]}>{slide.body}</Text>
       <View style={styles.dots} accessibilityRole="tablist">
         {slides.map((_, itemIndex) => (
@@ -78,6 +92,9 @@ const styles = StyleSheet.create({
   skipText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12},
   image: {width: '100%', height: '48%', marginTop: 12},
   title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 26, textAlign: 'center', marginTop: 18},
+  titleMask: {width: '100%'},
+  transparentTitle: {opacity: 0},
+  darkTitle: {color: COLORS.white},
   body: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 12},
   dots: {flexDirection: 'row', gap: 7, marginTop: 24},
   dot: {width: 7, height: 7, borderRadius: 4},
