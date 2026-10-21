@@ -18,9 +18,19 @@ export function resolveAuthClientType(platform: string = Platform.OS): AuthClien
 
 export const AUTH_CLIENT_TYPE = resolveAuthClientType();
 
+export function normalizeCandidateOnboarding(user: CandidateUser): CandidateUser {
+  return {
+    ...user,
+    onboarding_finished: user.prod_candidate
+      ? user.onboarding_finished
+      : Boolean(user.profile_completed_at),
+  };
+}
+
 async function getCurrentUser(): Promise<CandidateUser> {
   const response = await httpClient.get('/auth/me');
-  return currentUserResponseSchema.parse(response.data).data;
+  const user = currentUserResponseSchema.parse(response.data).data;
+  return normalizeCandidateOnboarding(user);
 }
 
 async function clearTokenSafely(): Promise<void> {

@@ -1,8 +1,9 @@
 import {httpClient} from '../../../core/api/http-client';
 import {tokenStorage} from '../../../api/tokenStorage';
-import {authApi, resolveAuthClientType} from '../api/auth.api';
+import {authApi, normalizeCandidateOnboarding, resolveAuthClientType} from '../api/auth.api';
 import {googleAuthApi} from '../api/google-auth.api';
 import {AuthFlowError} from '../auth.errors';
+import type {CandidateUser} from '../auth.types';
 
 jest.mock('../../../core/api/http-client', () => ({
   httpClient: {get: jest.fn(), post: jest.fn()},
@@ -17,15 +18,19 @@ jest.mock('../../../api/tokenStorage', () => ({
   },
 }));
 
-const candidate = {
+const candidate: CandidateUser = {
   id: 1,
   full_name: 'Andi Kandidat',
   email: 'andi@example.com',
+  avatar_url: null,
+  cover_url: null,
+  profile_completed_at: '2026-10-22T08:00:00.000000Z',
   is_verified: true,
   prod_candidate: false,
   onboarding_finished: true,
   role: 'user',
   roles: ['user'],
+  job_applications: [],
 };
 
 describe('authApi', () => {
@@ -58,6 +63,27 @@ describe('authApi', () => {
     expect(setToken).toHaveBeenCalledWith('candidate-token', true);
     expect(get).toHaveBeenCalledWith('/auth/me');
     expect(removeToken).not.toHaveBeenCalled();
+  });
+
+  it('normalizes a new professional candidate before routing after login', async () => {
+    post.mockResolvedValue({data: {success: true, token: 'candidate-token'}});
+    get.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          ...candidate,
+          prod_candidate: false,
+          profile_completed_at: null,
+          onboarding_finished: true,
+        },
+      },
+    });
+
+    await expect(authApi.login({
+      email: 'andi@example.com',
+      password: 'secret',
+      remember: true,
+    })).resolves.toMatchObject({onboarding_finished: false});
   });
 
   it('identifies a failure from /login without storing a token', async () => {
@@ -108,6 +134,33 @@ describe('authApi', () => {
       client_type: 'mobile',
     });
     expect(setToken).toHaveBeenCalledWith('registration-token', true);
+  });
+
+  it('marks a new professional candidate as needing onboarding', () => {
+    expect(normalizeCandidateOnboarding({
+      ...candidate,
+      prod_candidate: false,
+      profile_completed_at: null,
+      onboarding_finished: true,
+    }).onboarding_finished).toBe(false);
+  });
+
+  it('marks a professional candidate with a completed profile as onboarded', () => {
+    expect(normalizeCandidateOnboarding({
+      ...candidate,
+      prod_candidate: false,
+      profile_completed_at: '2026-10-22T08:00:00.000000Z',
+      onboarding_finished: false,
+    }).onboarding_finished).toBe(true);
+  });
+
+  it('keeps the backend onboarding flag for production candidates', () => {
+    expect(normalizeCandidateOnboarding({
+      ...candidate,
+      prod_candidate: true,
+      profile_completed_at: '2026-10-22T08:00:00.000000Z',
+      onboarding_finished: false,
+    }).onboarding_finished).toBe(false);
   });
 
   it('submits the existing backend reset-password contract', async () => {
