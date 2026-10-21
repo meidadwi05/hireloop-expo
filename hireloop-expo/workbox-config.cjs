@@ -11,8 +11,11 @@ module.exports = {
   swDest: 'dist/sw.js',
   sourcemap: false,
   cleanupOutdatedCaches: true,
-  clientsClaim: false,
-  skipWaiting: false,
+  clientsClaim: true,
+  // Required for the migration from older clients that do not yet send
+  // Workbox's SKIP_WAITING message. Expo currently emits one hashed JS bundle,
+  // so immediate activation cannot mix independently lazy-loaded JS chunks.
+  skipWaiting: true,
   maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
   navigateFallback: '/index.html',
   runtimeCaching: [
@@ -26,20 +29,6 @@ module.exports = {
         expiration: {
           maxEntries: 40,
           maxAgeSeconds: 30 * ONE_DAY,
-          purgeOnQuotaError: true,
-        },
-      },
-    },
-    {
-      urlPattern: ({request}) => request.mode === 'navigate',
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'hireloop-pages-v1',
-        networkTimeoutSeconds: 4,
-        cacheableResponse: {statuses: [0, 200]},
-        expiration: {
-          maxEntries: 20,
-          maxAgeSeconds: ONE_DAY,
           purgeOnQuotaError: true,
         },
       },

@@ -1,16 +1,6 @@
 import {ScrollViewStyleReset, useServerDocumentContext} from 'expo-router/html';
 import type {PropsWithChildren} from 'react';
 
-const serviceWorkerRegistration = `
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {
-      // The website remains usable when service-worker registration fails.
-    });
-  });
-}
-`;
-
 export default function Root({children}: PropsWithChildren) {
   const {headNodes, bodyNodes, htmlAttributes, bodyAttributes} = useServerDocumentContext();
   const isProduction = process.env.NODE_ENV === 'production';
@@ -26,7 +16,7 @@ export default function Root({children}: PropsWithChildren) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="manifest" href="/manifest.json" />
-        {isProduction ? <script dangerouslySetInnerHTML={{__html: serviceWorkerRegistration}} /> : null}
+        {isProduction ? <script src="/pwa-update.js" defer /> : null}
         <ScrollViewStyleReset />
         {headNodes}
       </head>
