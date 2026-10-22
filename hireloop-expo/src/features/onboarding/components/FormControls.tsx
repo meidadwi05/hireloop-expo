@@ -6,12 +6,13 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   type TextInputProps,
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
+import {FormFieldPressable} from '../../../components/forms/FormFieldPressable';
+import {FormTextInput} from '../../../components/forms/FormTextInput';
 import type {MasterOption} from '../onboarding.types';
 
 const C = {blue: '#1268FF', navy: '#061B52', text: '#FFFFFF', muted: '#B9C1D1', error: '#FF5B67'};
@@ -34,43 +35,19 @@ export function TextField({label, required, error, disabled, multiline, style, t
   return (
     <View style={styles.fieldGroup}>
       <FieldLabel label={label} required={required} tone={tone} />
-      <TextInput
+      <FormTextInput
         {...props}
+        accessibilityLabel={label}
+        containerStyle={[styles.inputFrame, multiline && styles.textareaFrame]}
         editable={!disabled}
+        error={Boolean(error)}
+        errorContainerStyle={styles.inputError}
+        inputStyle={[styles.input, multiline && styles.textarea, disabled && styles.inputTextDisabled, style]}
         multiline={multiline}
         placeholderTextColor="#B6BCC7"
-        style={[styles.input, multiline && styles.textarea, disabled && styles.inputDisabled, error && styles.inputError, style]}
-        accessibilityLabel={label}
-        accessibilityState={{disabled: Boolean(disabled)}}
+        disabledContainerStyle={styles.inputDisabled}
       />
       {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
-    </View>
-  );
-}
-
-function isoToDisplay(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
-}
-
-function displayToIso(value: string): string {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-  return match ? `${match[3]}-${match[2]}-${match[1]}` : value.trim();
-}
-
-export function DateField(props: Omit<TextFieldProps, 'value' | 'onChangeText'> & {value: string; onChange: (value: string) => void}) {
-  const {value, onChange, ...fieldProps} = props;
-
-  return (
-    <View>
-      <TextField
-        {...fieldProps}
-        value={isoToDisplay(value)}
-        onChangeText={text => onChange(displayToIso(text))}
-        placeholder="dd/mm/yyyy"
-        keyboardType="number-pad"
-      />
-      <Ionicons name="calendar-outline" size={20} color="#172036" style={styles.dateIcon} pointerEvents="none" />
     </View>
   );
 }
@@ -100,17 +77,20 @@ export function SelectField({label, value, options, onChange, placeholder, requi
   return (
     <View style={styles.fieldGroup}>
       <FieldLabel label={label} required={required} tone={tone} />
-      <Pressable
+      <FormFieldPressable
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityState={{expanded: open, disabled: Boolean(disabled)}}
+        containerStyle={styles.select}
         disabled={disabled}
+        disabledContainerStyle={styles.inputDisabled}
+        error={Boolean(error)}
+        errorContainerStyle={styles.inputError}
         onPress={() => setOpen(true)}
-        style={[styles.select, disabled && styles.inputDisabled, error && styles.inputError]}
       >
         <Text numberOfLines={1} style={[styles.selectText, !selected && styles.placeholder]}>{selected?.label ?? placeholder}</Text>
         <Ionicons name="chevron-down" size={20} color="#111827" />
-      </Pressable>
+      </FormFieldPressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <SafeAreaView style={styles.modalOverlay}>
@@ -123,13 +103,15 @@ export function SelectField({label, value, options, onChange, placeholder, requi
               </Pressable>
             </View>
             {searchable ? (
-              <TextInput
+              <FormTextInput
+                accessibilityLabel={`Cari ${label}`}
+                autoFocus
+                containerStyle={styles.searchInputFrame}
+                inputStyle={styles.searchInput}
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Cari..."
                 placeholderTextColor="#98A1B2"
-                style={styles.searchInput}
-                autoFocus
               />
             ) : null}
             <FlatList
@@ -158,18 +140,19 @@ export function SelectField({label, value, options, onChange, placeholder, requi
 
 export function CheckboxField({label, checked, onChange, required, disabled, tone = 'dark'}: {label: string; checked: boolean; onChange: (value: boolean) => void; required?: boolean; disabled?: boolean; tone?: 'dark' | 'light'}) {
   return (
-    <Pressable
+    <FormFieldPressable
       accessibilityRole="checkbox"
       accessibilityState={{checked, disabled: Boolean(disabled)}}
-      onPress={() => onChange(!checked)}
+      containerStyle={styles.checkboxRow}
       disabled={disabled}
-      style={styles.checkboxRow}
+      disabledContainerStyle={styles.checkboxRowDisabled}
+      onPress={() => onChange(!checked)}
     >
       <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
         {checked ? <Ionicons name="checkmark" size={15} color="white" /> : null}
       </View>
       <Text style={[styles.checkboxLabel, tone === 'light' && styles.checkboxLabelLight]}>{label}{required ? <Text style={styles.required}> *</Text> : null}</Text>
-    </Pressable>
+    </FormFieldPressable>
   );
 }
 
@@ -182,9 +165,9 @@ export function AddField({label, placeholder, onPress, required}: {label: string
           <Ionicons name="add" size={21} color="white" />
         </Pressable>
       </View>
-      <Pressable onPress={onPress} style={styles.addPlaceholder}>
+      <FormFieldPressable accessibilityRole="button" accessibilityLabel={label} containerStyle={styles.addPlaceholder} onPress={onPress}>
         <Text style={styles.placeholder}>{placeholder}</Text>
-      </Pressable>
+      </FormFieldPressable>
     </View>
   );
 }
@@ -194,30 +177,34 @@ const styles = StyleSheet.create({
   label: {fontFamily: F.medium, fontSize: 13, lineHeight: 20, color: C.text},
   labelLight: {color: '#151923'},
   required: {color: C.error},
-  input: {minHeight: 54, borderRadius: 11, backgroundColor: 'white', color: '#111827', paddingHorizontal: 15, fontFamily: F.regular, fontSize: 14, borderWidth: 1, borderColor: '#E0E5EC'},
+  inputFrame: {minHeight: 54, borderRadius: 11, borderColor: '#E0E5EC', paddingHorizontal: 15},
+  input: {minHeight: 50, color: '#111827', paddingVertical: 0, fontFamily: F.regular, fontSize: 14},
+  textareaFrame: {alignItems: 'stretch', minHeight: 88},
   textarea: {minHeight: 88, textAlignVertical: 'top', paddingTop: 14},
-  inputDisabled: {backgroundColor: '#D2CED0', color: '#5E626B'},
+  inputDisabled: {backgroundColor: '#D2CED0'},
+  inputTextDisabled: {color: '#5E626B'},
   inputError: {borderColor: C.error},
   error: {fontFamily: F.regular, color: '#FF8B93', fontSize: 11, lineHeight: 16},
-  dateIcon: {position: 'absolute', right: 16, top: 43},
-  select: {minHeight: 54, borderRadius: 11, backgroundColor: 'white', paddingHorizontal: 15, borderWidth: 1, borderColor: '#E0E5EC', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
+  select: {minHeight: 54, borderRadius: 11, paddingHorizontal: 15, borderColor: '#E0E5EC', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
   selectText: {flex: 1, fontFamily: F.regular, color: '#111827', fontSize: 14},
   placeholder: {fontFamily: F.regular, color: '#B6BCC7', fontSize: 13},
-  modalOverlay: {flex: 1, backgroundColor: 'rgba(2,7,25,0.72)', justifyContent: 'center', padding: 22},
+  modalOverlay: {flex: 1, backgroundColor: 'rgba(2,7,25,0.72)', justifyContent: 'center', padding: 12},
   selectModal: {width: '100%', maxWidth: 430, maxHeight: '72%', alignSelf: 'center', backgroundColor: 'white', borderRadius: 22, padding: 18},
   selectHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14},
   selectTitle: {fontFamily: F.bold, color: '#111827', fontSize: 18},
-  searchInput: {height: 46, borderRadius: 10, borderWidth: 1, borderColor: '#D9DFE8', paddingHorizontal: 13, fontFamily: F.regular, marginBottom: 10},
+  searchInputFrame: {height: 46, borderRadius: 10, borderColor: '#D9DFE8', paddingHorizontal: 13, marginBottom: 10},
+  searchInput: {height: 42, paddingVertical: 0, fontFamily: F.regular, color: '#111827'},
   option: {minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8},
   optionSelected: {backgroundColor: '#EEF5FF'},
   optionText: {fontFamily: F.regular, fontSize: 14, color: '#111827', flex: 1},
   emptyText: {fontFamily: F.regular, color: '#6B7280', textAlign: 'center', paddingVertical: 30},
-  checkboxRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 9, minHeight: 32},
+  checkboxRow: {flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 44, borderColor: 'transparent', backgroundColor: 'transparent', paddingHorizontal: 4},
+  checkboxRowDisabled: {backgroundColor: 'transparent', opacity: 0.65},
   checkbox: {width: 18, height: 18, borderRadius: 3, borderWidth: 1.5, borderColor: '#DCE5F5', alignItems: 'center', justifyContent: 'center', marginTop: 1},
   checkboxChecked: {backgroundColor: C.blue, borderColor: C.blue},
   checkboxLabel: {flex: 1, fontFamily: F.regular, color: '#D7DEEE', fontSize: 11, lineHeight: 16},
   checkboxLabelLight: {color: '#252A35'},
   addLabelRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
-  addButton: {width: 28, height: 28, borderRadius: 3, borderWidth: 1.5, borderColor: C.blue, alignItems: 'center', justifyContent: 'center'},
-  addPlaceholder: {minHeight: 54, borderRadius: 11, backgroundColor: 'white', paddingHorizontal: 15, justifyContent: 'center'},
+  addButton: {width: 44, height: 44, borderRadius: 8, borderWidth: 1.5, borderColor: C.blue, alignItems: 'center', justifyContent: 'center'},
+  addPlaceholder: {minHeight: 54, borderRadius: 11, borderColor: '#E0E5EC', paddingHorizontal: 15, justifyContent: 'center'},
 });

@@ -26,10 +26,6 @@ export function useOnboarding(refreshUser: () => Promise<unknown>) {
   });
   const submit = useMutation({
     mutationFn: async (draft: OnboardingDraft) => onboardingApi.complete(toOnboardingPayload(draft)),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({queryKey: onboardingKeys.all});
-      await refreshUser();
-    },
   });
 
   return {
@@ -44,5 +40,9 @@ export function useOnboarding(refreshUser: () => Promise<unknown>) {
       }
     },
     submitting: submit.isPending,
+    refreshAfterSubmit: async () => {
+      await queryClient.invalidateQueries({queryKey: onboardingKeys.all});
+      return refreshUser();
+    },
   };
 }

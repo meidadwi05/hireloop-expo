@@ -5,7 +5,8 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {experienceSchema} from '../onboarding.schemas';
 import type {ExperienceDraft, MasterOption} from '../onboarding.types';
-import {CheckboxField, DateField, SelectField, TextField} from './FormControls';
+import {DateField, isoToLocalDate} from './DateField';
+import {CheckboxField, SelectField, TextField} from './FormControls';
 
 const workSystems: MasterOption[] = [
   {value: 'onsite', label: 'On-site'}, {value: 'hybrid', label: 'Hybrid'}, {value: 'remote', label: 'Remote'},
@@ -43,7 +44,7 @@ export function ExperienceModal({visible, initialValue, onCancel, onSave}: {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel}>
       <SafeAreaView style={styles.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
           <View style={styles.card}>
@@ -57,9 +58,9 @@ export function ExperienceModal({visible, initialValue, onCancel, onSave}: {
               <SelectField tone="light" label="Tipe Pekerjaan" required value={value.employmentStatus} onChange={next => update('employmentStatus', next)} options={employmentStatuses} placeholder="Pilih tipe pekerjaan" error={errors.employmentStatus} />
               <SelectField tone="light" label="Sistem Kerja" required value={value.workSystem} onChange={next => update('workSystem', next)} options={workSystems} placeholder="Pilih sistem kerja" error={errors.workSystem} />
               <TextField tone="light" label="Lokasi Kerja" value={value.location} onChangeText={next => update('location', next)} placeholder="Contoh: Jakarta" />
-              <DateField tone="light" label="Mulai Bekerja" required value={value.startDate} onChange={next => update('startDate', next)} error={errors.startDate} />
-              <DateField tone="light" label="Selesai Bekerja" required={!value.current} disabled={value.current} value={value.endDate} onChange={next => update('endDate', next)} error={errors.endDate} />
-              <CheckboxField tone="light" label="Masih bekerja di sini" checked={value.current} onChange={next => update('current', next)} />
+              <DateField tone="light" label="Mulai Bekerja" required value={value.startDate} onChange={next => update('startDate', next)} maximumDate={new Date()} error={errors.startDate} />
+              <DateField tone="light" label="Selesai Bekerja" required={!value.current} disabled={value.current} value={value.endDate} onChange={next => update('endDate', next)} minimumDate={isoToLocalDate(value.startDate) ?? undefined} maximumDate={new Date()} error={errors.endDate} />
+              <CheckboxField tone="light" label="Masih bekerja di sini" checked={value.current} onChange={next => { update('current', next); if (next) update('endDate', ''); }} />
               <TextField tone="light" label="Deskripsi Pekerjaan" multiline value={value.description} onChangeText={next => update('description', next)} placeholder="Jelaskan tanggung jawab atau pencapaian Anda" />
             </ScrollView>
             <View style={styles.actions}>
@@ -74,14 +75,14 @@ export function ExperienceModal({visible, initialValue, onCancel, onSave}: {
 }
 
 const styles = StyleSheet.create({
-  overlay: {flex: 1, backgroundColor: 'rgba(1,5,20,0.78)', justifyContent: 'center', padding: 20},
+  overlay: {flex: 1, backgroundColor: 'rgba(1,5,20,0.78)', justifyContent: 'center', padding: 12},
   keyboard: {maxHeight: '92%', width: '100%', maxWidth: 460, alignSelf: 'center'},
   card: {backgroundColor: 'white', borderRadius: 24, overflow: 'hidden', maxHeight: '100%'},
-  header: {paddingHorizontal: 24, paddingVertical: 22, borderBottomWidth: 1, borderBottomColor: '#E7E9ED', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
-  title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 23, color: '#111'},
+  header: {paddingHorizontal: 18, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: '#E7E9ED', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
+  title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 21, color: '#111'},
   subtitle: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, color: '#555', marginTop: 5},
-  content: {padding: 24},
-  actions: {flexDirection: 'row', gap: 18, paddingHorizontal: 24, paddingBottom: 24},
+  content: {padding: 18},
+  actions: {flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingBottom: 18},
   cancel: {flex: 1, height: 50, borderRadius: 10, borderWidth: 1, borderColor: '#AEB4BE', alignItems: 'center', justifyContent: 'center'},
   cancelText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14},
   save: {flex: 1, height: 50, borderRadius: 10, backgroundColor: '#087BFF', alignItems: 'center', justifyContent: 'center'},

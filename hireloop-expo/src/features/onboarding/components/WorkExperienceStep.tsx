@@ -1,9 +1,9 @@
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
 import React, {useState} from 'react';
-import {Alert, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
-import type {CertificationDraft, ExperienceDraft, MasterOption, OnboardingAction, OnboardingDraft, SkillOption} from '../onboarding.types';
+import type {CertificationDraft, ExperienceDraft, MasterOption, OnboardingAction, OnboardingDraft, RunOnboardingAction, SkillOption} from '../onboarding.types';
 import {CertificationModal} from './CertificationModal';
 import {ExperienceModal} from './ExperienceModal';
 import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
@@ -15,15 +15,17 @@ const availabilityOptions: MasterOption[] = [
   {value: 'not_available', label: 'Belum tersedia'},
 ];
 
-export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack, onFinish, onNotify}: {
+export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack, onFinish, runAction, onNotify}: {
   draft: OnboardingDraft;
   dispatch: React.Dispatch<OnboardingAction>;
   skills: SkillOption[];
   submitting: boolean;
   onBack: () => void;
   onFinish: () => void;
+  runAction: RunOnboardingAction;
   onNotify: (status: 'success' | 'error', title: string, message: string) => void;
 }) {
+  const {width} = useWindowDimensions();
   const [experienceOpen, setExperienceOpen] = useState(false);
   const [editingExperience, setEditingExperience] = useState<ExperienceDraft | null>(null);
   const [certificationOpen, setCertificationOpen] = useState(false);
@@ -32,10 +34,15 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
 
   const openExperience = (item: ExperienceDraft | null = null) => { setEditingExperience(item); setExperienceOpen(true); };
   const saveExperience = (experience: ExperienceDraft) => {
-    dispatch({type: 'set-experience', experience});
-    setField('hasNoExperience', false);
     setExperienceOpen(false);
-    onNotify('success', 'Berhasil!', 'Pengalaman kerja berhasil disimpan.');
+    runAction({
+      loadingMessage: 'Menyimpan pengalaman kerja...',
+      successTitle: 'Berhasil!',
+      successMessage: 'Pengalaman kerja berhasil disimpan.',
+    }, () => {
+      dispatch({type: 'set-experience', experience});
+      setField('hasNoExperience', false);
+    });
   };
   const openCertification = (item: CertificationDraft | null = null) => { setEditingCertification(item); setCertificationOpen(true); };
   const saveCertification = (certification: CertificationDraft) => {
@@ -46,7 +53,7 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
   const confirmRemove = (title: string, onPress: () => void) => Alert.alert(title, 'Data yang dihapus tidak dapat dikembalikan.', [{text: 'Batal', style: 'cancel'}, {text: 'Hapus', style: 'destructive', onPress}]);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, width < 390 && styles.cardNarrow]}>
       <View style={styles.sectionTitle}><Ionicons name="briefcase-outline" size={27} color="#2F7FFF" /><Text style={styles.sectionTitleText}>Pengalaman Kerja</Text></View>
 
       <AddField label="Pengalaman Kerja" required placeholder={draft.experiences.length ? 'Tambah pengalaman lainnya' : 'Belum ada pengalaman ditambahkan'} onPress={() => openExperience()} />
@@ -54,22 +61,26 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
         <View key={item.id} style={styles.itemCard}>
           <View style={styles.itemIcon}><Ionicons name="briefcase" size={16} color="#0B66EE" /></View>
           <View style={styles.itemCopy}><Text style={styles.itemTitle}>{item.position}</Text><Text style={styles.itemMeta}>{item.companyName}</Text><Text style={styles.itemMeta}>{item.startDate} - {item.current ? 'Sekarang' : item.endDate}</Text></View>
-          <Pressable accessibilityLabel="Edit pengalaman" onPress={() => openExperience(item)} hitSlop={8}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
-          <Pressable accessibilityLabel="Hapus pengalaman" onPress={() => confirmRemove('Hapus pengalaman?', () => dispatch({type: 'remove-experience', id: item.id}))} hitSlop={8}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+          <View style={styles.itemActions}>
+            <Pressable accessibilityLabel="Edit pengalaman" onPress={() => openExperience(item)} style={styles.itemAction}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
+            <Pressable accessibilityLabel="Hapus pengalaman" onPress={() => confirmRemove('Hapus pengalaman?', () => dispatch({type: 'remove-experience', id: item.id}))} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+          </View>
         </View>
       ))}
       <View style={styles.compactCheckbox}><CheckboxField label="Belum memiliki pengalaman kerja" checked={draft.hasNoExperience} onChange={value => setField('hasNoExperience', value)} /></View>
 
       <SkillMultiSelect options={skills} selected={draft.skills} onToggle={skill => dispatch({type: 'toggle-skill', skill})} />
-      <TextField label="Pengalaman mesin / tools" required value={draft.tools} onChangeText={value => setField('tools', value)} placeholder="Contoh: Mesin CNC, Forklift" />
+      <TextField label="Pengalaman mesin / tools" value={draft.tools} onChangeText={value => setField('tools', value)} placeholder="Opsional, contoh: Mesin CNC, Forklift" />
 
-      <AddField label="Sertifikasi" required placeholder={draft.certifications.length ? 'Tambah sertifikasi lainnya' : 'Belum ada sertifikat yang ditambahkan'} onPress={() => openCertification()} />
+      <AddField label="Sertifikasi" placeholder={draft.certifications.length ? 'Tambah sertifikasi lainnya' : 'Opsional'} onPress={() => openCertification()} />
       {draft.certifications.map(item => (
         <View key={item.id} style={styles.itemCard}>
           <View style={styles.itemIcon}><Ionicons name="ribbon" size={17} color="#0B66EE" /></View>
           <View style={styles.itemCopy}><Text style={styles.itemTitle}>{item.name}</Text><Text style={styles.itemMeta}>{item.issuer}</Text><Text style={styles.itemMeta}>{item.originalName}</Text></View>
-          <Pressable accessibilityLabel="Edit sertifikasi" onPress={() => openCertification(item)} hitSlop={8}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
-          <Pressable accessibilityLabel="Hapus sertifikasi" onPress={() => confirmRemove('Hapus sertifikasi?', () => dispatch({type: 'remove-certification', id: item.id}))} hitSlop={8}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+          <View style={styles.itemActions}>
+            <Pressable accessibilityLabel="Edit sertifikasi" onPress={() => openCertification(item)} style={styles.itemAction}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
+            <Pressable accessibilityLabel="Hapus sertifikasi" onPress={() => confirmRemove('Hapus sertifikasi?', () => dispatch({type: 'remove-certification', id: item.id}))} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+          </View>
         </View>
       ))}
 
@@ -93,11 +104,14 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
 
 const styles = StyleSheet.create({
   card: {width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: '#061D52', borderRadius: 34, paddingHorizontal: 24, paddingTop: 31, paddingBottom: 30},
+  cardNarrow: {borderRadius: 26, paddingHorizontal: 16, paddingTop: 25},
   sectionTitle: {flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 31},
   sectionTitleText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 19},
   itemCard: {backgroundColor: 'white', borderRadius: 11, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
   itemIcon: {width: 28, height: 28, borderRadius: 14, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center'},
-  itemCopy: {flex: 1},
+  itemCopy: {flex: 1, minWidth: 0},
+  itemActions: {flexDirection: 'row', alignItems: 'center'},
+  itemAction: {width: 40, height: 44, alignItems: 'center', justifyContent: 'center'},
   itemTitle: {fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, color: '#172036'},
   itemMeta: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 9, color: '#616A79', marginTop: 2},
   compactCheckbox: {marginTop: -8, marginBottom: 20},

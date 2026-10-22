@@ -1,8 +1,10 @@
 import {Ionicons} from '@expo/vector-icons';
 import React, {useMemo, useState} from 'react';
-import {FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {FlatList, Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
+import {FormFieldPressable} from '../../../components/forms/FormFieldPressable';
+import {FormTextInput} from '../../../components/forms/FormTextInput';
 import type {SelectedSkill, SkillOption} from '../onboarding.types';
 import {FieldLabel} from './FormControls';
 
@@ -18,7 +20,14 @@ export function SkillMultiSelect({options, selected, onToggle, error}: {
   return (
     <View style={styles.group}>
       <FieldLabel label="Keahlian" required />
-      <Pressable accessibilityRole="button" accessibilityLabel="Pilih keahlian" onPress={() => setOpen(true)} style={[styles.control, error && styles.controlError]}>
+      <FormFieldPressable
+        accessibilityRole="button"
+        accessibilityLabel="Pilih keahlian"
+        containerStyle={styles.control}
+        error={Boolean(error)}
+        errorContainerStyle={styles.controlError}
+        onPress={() => setOpen(true)}
+      >
         <View style={styles.chips}>
           {selected.length ? selected.map(skill => (
             <View key={`${skill.skillId}-${skill.name}`} style={styles.chip}>
@@ -28,13 +37,21 @@ export function SkillMultiSelect({options, selected, onToggle, error}: {
           )) : <Text style={styles.placeholder}>Cari keahlian</Text>}
         </View>
         <Ionicons name="chevron-down" size={19} color="#172036" />
-      </Pressable>
+      </FormFieldPressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <SafeAreaView style={styles.overlay}>
           <View style={styles.modal}>
             <View style={styles.header}><Text style={styles.title}>Pilih Keahlian</Text><Pressable onPress={() => setOpen(false)}><Ionicons name="close" size={25} /></Pressable></View>
-            <TextInput autoFocus value={query} onChangeText={setQuery} placeholder="Cari keahlian" style={styles.search} />
+            <FormTextInput
+              accessibilityLabel="Cari keahlian"
+              autoFocus
+              containerStyle={styles.searchFrame}
+              inputStyle={styles.search}
+              onChangeText={setQuery}
+              placeholder="Cari keahlian"
+              value={query}
+            />
             <FlatList
               data={filtered}
               keyExtractor={item => String(item.id)}
@@ -55,18 +72,19 @@ export function SkillMultiSelect({options, selected, onToggle, error}: {
 
 const styles = StyleSheet.create({
   group: {gap: 8, marginBottom: 20},
-  control: {minHeight: 56, backgroundColor: 'white', borderRadius: 11, borderWidth: 1, borderColor: '#E0E5EC', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8},
+  control: {minHeight: 56, borderRadius: 11, borderColor: '#E0E5EC', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8},
   controlError: {borderColor: '#FF5B67'},
   chips: {flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 7},
   chip: {flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#EEF5FF', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5},
   chipText: {fontFamily: 'PlusJakartaSans_400Regular', color: '#4C8CFF', fontSize: 11},
   placeholder: {fontFamily: 'PlusJakartaSans_400Regular', color: '#B6BCC7', fontSize: 13},
   error: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FF8B93', fontSize: 11},
-  overlay: {flex: 1, backgroundColor: 'rgba(1,5,20,0.78)', justifyContent: 'center', padding: 22},
+  overlay: {flex: 1, backgroundColor: 'rgba(1,5,20,0.78)', justifyContent: 'center', padding: 12},
   modal: {backgroundColor: 'white', borderRadius: 22, width: '100%', maxWidth: 430, maxHeight: '82%', alignSelf: 'center', padding: 18},
   header: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
   title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 20},
-  search: {height: 46, borderRadius: 10, borderWidth: 1, borderColor: '#D9DFE8', paddingHorizontal: 13, marginVertical: 14, fontFamily: 'PlusJakartaSans_400Regular'},
+  searchFrame: {height: 46, borderRadius: 10, borderColor: '#D9DFE8', paddingHorizontal: 13, marginVertical: 14},
+  search: {height: 42, paddingVertical: 0, color: '#111827', fontFamily: 'PlusJakartaSans_400Regular'},
   option: {minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   optionText: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, flex: 1},
   empty: {fontFamily: 'PlusJakartaSans_400Regular', color: '#6B7280', textAlign: 'center', padding: 30},

@@ -91,17 +91,23 @@ export type OnboardingDraft = {
   acceptedMatching: boolean;
 };
 
-export type OnboardingResult = {
-  status: 'success' | 'error';
-  title: string;
-  message: string;
+export type OnboardingActionFeedback = {
+  loadingMessage: string;
+  successTitle: string;
+  successMessage: string;
+  errorTitle?: string;
+  minimumDuration?: number;
 };
+
+export type RunOnboardingAction = (
+  feedback: OnboardingActionFeedback,
+  operation: () => Promise<void> | void,
+) => void;
 
 export type OnboardingState = {
   step: 1 | 2;
   draft: OnboardingDraft;
   submitting: boolean;
-  result: OnboardingResult | null;
 };
 
 export type OnboardingAction =
@@ -116,8 +122,7 @@ export type OnboardingAction =
   | {type: 'set-certification'; certification: CertificationDraft}
   | {type: 'remove-certification'; id: string}
   | {type: 'toggle-skill'; skill: SkillOption}
-  | {type: 'submitting'; value: boolean}
-  | {type: 'set-result'; result: OnboardingResult | null};
+  | {type: 'submitting'; value: boolean};
 
 export type OnboardingPayload = {
   full_name: string;

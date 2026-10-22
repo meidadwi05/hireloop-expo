@@ -7,12 +7,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import {LinearGradient} from 'expo-linear-gradient';
+
+import {FormTextInput} from '../components/forms/FormTextInput';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -153,21 +154,22 @@ export default function ForgotPasswordPage({
         <View style={styles.resetCard}>
           <Text style={styles.resetBody}>Kami akan mengirimkan tautan untuk{ '\n'}mengatur ulang kata sandi Anda.</Text>
           <Text style={styles.resetLabel}>Email</Text>
-          <View style={[styles.resetInputWrap, error ? styles.resetInputError : null]}>
-            <Ionicons name="mail-outline" size={17} color="#7B879D"/>
-            <TextInput
-              accessibilityLabel="Email terdaftar"
-              style={styles.resetInput}
-              value={email}
-              onChangeText={onEmailChange}
-              placeholder="Masukkan email terdaftar"
-              placeholderTextColor="#A2AAB9"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </View>
+          <FormTextInput
+            accessibilityLabel="Email terdaftar"
+            autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect={false}
+            containerStyle={styles.resetInputWrap}
+            error={Boolean(error)}
+            errorContainerStyle={styles.resetInputError}
+            inputStyle={styles.resetInput}
+            keyboardType="email-address"
+            leftAccessory={<Ionicons name="mail-outline" size={17} color="#7B879D"/>}
+            onChangeText={onEmailChange}
+            placeholder="Masukkan email terdaftar"
+            placeholderTextColor="#A2AAB9"
+            value={email}
+          />
           {!!error && <Text accessibilityLiveRegion="polite" style={styles.resetError}>{error}</Text>}
           <View style={styles.resetButtonSpacing}>
             <SubmitButton isSubmitting={isSubmitting} onPress={onSubmit}/>
@@ -229,9 +231,9 @@ const styles = StyleSheet.create({
   resetCard: {backgroundColor: C.navy, borderRadius: 16, paddingHorizontal: 19, paddingTop: 27, paddingBottom: 20, marginTop: -4},
   resetBody: {fontFamily: F.regular, color: '#E0E6F9', fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 26},
   resetLabel: {fontFamily: F.medium, color: 'white', fontSize: 11, marginBottom: 7},
-  resetInputWrap: {minHeight: 43, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'white', borderRadius: 7, paddingHorizontal: 11},
-  resetInputError: {borderColor: '#ED8691', borderWidth: 1.5},
-  resetInput: {fontFamily: F.regular, color: C.ink, flex: 1, fontSize: 11, paddingVertical: 10},
+  resetInputWrap: {minHeight: 43, gap: 8, borderColor: '#E4E9F2', borderRadius: 7, paddingHorizontal: 11},
+  resetInputError: {borderColor: '#ED8691'},
+  resetInput: {fontFamily: F.regular, color: C.ink, fontSize: 11, paddingVertical: 10},
   resetError: {fontFamily: F.regular, color: '#FFADB7', fontSize: 11, marginTop: 7},
   resetButtonSpacing: {marginTop: 24},
   resetBack: {alignItems: 'center', paddingVertical: 14, marginTop: 3},

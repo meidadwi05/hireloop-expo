@@ -10,7 +10,7 @@ export default function IndexRoute() {
   if (status === 'loading' || status === 'authenticating') {
     return <FullScreenLoader label={status === 'loading' ? 'Memulihkan sesi...' : 'Memverifikasi akun...'} />;
   }
-  if (status === 'unauthenticated') return <Redirect href="/(public)/login" />;
+  if (status === 'unauthenticated') return <Redirect href="/(public)/welcome" />;
   if (user && !user.onboarding_finished) return <Redirect href="/(onboarding)/onboarding" />;
   return <Redirect href="/(candidate)/(tabs)/home" />;
 }

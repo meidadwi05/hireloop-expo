@@ -20,6 +20,7 @@ import type {CandidateUser} from '../features/auth/auth.types';
 import type {DashboardInterview} from '../features/dashboard/dashboard.types';
 import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
 import type {JobCardModel} from '../features/jobs/jobs.types';
+import {getDashboardHeroLayout, getDashboardSummaryIconSize} from './dashboard.layout';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -93,6 +94,8 @@ function SectionHeader({title, onPress}: {title: string; onPress: () => void}) {
 
 function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
   const insets = useSafeAreaInsets();
+  const {width} = useWindowDimensions();
+  const layout = getDashboardHeroLayout(width);
   const firstName = user.full_name?.trim().split(/\s+/)[0] || 'Kandidat';
   const avatarUrl = resolveMediaUrl(user.avatar_url);
   const initials = user.full_name
@@ -106,56 +109,71 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
     <ImageBackground
       source={require('../assets/dashboard_home.png')}
       resizeMode="cover"
-      style={[styles.hero, {paddingTop: insets.top + 12}]}
+      style={[styles.hero, {height: layout.heroHeight}]}
       imageStyle={styles.heroImage}
       accessibilityIgnoresInvertColors
+      testID="dashboard-hero"
     >
-      <View style={styles.heroTop}>
+      <View
+        testID="dashboard-hero-copy"
+        style={[
+          styles.heroCopy,
+          {
+            left: layout.horizontalPadding,
+            top: Math.max(insets.top + 12, layout.contentTop),
+            width: layout.compact ? '62%' : layout.wide ? '55%' : '58%',
+          },
+        ]}
+      >
         <Image
           source={require('../assets/HireLoopLogo.png')}
           resizeMode="contain"
-          style={styles.heroLogo}
+          style={{width: layout.logoWidth, height: layout.logoHeight}}
           accessibilityLabel="HireLoop"
         />
-        <View style={styles.heroActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${unread} notifikasi belum dibaca`}
-            onPress={() => Alert.alert('Notifikasi', 'Halaman notifikasi akan dibuka dari navigasi utama.')}
-            style={styles.notificationButton}
-          >
-            <Ionicons name="notifications" size={25} color="white" />
-            {unread > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>{unread > 99 ? '99+' : unread}</Text>
-              </View>
-            )}
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Buka profil"
-            onPress={() => Alert.alert('Profil', 'Halaman profil akan dibuka dari navigasi utama.')}
-          >
-            {avatarUrl ? (
-              <Image source={{uri: avatarUrl}} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarText}>{initials}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
+        <Text style={[styles.greetingTitle, layout.compact && styles.greetingTitleCompact, layout.wide && styles.greetingTitleWide]}>Hi, {firstName}</Text>
+        <Text style={[styles.greetingSubtitle, layout.compact && styles.greetingSubtitleCompact, layout.wide && styles.greetingSubtitleWide]}>Temukan peluang terbaik{`\n`}untuk karirmu hari ini</Text>
       </View>
-
-      <View style={styles.greeting}>
-        <Text style={styles.greetingTitle}>Hi, {firstName}</Text>
-        <Text style={styles.greetingSubtitle}>Temukan peluang terbaik{`\n`}untuk karirmu hari ini</Text>
+      <View
+        style={[
+          styles.heroActions,
+          {right: layout.horizontalPadding, top: Math.max(insets.top + 12, layout.contentTop)},
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${unread} notifikasi belum dibaca`}
+          onPress={() => Alert.alert('Notifikasi', 'Halaman notifikasi akan dibuka dari navigasi utama.')}
+          style={styles.notificationButton}
+        >
+          <Ionicons name="notifications" size={25} color="white" />
+          {unread > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>{unread > 99 ? '99+' : unread}</Text>
+            </View>
+          )}
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Buka profil"
+          onPress={() => Alert.alert('Profil', 'Halaman profil akan dibuka dari navigasi utama.')}
+        >
+          {avatarUrl ? (
+            <Image source={{uri: avatarUrl}} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
     </ImageBackground>
   );
 }
 
-function SummaryCard({applications, interviews}: {applications: unknown[]; interviews: DashboardInterview[]}) {
+function SummaryCard({applications, interviews, viewportWidth}: {applications: unknown[]; interviews: DashboardInterview[]; viewportWidth: number}) {
+  const iconSize = getDashboardSummaryIconSize(viewportWidth);
+  const iconGlyphSize = Math.round(iconSize * 0.48);
   const processing = applications.filter(application => {
     const status = applicationStatus(application);
     return status && !['rejected', 'hired', 'cancelled', 'canceled'].includes(status);
@@ -179,8 +197,8 @@ function SummaryCard({applications, interviews}: {applications: unknown[]; inter
           style={[styles.summaryItem, index < items.length - 1 && styles.summaryDivider]}
         >
           <View style={styles.summaryTop}>
-            <View style={[styles.summaryIcon, {backgroundColor: item.color}]}>
-              <Ionicons name={item.icon} size={19} color="white" />
+            <View style={[styles.summaryIcon, {backgroundColor: item.color, width: iconSize, height: iconSize, borderRadius: iconSize / 2}]}>
+              <Ionicons name={item.icon} size={iconGlyphSize} color="white" />
             </View>
             <View style={styles.summaryCopy}>
               <Text style={styles.summaryValue}>{item.value}</Text>
@@ -475,7 +493,7 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
       >
         <DashboardHero user={initialUser} unread={unread} />
         <View style={styles.content}>
-          <SummaryCard applications={applications} interviews={interviews} />
+          <SummaryCard applications={applications} interviews={interviews} viewportWidth={width} />
 
           {!!error && (
             <Pressable accessibilityRole="button" onPress={() => void refresh()} style={styles.errorBanner}>
@@ -513,28 +531,30 @@ const cardShadow = {
 };
 
 const styles = StyleSheet.create({
-  screen: {flex: 1, backgroundColor: C.background},
+  screen: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: C.background},
   scrollContent: {paddingBottom: 24},
-  hero: {width: '100%', aspectRatio: 1200 / 835, paddingHorizontal: 22},
+  hero: {width: '100%', overflow: 'hidden'},
   heroImage: {backgroundColor: C.navy},
-  heroTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  heroLogo: {width: 155, height: 46, flexShrink: 1},
-  heroActions: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  heroCopy: {position: 'absolute', alignItems: 'flex-start'},
+  heroActions: {position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 8},
   notificationButton: {width: 40, height: 40, alignItems: 'center', justifyContent: 'center'},
   notificationBadge: {position: 'absolute', top: 0, right: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: 'white'},
   notificationBadgeText: {fontFamily: F.bold, fontSize: 10, color: 'white'},
   avatar: {width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: 'white'},
   avatarFallback: {width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: 'white', backgroundColor: '#E7F0FF', alignItems: 'center', justifyContent: 'center'},
   avatarText: {fontFamily: F.bold, fontSize: 15, color: C.blue},
-  greeting: {marginTop: 18, width: '58%'},
-  greetingTitle: {fontFamily: F.bold, fontSize: 36, lineHeight: 43, color: 'white', letterSpacing: -1.2},
+  greetingTitle: {fontFamily: F.bold, fontSize: 36, lineHeight: 43, color: 'white', letterSpacing: -1.2, marginTop: 28, textAlign: 'left'},
+  greetingTitleCompact: {fontSize: 30, lineHeight: 37, marginTop: 20},
+  greetingTitleWide: {fontSize: 42, lineHeight: 50},
   greetingSubtitle: {fontFamily: F.regular, fontSize: 14, lineHeight: 22, color: 'rgba(255,255,255,0.92)', marginTop: 7},
+  greetingSubtitleCompact: {fontSize: 12, lineHeight: 19, marginTop: 5},
+  greetingSubtitleWide: {fontSize: 16, lineHeight: 26},
   content: {paddingHorizontal: 20, gap: 28, marginTop: -22},
   summaryCard: {...cardShadow, minHeight: 137, backgroundColor: 'white', borderRadius: 18, flexDirection: 'row', paddingVertical: 18, paddingHorizontal: 8},
   summaryItem: {flex: 1, justifyContent: 'space-between', paddingHorizontal: 7},
   summaryDivider: {borderRightWidth: 1, borderRightColor: C.border},
   summaryTop: {flexDirection: 'row', alignItems: 'center', gap: 7},
-  summaryIcon: {width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center'},
+  summaryIcon: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   summaryCopy: {flex: 1, minWidth: 0},
   summaryValue: {fontFamily: F.bold, fontSize: 22, lineHeight: 25, color: C.ink},
   summaryLabel: {fontFamily: F.medium, fontSize: 8.5, lineHeight: 11, color: '#3F4652'},

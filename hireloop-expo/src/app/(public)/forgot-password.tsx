@@ -2,6 +2,7 @@ import {router, useLocalSearchParams} from 'expo-router';
 import React, {useState} from 'react';
 
 import {toAppApiError} from '../../core/api/api-error';
+import {goBackOrReplace} from '../../core/navigation/go-back-or-replace';
 import {authApi} from '../../features/auth/api/auth.api';
 import ForgotPasswordPage from '../../login_page/forgotpassword';
 
@@ -42,7 +43,7 @@ export default function ForgotPasswordRoute() {
       successVisible={successVisible}
       onEmailChange={setEmail}
       onSubmit={() => void submit()}
-      onBack={() => router.back()}
+      onBack={() => goBackOrReplace('/(public)/login')}
       onSuccessDismiss={() => {
         setSuccessVisible(false);
         router.replace('/(public)/login');

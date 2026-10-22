@@ -5,12 +5,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import {LinearGradient} from 'expo-linear-gradient';
+
+import {FormTextInput} from '../components/forms/FormTextInput';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -75,27 +76,25 @@ function Field({
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputWrap, error ? styles.inputError : null]}>
-        <Ionicons
+      <FormTextInput
+        accessibilityLabel={label}
+        autoCapitalize="none"
+        autoComplete={password ? 'current-password' : 'email'}
+        autoCorrect={false}
+        containerStyle={styles.inputWrap}
+        error={Boolean(error)}
+        errorContainerStyle={styles.inputError}
+        inputStyle={styles.input}
+        keyboardType={password ? 'default' : 'email-address'}
+        leftAccessory={<Ionicons
           name={password ? 'lock-closed-outline' : 'mail-outline'}
           size={18}
           color="#8B96AC"
-        />
-        <TextInput
-          accessibilityLabel={label}
-          style={styles.input}
-          value={value}
-          onChangeText={onChange}
-          placeholder={password ? 'Masukkan kata sandi' : 'nama@email.com'}
-          placeholderTextColor="#A0A9BB"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType={password ? 'default' : 'email-address'}
-          secureTextEntry={password && !visible}
-          textContentType={password ? 'password' : 'emailAddress'}
-          autoComplete={password ? 'current-password' : 'email'}
-        />
-        {password && (
+        />}
+        onChangeText={onChange}
+        placeholder={password ? 'Masukkan kata sandi' : 'nama@email.com'}
+        placeholderTextColor="#A0A9BB"
+        rightAccessory={password ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={visible ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
@@ -108,8 +107,11 @@ function Field({
               color="#8B96AC"
             />
           </Pressable>
-        )}
-      </View>
+        ) : undefined}
+        secureTextEntry={password && !visible}
+        textContentType={password ? 'password' : 'emailAddress'}
+        value={value}
+      />
       {!!error && <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>}
     </View>
   );
@@ -267,9 +269,9 @@ const styles = StyleSheet.create({
   fields: {gap: 19, marginTop: 28},
   field: {gap: 8},
   label: {fontFamily: F.medium, fontSize: 12, color: '#49536A'},
-  inputWrap: {flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#E4E9F2', borderRadius: 8, paddingHorizontal: 12, backgroundColor: 'white', minHeight: 48},
+  inputWrap: {gap: 10, borderColor: '#E4E9F2', borderRadius: 8, paddingHorizontal: 12, minHeight: 48},
   inputError: {borderColor: '#E25E6D'},
-  input: {fontFamily: F.regular, flex: 1, minWidth: 0, paddingVertical: 13, fontSize: 13, color: C.ink, outlineWidth: 0} as any,
+  input: {fontFamily: F.regular, paddingVertical: 13, fontSize: 13, color: C.ink},
   error: {fontFamily: F.regular, fontSize: 11, color: '#DE5364', lineHeight: 16},
   options: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, marginBottom: 12, flexWrap: 'wrap'},
   checkRow: {flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44},

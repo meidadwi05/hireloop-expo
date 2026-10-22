@@ -55,9 +55,27 @@ describe('onboarding domain', () => {
     expect(validateWorkStep(draft).success).toBe(false);
   });
 
+  test('menerima tools dan sertifikasi kosong sesuai kontrak web/backend', () => {
+    const draft = {...completeDraft(), tools: '', certifications: []};
+    expect(validateWorkStep(draft).success).toBe(true);
+  });
+
+  test('menerima detail pendidikan opsional selama tingkat pendidikan tersedia', () => {
+    const draft = {
+      ...completeDraft(),
+      educations: [{id: 'education-optional', educationLevel: 'SMA/SMK', schoolName: '', majorName: '', startDate: '', endDate: '', ongoing: false}],
+    };
+    expect(validatePersonalStep(draft).success).toBe(true);
+  });
+
+  test('menolak nama kurang dari tiga karakter dan telepon lebih dari dua puluh digit', () => {
+    expect(validatePersonalStep({...completeDraft(), fullName: 'AB'}).success).toBe(false);
+    expect(validatePersonalStep({...completeDraft(), phone: '1'.repeat(21)}).success).toBe(false);
+  });
+
   test('reducer menyinkronkan domisili dan melakukan upsert pendidikan', () => {
     const draft = completeDraft();
-    let state: OnboardingState = {step: 1, draft: {...draft, domicileSameAsIdentity: true}, submitting: false, result: null};
+    let state: OnboardingState = {step: 1, draft: {...draft, domicileSameAsIdentity: true}, submitting: false};
     const nextAddress = {...draft.identityAddress, addressLine: 'Alamat baru'};
     state = onboardingReducer(state, {type: 'set-address', target: 'identityAddress', address: nextAddress});
     expect(state.draft.domicileAddress.addressLine).toBe('Alamat baru');

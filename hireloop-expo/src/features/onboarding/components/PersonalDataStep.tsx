@@ -4,25 +4,33 @@ import React, {useMemo, useState} from 'react';
 import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
 import {calculateAge} from '../onboarding.schemas';
-import type {EducationDraft, MasterOption, OnboardingAction, OnboardingDraft} from '../onboarding.types';
+import type {EducationDraft, MasterOption, OnboardingAction, OnboardingDraft, RunOnboardingAction} from '../onboarding.types';
 import {AddressFields} from './AddressFields';
+import {DateField} from './DateField';
 import {EducationModal} from './EducationModal';
-import {AddField, CheckboxField, DateField, SelectField, TextField} from './FormControls';
+import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
 
 const genderOptions: MasterOption[] = [{value: 'male', label: 'Laki-laki'}, {value: 'female', label: 'Perempuan'}];
 const maritalOptions: MasterOption[] = [{value: 'single', label: 'Belum Menikah'}, {value: 'married', label: 'Menikah'}, {value: 'other', label: 'Lainnya'}];
 
-export function PersonalDataStep({draft, dispatch, majorOptions, onNext, onNotify}: {
+export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runAction}: {
   draft: OnboardingDraft;
   dispatch: React.Dispatch<OnboardingAction>;
   majorOptions: MasterOption[];
   onNext: () => void;
-  onNotify: (status: 'success' | 'error', title: string, message: string) => void;
+  runAction: RunOnboardingAction;
 }) {
   const {width} = useWindowDimensions();
   const [educationOpen, setEducationOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<EducationDraft | null>(null);
   const age = useMemo(() => calculateAge(draft.birthDate), [draft.birthDate]);
+  const birthDateLimits = useMemo(() => {
+    const today = new Date();
+    return {
+      minimumDate: new Date(today.getFullYear() - 100, today.getMonth(), today.getDate(), 12),
+      maximumDate: new Date(today.getFullYear() - 15, today.getMonth(), today.getDate(), 12),
+    };
+  }, []);
   const setField = <K extends keyof OnboardingDraft>(field: K, value: OnboardingDraft[K]) => dispatch({type: 'set-field', field, value});
 
   const openEducation = (item: EducationDraft | null = null) => {
@@ -30,9 +38,12 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, onNotif
     setEducationOpen(true);
   };
   const saveEducation = (education: EducationDraft) => {
-    dispatch({type: 'set-education', education});
     setEducationOpen(false);
-    onNotify('success', 'Berhasil!', 'Data pendidikan berhasil disimpan ke profil.');
+    runAction({
+      loadingMessage: 'Menyimpan pendidikan...',
+      successTitle: 'Berhasil!',
+      successMessage: 'Data pendidikan berhasil disimpan ke profil.',
+    }, () => dispatch({type: 'set-education', education}));
   };
   const removeEducation = (item: EducationDraft) => Alert.alert('Hapus pendidikan?', `${item.educationLevel} - ${item.schoolName}`, [
     {text: 'Batal', style: 'cancel'},
@@ -40,13 +51,13 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, onNotif
   ]);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, width < 390 && styles.cardNarrow]}>
       <View style={styles.sectionTitle}><Ionicons name="person-outline" size={25} color="#2F7FFF" /><Text style={styles.sectionTitleText}>Informasi Pribadi</Text></View>
       <TextField label="Nama Lengkap" required value={draft.fullName} onChangeText={value => setField('fullName', value)} placeholder="Contoh: Andi Permana" />
       <SelectField label="Jenis Kelamin" required value={draft.gender} onChange={value => setField('gender', value as OnboardingDraft['gender'])} options={genderOptions} placeholder="Pilih jenis kelamin" />
       <View style={[styles.columns, width < 390 && styles.columnsNarrow]}>
         <View style={styles.column}><TextField label="Tempat Lahir" required value={draft.birthPlace} onChangeText={value => setField('birthPlace', value)} placeholder="Contoh: Jakarta" /></View>
-        <View style={styles.column}><DateField label="Tanggal Lahir" required value={draft.birthDate} onChange={value => setField('birthDate', value)} /></View>
+        <View style={styles.column}><DateField label="Tanggal Lahir" required value={draft.birthDate} onChange={value => setField('birthDate', value)} {...birthDateLimits} /></View>
       </View>
       <TextField label="Usia" disabled value={age === null ? '-' : String(age)} />
       <SelectField label="Status Pernikahan" required value={draft.maritalStatus} onChange={value => setField('maritalStatus', value as OnboardingDraft['maritalStatus'])} options={maritalOptions} placeholder="Pilih status pernikahan" />
@@ -60,12 +71,14 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, onNotif
         <View key={item.id} style={styles.itemCard}>
           <View style={styles.itemIcon}><Ionicons name="school" size={17} color="#0B66EE" /></View>
           <View style={styles.itemCopy}>
-            <Text style={styles.itemTitle}>{item.educationLevel} - {item.schoolName}</Text>
-            <Text style={styles.itemMeta}>Jurusan: {item.majorName}</Text>
-            <Text style={styles.itemMeta}>{item.startDate} - {item.ongoing ? 'Sekarang' : item.endDate}</Text>
+            <Text style={styles.itemTitle}>{item.educationLevel}{item.schoolName ? ` - ${item.schoolName}` : ''}</Text>
+            {item.majorName ? <Text style={styles.itemMeta}>Jurusan: {item.majorName}</Text> : null}
+            {item.startDate ? <Text style={styles.itemMeta}>{item.startDate}{item.ongoing ? ' - Sekarang' : item.endDate ? ` - ${item.endDate}` : ''}</Text> : null}
           </View>
-          <Pressable accessibilityLabel="Edit pendidikan" onPress={() => openEducation(item)} hitSlop={8}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
-          <Pressable accessibilityLabel="Hapus pendidikan" onPress={() => removeEducation(item)} hitSlop={8}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+          <View style={styles.itemActions}>
+            <Pressable accessibilityLabel="Edit pendidikan" onPress={() => openEducation(item)} style={styles.itemAction}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
+            <Pressable accessibilityLabel="Hapus pendidikan" onPress={() => removeEducation(item)} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+          </View>
         </View>
       ))}
 
@@ -81,15 +94,18 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, onNotif
 
 const styles = StyleSheet.create({
   card: {width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: '#061D52', borderRadius: 34, paddingHorizontal: 24, paddingTop: 31, paddingBottom: 30},
+  cardNarrow: {borderRadius: 26, paddingHorizontal: 16, paddingTop: 25},
   sectionTitle: {flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 31},
   sectionTitleText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 19},
   columns: {flexDirection: 'row', gap: 12},
   columnsNarrow: {flexDirection: 'column', gap: 0},
   column: {flex: 1, minWidth: 0},
-  sameAddress: {marginTop: -9, marginBottom: 13},
+  sameAddress: {marginTop: 2, marginBottom: 18},
   itemCard: {backgroundColor: 'white', borderRadius: 11, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
   itemIcon: {width: 28, height: 28, borderRadius: 14, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center'},
-  itemCopy: {flex: 1},
+  itemCopy: {flex: 1, minWidth: 0},
+  itemActions: {flexDirection: 'row', alignItems: 'center'},
+  itemAction: {width: 40, height: 44, alignItems: 'center', justifyContent: 'center'},
   itemTitle: {fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, color: '#172036'},
   itemMeta: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 9, color: '#616A79', marginTop: 2},
   privacy: {flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: '#0B2A62', borderRadius: 12, padding: 14, marginTop: 14, marginBottom: 22},

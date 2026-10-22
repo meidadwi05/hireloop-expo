@@ -1,10 +1,12 @@
-import MaskedView from '@react-native-masked-view/masked-view';
-import {LinearGradient} from 'expo-linear-gradient';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+
+import {GradientIntroTitle} from '../../features/intro/components/GradientIntroTitle';
+import {OnboardingSplash, ONBOARDING_SPLASH_DURATION_MS} from '../../features/intro/components/OnboardingSplash';
+import type {IntroSlide, WelcomePhase} from '../../features/intro/intro.types';
 
 const COLORS = {
   cyan: '#00CBEA',
@@ -19,27 +21,54 @@ const COLORS = {
   white: '#FFFFFF',
 } as const;
 
-const slides = [
-  {image: require('../../assets/Onboarding1.png'), title: 'Temukan pekerjaan terbaik', body: 'Cari peluang yang sesuai dengan kemampuan dan tujuan kariermu.'},
-  {image: require('../../assets/Onboarding2.png'), title: 'Pantau proses lamaran', body: 'Semua progres rekrutmen tersimpan dan mudah dipantau.'},
-  {image: require('../../assets/Onboarding3.png'), title: 'Lamar dengan lebih mudah', body: 'Profil yang lengkap membuat proses lamaran lebih cepat.'},
-  {image: require('../../assets/Onboarding4.png'), title: 'Rekomendasi personal', body: 'Dapatkan lowongan yang relevan untuk perjalanan kariermu.'},
+const slides: IntroSlide[] = [
+  {
+    id: 'discover',
+    image: require('../../assets/Onboarding1.png'),
+    theme: 'light',
+    titleVariant: 'gradient',
+    title: 'Lamar kerja lebih\ncepat & tepat sasaran',
+    body: 'Cari lowongan dari berbagai\nperusahaan terpercaya sesuai\ndengan minat dan keahlian.',
+  },
+  {
+    id: 'tracking',
+    image: require('../../assets/Onboarding2.png'),
+    theme: 'dark',
+    titleVariant: 'solid',
+    title: 'Pantau Proses Lamaran\nSecara Real-Time',
+    body: 'Dapatkan update setiap tahap seleksi\nlamaran pekerjaan langsung di genggaman.',
+  },
+  {
+    id: 'multi-apply',
+    image: require('../../assets/Onboarding3.png'),
+    theme: 'light',
+    titleVariant: 'gradient',
+    title: 'Lamar ke Banyak\nPerusahaan Sekaligus',
+    body: 'Cari lowongan dari berbagai\nperusahaan terpercaya sesuai\ndengan minat dan keahlian.',
+  },
+  {
+    id: 'recommendation',
+    image: require('../../assets/Onboarding4.png'),
+    theme: 'dark',
+    titleVariant: 'solid',
+    title: 'Temukan Pekerjaan\nyang Tepat',
+    body: 'Sistem kami akan merekomendasikan\npekerjaan terbaik berdasarkan profil\ndan aktivitasmu.',
+  },
 ];
 
-function GradientTitle({children}: {children: string}) {
-  return (
-    <MaskedView style={styles.titleMask} maskElement={<Text style={styles.title}>{children}</Text>}>
-      <LinearGradient colors={['#0051FD', '#00DAFD']} start={{x: 0, y: 0.5}} end={{x: 1, y: 0.5}}>
-        <Text style={[styles.title, styles.transparentTitle]}>{children}</Text>
-      </LinearGradient>
-    </MaskedView>
-  );
-}
-
 export default function WelcomeRoute() {
+  const [phase, setPhase] = useState<WelcomePhase>('splash');
   const [index, setIndex] = useState(0);
   const slide = slides[index];
-  const isLightSlide = index % 2 === 0;
+  const isLightSlide = slide.theme === 'light';
+
+  useEffect(() => {
+    if (phase !== 'splash') return;
+    const timer = setTimeout(() => setPhase('slides'), ONBOARDING_SPLASH_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  if (phase === 'splash') return <OnboardingSplash />;
 
   return (
     <SafeAreaView
@@ -56,8 +85,8 @@ export default function WelcomeRoute() {
         <Text style={[styles.skipText, {color: isLightSlide ? COLORS.navyText : COLORS.white}]}>Lewati</Text>
       </Pressable>
       <Image source={slide.image} style={styles.image} resizeMode="contain" />
-      {isLightSlide
-        ? <GradientTitle>{slide.title}</GradientTitle>
+      {slide.titleVariant === 'gradient'
+        ? <GradientIntroTitle>{slide.title}</GradientIntroTitle>
         : <Text style={[styles.title, styles.darkTitle]}>{slide.title}</Text>}
       <Text style={[styles.body, {color: isLightSlide ? COLORS.lightBody : COLORS.darkBody}]}>{slide.body}</Text>
       <View style={styles.dots} accessibilityRole="tablist">
@@ -91,9 +120,7 @@ const styles = StyleSheet.create({
   skip: {alignSelf: 'flex-end', minHeight: 44, minWidth: 44, padding: 10, alignItems: 'center', justifyContent: 'center'},
   skipText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12},
   image: {width: '100%', height: '48%', marginTop: 12},
-  title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 26, textAlign: 'center', marginTop: 18},
-  titleMask: {width: '100%'},
-  transparentTitle: {opacity: 0},
+  title: {width: '100%', minHeight: 72, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 26, lineHeight: 34, textAlign: 'center', textAlignVertical: 'center', marginTop: 18},
   darkTitle: {color: COLORS.white},
   body: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 12},
   dots: {flexDirection: 'row', gap: 7, marginTop: 24},

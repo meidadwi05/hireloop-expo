@@ -1,20 +1,22 @@
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import React, {useEffect, useMemo, useReducer, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useReducer, useRef, useState} from 'react';
 import {ScrollView, StyleSheet, View, useWindowDimensions} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {useAuth} from '../auth/auth-provider';
+import {goBackOrReplace} from '../../core/navigation/go-back-or-replace';
+import {ActionOverlayModal, type ActionOverlay} from '../../shared/components/ActionOverlayModal';
+import {withMinimumDelay} from '../../shared/utils/with-minimum-delay';
 import {OnboardingHero} from './components/OnboardingHero';
 import {OnboardingProgress} from './components/OnboardingProgress';
-import {OnboardingResultModal} from './components/OnboardingResultModal';
 import {PersonalDataStep} from './components/PersonalDataStep';
 import {WorkExperienceStep} from './components/WorkExperienceStep';
 import {useOnboarding} from './hooks/use-onboarding';
 import {mapCurrentOnboarding} from './onboarding.mapper';
 import {onboardingReducer} from './onboarding.reducer';
 import {firstValidationMessage, validatePersonalStep, validateWorkStep} from './onboarding.schemas';
-import {createEmptyOnboardingDraft, type MasterOption, type OnboardingResult} from './onboarding.types';
+import {createEmptyOnboardingDraft, type MasterOption, type OnboardingActionFeedback, type RunOnboardingAction} from './onboarding.types';
 
 function normalizeMasterOptions(input: unknown): MasterOption[] {
   const root = input && typeof input === 'object' ? input as Record<string, unknown> : {};
@@ -35,13 +37,23 @@ export function OnboardingScreen() {
   const currentData = onboarding.current.data;
   const currentLoading = onboarding.current.isLoading;
   const hydrated = useRef(false);
+  const mounted = useRef(true);
+  const actionId = useRef(0);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [overlay, setOverlay] = useState<ActionOverlay | null>(null);
   const [state, dispatch] = useReducer(onboardingReducer, {
     step: 1,
     draft: createEmptyOnboardingDraft(user?.full_name ?? ''),
     submitting: false,
-    result: null,
   });
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      actionId.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     if (hydrated.current || currentLoading) return;
@@ -52,23 +64,55 @@ export function OnboardingScreen() {
   }, [currentData, currentLoading, user?.full_name]);
 
   const majors = useMemo(() => normalizeMasterOptions(onboarding.majors.data), [onboarding.majors.data]);
-  const notify = (status: OnboardingResult['status'], title: string, message: string) => {
+  const notify = useCallback((status: 'success' | 'error', title: string, message: string) => {
     setPendingAction(null);
-    dispatch({type: 'set-result', result: {status, title, message}});
-  };
-  const closeResult = () => {
-    dispatch({type: 'set-result', result: null});
-    if (pendingAction === 'step-2') {
+    setOverlay({kind: status, title, message});
+  }, []);
+  const runAction = useCallback<RunOnboardingAction>((feedback: OnboardingActionFeedback, operation) => {
+    const currentActionId = ++actionId.current;
+    setOverlay({kind: 'loading', message: feedback.loadingMessage});
+    void (async () => {
+      try {
+        await withMinimumDelay(operation, feedback.minimumDuration);
+        if (!mounted.current || currentActionId !== actionId.current) return;
+        setOverlay({kind: 'success', title: feedback.successTitle, message: feedback.successMessage});
+      } catch (error) {
+        if (!mounted.current || currentActionId !== actionId.current) return;
+        setPendingAction(null);
+        setOverlay({
+          kind: 'error',
+          title: feedback.errorTitle ?? 'Gagal Menyimpan',
+          message: error instanceof Error ? error.message : 'Data belum dapat disimpan. Silakan coba lagi.',
+        });
+      }
+    })();
+  }, []);
+  const closeOverlay = () => {
+    const nextAction = pendingAction;
+    setOverlay(null);
+    setPendingAction(null);
+    if (nextAction === 'step-2') {
       dispatch({type: 'set-step', step: 2});
-      setPendingAction(null);
-    } else if (pendingAction === 'home') {
-      setPendingAction(null);
-      router.replace('/(candidate)/(tabs)/home');
+    } else if (nextAction === 'home') {
+      void (async () => {
+        try {
+          const refreshedUser = await onboarding.refreshAfterSubmit();
+          if (!refreshedUser) throw new Error('Profil sudah tersimpan, tetapi sesi belum dapat diperbarui. Silakan masuk kembali.');
+          router.replace('/(candidate)/(tabs)/home');
+        } catch (error) {
+          if (!mounted.current) return;
+          setOverlay({
+            kind: 'error',
+            title: 'Sesi Belum Diperbarui',
+            message: error instanceof Error ? error.message : 'Profil sudah tersimpan, tetapi sesi belum dapat diperbarui. Silakan coba masuk kembali.',
+          });
+        }
+      })();
     }
   };
   const goBack = () => {
     if (state.step === 2) dispatch({type: 'set-step', step: 1});
-    else router.back();
+    else goBackOrReplace('/');
   };
   const continueToWork = () => {
     const result = validatePersonalStep(state.draft);
@@ -77,24 +121,32 @@ export function OnboardingScreen() {
       return;
     }
     setPendingAction('step-2');
-    dispatch({type: 'set-result', result: {status: 'success', title: 'Data Diri Lengkap!', message: 'Informasi pribadi berhasil divalidasi. Lanjutkan dengan pengalaman kerja.'}});
+    runAction({
+      loadingMessage: 'Memeriksa data diri...',
+      successTitle: 'Data Diri Lengkap!',
+      successMessage: 'Informasi pribadi berhasil divalidasi. Lanjutkan dengan pengalaman kerja.',
+    }, () => undefined);
   };
-  const finish = async () => {
+  const finish = () => {
     const result = validateWorkStep(state.draft);
     if (!result.success) {
       notify('error', 'Data Belum Lengkap', firstValidationMessage(result.error));
       return;
     }
-    dispatch({type: 'submitting', value: true});
-    try {
-      await onboarding.submit(state.draft);
-      setPendingAction('home');
-      dispatch({type: 'set-result', result: {status: 'success', title: 'Onboarding Berhasil!', message: 'Profil Anda berhasil dilengkapi. Anda akan dialihkan ke halaman utama.'}});
-    } catch (error) {
-      notify('error', 'Gagal Menyimpan', error instanceof Error ? error.message : 'Data onboarding belum dapat disimpan. Silakan coba lagi.');
-    } finally {
-      dispatch({type: 'submitting', value: false});
-    }
+    setPendingAction('home');
+    runAction({
+      loadingMessage: 'Menyelesaikan onboarding...',
+      successTitle: 'Onboarding Berhasil!',
+      successMessage: 'Profil Anda berhasil dilengkapi. Anda akan dialihkan ke halaman utama.',
+      errorTitle: 'Gagal Menyimpan',
+    }, async () => {
+      dispatch({type: 'submitting', value: true});
+      try {
+        await onboarding.submit(state.draft);
+      } finally {
+        dispatch({type: 'submitting', value: false});
+      }
+    });
   };
 
   return (
@@ -104,16 +156,16 @@ export function OnboardingScreen() {
         <View style={[styles.page, width > 720 && styles.desktopPage]}>
           <OnboardingHero step={state.step} onBack={goBack} />
           <OnboardingProgress step={state.step} />
-          <View style={styles.formWrap}>
+          <View style={[styles.formWrap, width < 390 && styles.formWrapNarrow]}>
             {state.step === 1 ? (
-              <PersonalDataStep draft={state.draft} dispatch={dispatch} majorOptions={majors} onNext={continueToWork} onNotify={notify} />
+              <PersonalDataStep draft={state.draft} dispatch={dispatch} majorOptions={majors} onNext={continueToWork} runAction={runAction} />
             ) : (
-              <WorkExperienceStep draft={state.draft} dispatch={dispatch} skills={onboarding.skills.data ?? []} submitting={state.submitting || onboarding.submitting} onBack={() => dispatch({type: 'set-step', step: 1})} onFinish={finish} onNotify={notify} />
+              <WorkExperienceStep draft={state.draft} dispatch={dispatch} skills={onboarding.skills.data ?? []} submitting={state.submitting || onboarding.submitting || overlay?.kind === 'loading'} onBack={() => dispatch({type: 'set-step', step: 1})} onFinish={finish} runAction={runAction} onNotify={notify} />
             )}
           </View>
         </View>
       </ScrollView>
-      <OnboardingResultModal result={state.result} onClose={closeResult} />
+      {overlay ? <ActionOverlayModal overlay={overlay} onClose={closeOverlay} /> : null}
     </SafeAreaView>
   );
 }
@@ -124,4 +176,5 @@ const styles = StyleSheet.create({
   page: {width: '100%', maxWidth: 720, alignSelf: 'center'},
   desktopPage: {marginTop: 20, borderRadius: 28, overflow: 'hidden'},
   formWrap: {paddingHorizontal: 24, paddingBottom: 30},
+  formWrapNarrow: {paddingHorizontal: 14},
 });

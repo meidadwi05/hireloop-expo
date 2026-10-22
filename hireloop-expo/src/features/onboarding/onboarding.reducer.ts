@@ -56,8 +56,6 @@ export function onboardingReducer(state: OnboardingState, action: OnboardingActi
     }
     case 'submitting':
       return {...state, submitting: action.value};
-    case 'set-result':
-      return {...state, result: action.result};
     default:
       return state;
   }

@@ -18,13 +18,16 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
+import {FormTextInput} from '../../components/forms/FormTextInput';
 import {toAppApiError} from '../../core/api/api-error';
+import {goBackOrReplace} from '../../core/navigation/go-back-or-replace';
 import {authApi} from '../../features/auth/api/auth.api';
 import {useAuth} from '../../features/auth/auth-provider';
 import {type RegisterFormErrors, validateRegisterForm} from '../../features/auth/register-validation';
+import {withMinimumDelay} from '../../shared/utils/with-minimum-delay';
 
 type FieldErrors = RegisterFormErrors & {otp?: string};
-type Dialog = 'registerSuccess' | 'otp' | 'verifySuccess' | null;
+type Dialog = 'registerLoading' | 'registerSuccess' | 'otp' | 'verifyLoading' | 'resendLoading' | 'verifySuccess' | null;
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const OTP_RESEND_SECONDS = 120;
@@ -47,6 +50,7 @@ export default function RegisterRoute() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [otp, setOtp] = useState('');
+  const [otpFocused, setOtpFocused] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,18 +78,20 @@ export default function RegisterRoute() {
 
     setLoading(true);
     try {
-      const message = await authApi.register({
-        firstName,
-        lastName,
-        email,
-        password,
-        passwordConfirmation: confirmation,
-      });
+      setDialog('registerLoading');
+      const message = await withMinimumDelay(() => authApi.register({
+          firstName,
+          lastName,
+          email,
+          password,
+          passwordConfirmation: confirmation,
+        }));
       setNotice(message ?? 'OTP telah dikirimkan ke email kamu.');
       setOtp('');
       setCountdown(OTP_RESEND_SECONDS);
       setDialog('registerSuccess');
     } catch (error) {
+      setDialog(null);
       const apiError = toAppApiError(error);
       const validation = apiError.validationErrors;
       setErrors({
@@ -109,11 +115,13 @@ export default function RegisterRoute() {
     setLoading(true);
     setNotice('');
     try {
-      await authApi.verifyRegistrationOtp(email, otp);
+      setDialog('verifyLoading');
+      await withMinimumDelay(() => authApi.verifyRegistrationOtp(email, otp));
       const user = await refreshUser();
       if (!user) throw new Error('Akun berhasil dibuat, tetapi sesi login gagal dimuat. Silakan masuk kembali.');
       setDialog('verifySuccess');
     } catch (error) {
+      setDialog('otp');
       const apiError = toAppApiError(error);
       setErrors((current) => ({...current, otp: apiError.validationErrors.code?.[0]}));
       setNotice(apiError.message);
@@ -127,12 +135,14 @@ export default function RegisterRoute() {
     setResending(true);
     setNotice('');
     try {
-      const message = await authApi.resendRegistrationOtp(email);
+      setDialog('resendLoading');
+      const message = await withMinimumDelay(() => authApi.resendRegistrationOtp(email));
       setNotice(message ?? 'Kode OTP baru sudah dikirim.');
       setCountdown(OTP_RESEND_SECONDS);
     } catch (error) {
       setNotice(toAppApiError(error).message);
     } finally {
+      setDialog('otp');
       setResending(false);
     }
   };
@@ -141,6 +151,7 @@ export default function RegisterRoute() {
     if (loading || resending) return;
     setDialog(null);
     setOtp('');
+    setOtpFocused(false);
     setErrors((current) => ({...current, otp: undefined}));
     setNotice('');
   };
@@ -160,7 +171,7 @@ export default function RegisterRoute() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Kembali ke login"
-              onPress={() => router.back()}
+              onPress={() => goBackOrReplace('/(public)/login')}
               style={styles.back}
             >
               <Ionicons name="arrow-back" size={25} color="white" />
@@ -191,8 +202,10 @@ export default function RegisterRoute() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal animationType="fade" onRequestClose={dialog === 'verifySuccess' ? () => router.replace('/') : closeOtp} transparent visible={dialog !== null}>
+      <Modal animationType="fade" onRequestClose={dialog === 'verifySuccess' ? () => router.replace('/') : dialog === 'otp' ? closeOtp : undefined} transparent visible={dialog !== null}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          {dialog === 'registerLoading' && <LoadingDialog message="Membuat akun dan mengirim OTP..." />}
+
           {dialog === 'registerSuccess' && (
             <View accessibilityRole="alert" style={styles.modalCard}>
               <View style={styles.mailIllustration}>
@@ -205,15 +218,18 @@ export default function RegisterRoute() {
             </View>
           )}
 
+          {dialog === 'verifyLoading' && <LoadingDialog message="Memverifikasi kode OTP..." />}
+          {dialog === 'resendLoading' && <LoadingDialog message="Mengirim ulang kode OTP..." />}
+
           {dialog === 'otp' && (
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Verifikasi OTP</Text>
               <Text style={styles.modalBody}>Masukkan 6 digit kode yang kami kirim ke</Text>
               <Text style={styles.modalEmail}>{email.trim().toLowerCase()}</Text>
-              <TextInput ref={otpInputRef} accessibilityLabel="Kode OTP enam digit" autoComplete="one-time-code" keyboardType="number-pad" maxLength={6} onChangeText={(value) => { setOtp(value.replace(/\D/g, '')); setErrors((current) => ({...current, otp: undefined})); }} style={styles.hiddenOtpInput} value={otp} />
-              <Pressable accessibilityRole="button" accessibilityLabel="Masukkan kode OTP" onPress={() => otpInputRef.current?.focus()} style={styles.otpBoxes}>
+              <TextInput ref={otpInputRef} accessibilityLabel="Kode OTP enam digit" autoComplete="one-time-code" keyboardType="number-pad" maxLength={6} onBlur={() => setOtpFocused(false)} onChangeText={(value) => { setOtp(value.replace(/\D/g, '')); setErrors((current) => ({...current, otp: undefined})); }} onFocus={() => setOtpFocused(true)} style={styles.hiddenOtpInput} value={otp} />
+              <Pressable accessibilityRole="button" accessibilityLabel="Masukkan kode OTP" onPress={() => otpInputRef.current?.focus()} style={[styles.otpBoxes, otpFocused && styles.otpBoxesFocused, errors.otp && styles.otpBoxesError]}>
                 {Array.from({length: 6}, (_, index) => (
-                  <View key={index} style={[styles.otpBox, errors.otp && styles.otpBoxError]}>
+                  <View key={index} style={styles.otpBox}>
                     <Text style={styles.otpDigit}>{otp[index] ?? ''}</Text>
                   </View>
                 ))}
@@ -248,6 +264,16 @@ export default function RegisterRoute() {
   );
 }
 
+function LoadingDialog({message}: {message: string}) {
+  return (
+    <View accessibilityRole="alert" accessibilityLiveRegion="assertive" accessibilityState={{busy: true}} style={styles.modalCard}>
+      <View style={styles.loadingIcon}><ActivityIndicator size="large" color="#0865FF" /></View>
+      <Text style={styles.modalTitle}>Mohon tunggu</Text>
+      <Text style={styles.modalBody}>{message}</Text>
+    </View>
+  );
+}
+
 type RegisterInputProps = {
   label: string;
   value: string;
@@ -261,22 +287,32 @@ type RegisterInputProps = {
 };
 
 function RegisterInput({label, value, onChange, placeholder, icon, keyboardType = 'default', secureTextEntry, onToggleSecure, error}: RegisterInputProps) {
-  const [focused, setFocused] = useState(false);
-
   return (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>
         {label}<Text style={styles.requiredMark}> *</Text>
       </Text>
-      <View style={[styles.inputWrap, focused && styles.inputFocused, error && styles.inputError]}>
-        <Ionicons name={icon} size={21} color="#7C828A" />
-        <TextInput accessibilityLabel={`${label}, wajib diisi`} autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'} autoCorrect={false} keyboardType={keyboardType} onBlur={() => setFocused(false)} onChangeText={onChange} onFocus={() => setFocused(true)} placeholder={placeholder} placeholderTextColor="#B3B8C0" secureTextEntry={secureTextEntry} style={styles.input} underlineColorAndroid="transparent" value={value} />
-        {!!onToggleSecure && (
+      <FormTextInput
+        accessibilityLabel={`${label}, wajib diisi`}
+        autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
+        autoCorrect={false}
+        containerStyle={styles.inputWrap}
+        error={Boolean(error)}
+        errorContainerStyle={styles.inputError}
+        inputStyle={styles.input}
+        keyboardType={keyboardType}
+        leftAccessory={<Ionicons name={icon} size={21} color="#7C828A" />}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor="#B3B8C0"
+        rightAccessory={onToggleSecure ? (
           <Pressable accessibilityRole="button" accessibilityLabel={secureTextEntry ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi'} hitSlop={10} onPress={onToggleSecure} style={styles.eyeButton}>
             <Ionicons name={secureTextEntry ? 'eye-off-outline' : 'eye-outline'} size={21} color="#A8AFB8" />
           </Pressable>
-        )}
-      </View>
+        ) : undefined}
+        secureTextEntry={secureTextEntry}
+        value={value}
+      />
       {!!error && <Text style={styles.fieldError}>{error}</Text>}
     </View>
   );
@@ -305,9 +341,8 @@ const styles = StyleSheet.create({
   inputGroup: {marginBottom: 16},
   label: {fontFamily: 'PlusJakartaSans_500Medium', color: '#FFFFFF', fontSize: 13, marginBottom: 8},
   requiredMark: {color: '#FF9FA9'},
-  inputWrap: {minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 12, paddingHorizontal: 14, borderWidth: 1.5, borderColor: '#DDE3EA'},
-  inputFocused: {borderWidth: 2, borderColor: '#0B63FF'},
-  input: {fontFamily: 'PlusJakartaSans_400Regular', flex: 1, minHeight: 50, fontSize: 13, color: '#121B35', paddingVertical: 0, outlineWidth: 0, outlineColor: 'transparent'},
+  inputWrap: {minHeight: 52, gap: 10, borderRadius: 12, paddingHorizontal: 14, borderColor: '#DDE3EA'},
+  input: {fontFamily: 'PlusJakartaSans_400Regular', minHeight: 48, fontSize: 13, color: '#121B35', paddingVertical: 0},
   inputError: {borderColor: '#FF6978'},
   eyeButton: {width: 36, height: 44, alignItems: 'center', justifyContent: 'center'},
   fieldError: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FF9FA9', fontSize: 11, lineHeight: 17, marginTop: 5},
@@ -324,13 +359,15 @@ const styles = StyleSheet.create({
   modalCard: {width: '100%', maxWidth: 390, borderRadius: 24, backgroundColor: 'white', paddingHorizontal: 22, paddingTop: 30, paddingBottom: 26, alignItems: 'center'},
   mailIllustration: {width: 130, height: 130, borderRadius: 65, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center', marginBottom: 14},
   mailCheck: {position: 'absolute', right: 13, bottom: 18, backgroundColor: 'white', borderRadius: 18},
+  loadingIcon: {width: 112, height: 112, borderRadius: 56, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center', marginBottom: 8},
   modalTitle: {fontFamily: 'PlusJakartaSans_700Bold', color: '#0878FF', fontSize: 25, lineHeight: 33, textAlign: 'center', marginTop: 8},
   modalBody: {fontFamily: 'PlusJakartaSans_400Regular', color: '#1B1C20', fontSize: 14, lineHeight: 22, textAlign: 'center', marginTop: 10},
   modalEmail: {fontFamily: 'PlusJakartaSans_500Medium', color: '#1359D5', fontSize: 15, lineHeight: 23, textAlign: 'center', marginTop: 6},
   hiddenOtpInput: {position: 'absolute', width: 1, height: 1, opacity: 0},
-  otpBoxes: {width: '100%', flexDirection: 'row', justifyContent: 'space-between', gap: 7, marginTop: 28, marginBottom: 12},
-  otpBox: {flex: 1, maxWidth: 52, aspectRatio: 0.86, borderRadius: 12, backgroundColor: '#F1F1F1', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent'},
-  otpBoxError: {borderColor: '#FF6978'},
+  otpBoxes: {width: '100%', flexDirection: 'row', justifyContent: 'space-between', gap: 7, marginTop: 28, marginBottom: 12, padding: 4, borderRadius: 15, borderWidth: 2, borderColor: 'transparent'},
+  otpBoxesFocused: {borderColor: '#111111'},
+  otpBoxesError: {borderColor: '#FF6978'},
+  otpBox: {flex: 1, maxWidth: 52, aspectRatio: 0.86, borderRadius: 12, backgroundColor: '#F1F1F1', alignItems: 'center', justifyContent: 'center'},
   otpDigit: {fontFamily: 'PlusJakartaSans_700Bold', color: '#0878FF', fontSize: 23},
   modalError: {fontFamily: 'PlusJakartaSans_400Regular', color: '#D9364B', fontSize: 11, lineHeight: 17, textAlign: 'center', marginBottom: 8},
   otpNotice: {fontFamily: 'PlusJakartaSans_400Regular', color: '#53627A', fontSize: 11, lineHeight: 17, textAlign: 'center', marginBottom: 8},
