@@ -30,5 +30,5 @@ export function getDashboardHeroLayout(viewportWidth: number) {
 
 export function getDashboardSummaryIconSize(viewportWidth: number) {
   const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
-  return Math.round(clamp(safeWidth * 0.085, 38, 54));
+  return Math.round(clamp(safeWidth * 0.135, 46, 58));
 }

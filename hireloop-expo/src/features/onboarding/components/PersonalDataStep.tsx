@@ -9,6 +9,7 @@ import {AddressFields} from './AddressFields';
 import {DateField} from './DateField';
 import {EducationModal} from './EducationModal';
 import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
+import {IdentityUploadCards} from './IdentityUploadCards';
 
 const genderOptions: MasterOption[] = [{value: 'male', label: 'Laki-laki'}, {value: 'female', label: 'Perempuan'}];
 const maritalOptions: MasterOption[] = [{value: 'single', label: 'Belum Menikah'}, {value: 'married', label: 'Menikah'}, {value: 'other', label: 'Lainnya'}];
@@ -23,6 +24,7 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runActi
   const {width} = useWindowDimensions();
   const [educationOpen, setEducationOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<EducationDraft | null>(null);
+  const [nik, setNik] = useState('');
   const age = useMemo(() => calculateAge(draft.birthDate), [draft.birthDate]);
   const birthDateLimits = useMemo(() => {
     const today = new Date();
@@ -51,9 +53,20 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runActi
   ]);
 
   return (
-    <View style={[styles.card, width < 390 && styles.cardNarrow]}>
-      <View style={styles.sectionTitle}><Ionicons name="person-outline" size={25} color="#2F7FFF" /><Text style={styles.sectionTitleText}>Informasi Pribadi</Text></View>
-      <TextField label="Nama Lengkap" required value={draft.fullName} onChangeText={value => setField('fullName', value)} placeholder="Contoh: Andi Permana" />
+    <View testID="personal-data-step" style={styles.stepContent}>
+      <IdentityUploadCards />
+      <View testID="personal-information-card" style={[styles.card, width < 390 && styles.cardNarrow]}>
+        <View style={styles.sectionTitle}><Ionicons name="person-outline" size={25} color="#2F7FFF" /><Text style={styles.sectionTitleText}>Informasi Pribadi</Text></View>
+        <TextField
+          label="NIK"
+          required
+          value={nik}
+          onChangeText={value => setNik(value.replace(/\D/g, '').slice(0, 16))}
+          keyboardType="number-pad"
+          maxLength={16}
+          placeholder="Contoh: 3275010101900001"
+        />
+        <TextField label="Nama Lengkap" required value={draft.fullName} onChangeText={value => setField('fullName', value)} placeholder="Contoh: Andi Permana" />
       <SelectField label="Jenis Kelamin" required value={draft.gender} onChange={value => setField('gender', value as OnboardingDraft['gender'])} options={genderOptions} placeholder="Pilih jenis kelamin" />
       <View style={[styles.columns, width < 390 && styles.columnsNarrow]}>
         <View style={styles.column}><TextField label="Tempat Lahir" required value={draft.birthPlace} onChangeText={value => setField('birthPlace', value)} placeholder="Contoh: Jakarta" /></View>
@@ -87,12 +100,14 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runActi
         <LinearGradient colors={['#0B5CFF', '#00D8F4']} end={{x: 1, y: 0}} start={{x: 0, y: 0}} style={styles.gradient}><Text style={styles.primaryText}>Selanjutnya</Text></LinearGradient>
       </Pressable>
 
-      {educationOpen ? <EducationModal visible initialValue={editingEducation} majorOptions={majorOptions} onCancel={() => setEducationOpen(false)} onSave={saveEducation} /> : null}
+        {educationOpen ? <EducationModal visible initialValue={editingEducation} majorOptions={majorOptions} onCancel={() => setEducationOpen(false)} onSave={saveEducation} /> : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  stepContent: {width: '100%', gap: 16},
   card: {width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: '#061D52', borderRadius: 34, paddingHorizontal: 24, paddingTop: 31, paddingBottom: 30},
   cardNarrow: {borderRadius: 26, paddingHorizontal: 16, paddingTop: 25},
   sectionTitle: {flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 31},

@@ -5,7 +5,6 @@ import {
   Alert,
   Image,
   ImageBackground,
-  ImageSourcePropType,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -51,16 +50,11 @@ type DashboardHomeProps = {
   onLogout: () => Promise<void> | void;
 };
 
-type CareerTab = 'progress' | 'interview' | 'announcement';
-
-const shortcutItems: {
-  label: string;
-  source: ImageSourcePropType;
-}[] = [
-  {label: 'Lowongan', source: require('../assets/shortcut_lowongan.png')},
-  {label: 'Lamaran', source: require('../assets/shortcut_lamaran.png')},
-  {label: 'Interview', source: require('../assets/shortcut_interview.png')},
-  {label: 'Karier', source: require('../assets/shortcut_karier.png')},
+const shortcutItems = [
+  {label: 'Profil Saya', icon: 'person-outline' as const},
+  {label: 'Lowongan Kerja', icon: 'briefcase-outline' as const},
+  {label: 'Lamaran Saya', icon: 'document-text-outline' as const},
+  {label: 'Performance', icon: 'stats-chart-outline' as const},
 ];
 
 const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
@@ -85,8 +79,9 @@ function SectionHeader({title, onPress}: {title: string; onPress: () => void}) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8}>
-        <Text style={styles.seeAll}>Lihat semua  ›</Text>
+      <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={styles.seeAllButton}>
+        <Text style={styles.seeAll}>Lihat semua</Text>
+        <Ionicons name="chevron-forward" size={15} color={C.brightBlue} />
       </Pressable>
     </View>
   );
@@ -171,7 +166,7 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
   );
 }
 
-function SummaryCard({applications, interviews, viewportWidth}: {applications: unknown[]; interviews: DashboardInterview[]; viewportWidth: number}) {
+export function SummaryCard({applications, interviews, viewportWidth}: {applications: unknown[]; interviews: DashboardInterview[]; viewportWidth: number}) {
   const iconSize = getDashboardSummaryIconSize(viewportWidth);
   const iconGlyphSize = Math.round(iconSize * 0.48);
   const processing = applications.filter(application => {
@@ -180,32 +175,34 @@ function SummaryCard({applications, interviews, viewportWidth}: {applications: u
   }).length;
 
   const items = [
-    {label: 'Lamaran\nTerkirim', value: applications.length, color: C.navy, icon: 'briefcase' as const},
-    {label: 'Sedang\nDiproses', value: processing, color: C.green, icon: 'document-text' as const},
-    {label: 'Interview\nMendatang', value: interviews.length, color: C.purple, icon: 'calendar' as const},
-    {label: 'Disimpan', value: 0, color: C.orange, icon: 'bookmark' as const},
+    {label: 'Total Lamaran', value: applications.length, color: C.navy, icon: 'document-text' as const},
+    {label: 'Dalam Seleksi', value: processing, color: C.green, icon: 'people' as const},
+    {label: 'Jadwal Interview', value: interviews.length, color: C.purple, icon: 'calendar' as const},
+    {label: 'Lowongan Disimpan', value: 0, color: C.orange, icon: 'bookmark' as const},
   ];
 
   return (
-    <View style={styles.summaryCard}>
+    <View testID="dashboard-summary-card" style={styles.summaryGrid}>
       {items.map((item, index) => (
         <Pressable
           key={item.label}
+          testID={`dashboard-summary-item-${index}`}
           accessibilityRole="button"
-          accessibilityLabel={`${item.value} ${item.label.replace('\n', ' ')}`}
-          onPress={() => Alert.alert(item.label.replace('\n', ' '), 'Daftar lengkap akan tersedia pada halaman terkait.')}
-          style={[styles.summaryItem, index < items.length - 1 && styles.summaryDivider]}
+          accessibilityLabel={`${item.value} ${item.label}`}
+          onPress={() => Alert.alert(item.label, 'Daftar lengkap akan tersedia pada halaman terkait.')}
+          style={({pressed}) => [styles.summaryItem, pressed && styles.pressed]}
         >
-          <View style={styles.summaryTop}>
-            <View style={[styles.summaryIcon, {backgroundColor: item.color, width: iconSize, height: iconSize, borderRadius: iconSize / 2}]}>
-              <Ionicons name={item.icon} size={iconGlyphSize} color="white" />
-            </View>
-            <View style={styles.summaryCopy}>
-              <Text style={styles.summaryValue}>{item.value}</Text>
-              <Text numberOfLines={2} style={styles.summaryLabel}>{item.label}</Text>
-            </View>
+          <View
+            testID={`dashboard-summary-icon-${index}`}
+            style={[styles.summaryIcon, {backgroundColor: item.color, width: iconSize, height: iconSize, borderRadius: iconSize / 2}]}
+          >
+            <Ionicons name={item.icon} size={iconGlyphSize} color="white" />
           </View>
-          <Text style={styles.summaryLink}>Lihat semua  ›</Text>
+          <View style={styles.summaryCopy}>
+            <Text testID={`dashboard-summary-value-${index}`} style={styles.summaryValue}>{item.value}</Text>
+            <Text testID={`dashboard-summary-label-${index}`} numberOfLines={2} style={styles.summaryLabel}>{item.label}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={C.brightBlue} />
         </Pressable>
       ))}
     </View>
@@ -219,7 +216,7 @@ function ProfileCompletionCard({completion}: {completion: number}) {
     <View style={styles.profileCard}>
       <View style={styles.profileCopy}>
         <Text style={styles.profileTitle}>Lengkapi Profilmu</Text>
-        <Text style={styles.profileDescription}>Profil yang lengkap meningkatkan{`\n`}peluang dipanggil interview!</Text>
+        <Text style={styles.profileDescription}>Lengkapi data dan pengalaman kerjamu{`\n`}untuk meningkatkan peluang dipanggil interview!</Text>
         <View style={styles.progressHeader}>
           <View />
           <Text style={styles.progressValue}>{completion}%</Text>
@@ -249,6 +246,20 @@ function ProfileCompletionCard({completion}: {completion: number}) {
   );
 }
 
+function getRelativeDayLabel(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return 'Jadwal';
+
+  const today = new Date();
+  const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const interviewDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const difference = Math.round((interviewDay - currentDay) / 86_400_000);
+
+  if (difference === 0) return 'Hari ini';
+  if (difference === 1) return 'Besok';
+  return difference > 1 ? `${difference} hari lagi` : 'Terlewat';
+}
+
 function InterviewContent({interview}: {interview?: DashboardInterview}) {
   if (!interview) {
     return (
@@ -265,80 +276,57 @@ function InterviewContent({interview}: {interview?: DashboardInterview}) {
   const month = Number.isNaN(date.getTime()) ? '---' : monthNames[date.getMonth()];
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => Alert.alert(interview.agenda, interview.meeting_link ?? interview.location ?? 'Detail interview')}
-      style={styles.interviewContent}
-    >
+    <View style={styles.interviewContent}>
       <View style={styles.dateBlock}>
         <Text style={styles.dateDay}>{day}</Text>
         <Text style={styles.dateMonth}>{month}</Text>
-        <View style={styles.dateLine} />
-        <Text style={styles.dateTime}>{interview.time ?? 'Waktu menyusul'}</Text>
+        <Text style={styles.dateRelative}>{getRelativeDayLabel(interview.date)}</Text>
+        <Text style={styles.dateTime}>{interview.time ? `${interview.time} WIB` : 'Waktu menyusul'}</Text>
       </View>
       <View style={styles.interviewDetail}>
         <View style={styles.activityTopline}>
           <Text numberOfLines={1} style={styles.activityRole}>{interview.role_taxonomy_name}</Text>
-          <View style={styles.videoBubble}>
-            <Ionicons name="videocam" size={24} color={C.blue} />
-          </View>
+          <Ionicons name="chevron-forward" size={20} color={C.brightBlue} />
         </View>
-        <Text numberOfLines={1} style={styles.activityCompany}>HireLoop Recruitment  <Ionicons name="checkmark-circle" size={13} color={C.brightBlue} /></Text>
+        <Text numberOfLines={1} style={styles.activityCompany}>{interview.company_name ?? 'HireLoop Recruitment'}  <Ionicons name="checkmark-circle" size={13} color={C.brightBlue} /></Text>
         <View style={styles.activityMode}>
           <Ionicons name={interview.mode === 'online' ? 'videocam-outline' : 'location-outline'} size={17} color={C.blue} />
-          <Text style={styles.activityModeText}>{interview.mode === 'online' ? 'Online Interview' : 'Interview Offline'}</Text>
+          <Text numberOfLines={1} style={styles.activityModeText}>{interview.mode === 'online' ? 'Online · Zoom' : interview.location ?? 'Interview Offline'}</Text>
+          {interview.mode === 'online' && <View style={styles.zoomBadge}><Text style={styles.zoomBadgeText}>zoom</Text></View>}
         </View>
-        <Text numberOfLines={1} style={styles.activityLink}>{interview.meeting_link ?? interview.location ?? interview.agenda}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function CareerActivityCard({interviews}: {interviews: DashboardInterview[]}) {
-  const [activeTab, setActiveTab] = useState<CareerTab>('progress');
-  const tabs: {key: CareerTab; label: string}[] = [
-    {key: 'progress', label: 'Progress Lamaran'},
-    {key: 'interview', label: 'Interview Mendatang'},
-    {key: 'announcement', label: 'Pengumuman'},
-  ];
-
-  return (
-    <View style={styles.activityCard}>
-      <View style={styles.tabs}>
-        {tabs.map(tab => (
+        <View style={styles.interviewButtons}>
           <Pressable
-            key={tab.key}
-            accessibilityRole="tab"
-            accessibilityState={{selected: activeTab === tab.key}}
-            onPress={() => setActiveTab(tab.key)}
-            style={styles.tabButton}
+            accessibilityRole="button"
+            onPress={() => Alert.alert('Gabung Interview', interview.meeting_link ?? 'Tautan interview belum tersedia.')}
+            style={styles.joinButton}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
-            {activeTab === tab.key && <View style={styles.tabIndicator} />}
+            <Text style={styles.joinButtonText}>Gabung Interview</Text>
           </Pressable>
-        ))}
-      </View>
-      <View style={styles.activityBody}>
-        <View style={styles.activitySeeAllRow}>
-          <Pressable accessibilityRole="button" onPress={() => Alert.alert('Aktivitas karier', 'Daftar seluruh aktivitas kandidat.') }>
-            <Text style={styles.seeAllSmall}>Lihat semua  ›</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => Alert.alert(interview.agenda, interview.location ?? 'Detail interview')}
+            style={styles.detailInterviewButton}
+          >
+            <Text style={styles.detailInterviewText}>Detail</Text>
           </Pressable>
         </View>
-        {activeTab === 'announcement' ? (
-          <View style={styles.emptyActivity}>
-            <Ionicons name="megaphone-outline" size={30} color="#A3ADC0" />
-            <Text style={styles.emptyTitle}>Belum ada pengumuman</Text>
-            <Text style={styles.emptyText}>Pengumuman rekrutmen akan tampil di sini.</Text>
-          </View>
-        ) : (
-          <InterviewContent interview={interviews[0]} />
-        )}
       </View>
     </View>
   );
 }
 
-function ShortcutGrid() {
+export function NearestInterviewCard({interviews}: {interviews: DashboardInterview[]}) {
+  return (
+    <View>
+      <SectionHeader title="Interview Terdekat" onPress={() => Alert.alert('Interview', 'Buka seluruh jadwal interview.')} />
+      <View style={styles.interviewCard}>
+        <InterviewContent interview={interviews[0]} />
+      </View>
+    </View>
+  );
+}
+
+export function ShortcutGrid() {
   return (
     <View>
       <Text style={styles.sectionTitle}>Pintasan</Text>
@@ -351,9 +339,7 @@ function ShortcutGrid() {
             onPress={() => Alert.alert(item.label, `Halaman ${item.label} akan dibuka dari navigasi aplikasi.`)}
             style={({pressed}) => [styles.shortcut, pressed && styles.pressed]}
           >
-            <View style={styles.shortcutIconBox}>
-              <Image source={item.source} resizeMode="contain" style={styles.shortcutImage} />
-            </View>
+            <Ionicons name={item.icon} size={31} color={C.brightBlue} />
             <Text style={styles.shortcutLabel}>{item.label}</Text>
           </Pressable>
         ))}
@@ -503,8 +489,8 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
             </Pressable>
           )}
 
+          <NearestInterviewCard interviews={interviews} />
           <ProfileCompletionCard completion={profileCompletion} />
-          <CareerActivityCard interviews={interviews} />
           <ShortcutGrid />
 
           <View>
@@ -550,15 +536,12 @@ const styles = StyleSheet.create({
   greetingSubtitleCompact: {fontSize: 12, lineHeight: 19, marginTop: 5},
   greetingSubtitleWide: {fontSize: 16, lineHeight: 26},
   content: {paddingHorizontal: 20, gap: 28, marginTop: -22},
-  summaryCard: {...cardShadow, minHeight: 137, backgroundColor: 'white', borderRadius: 18, flexDirection: 'row', paddingVertical: 18, paddingHorizontal: 8},
-  summaryItem: {flex: 1, justifyContent: 'space-between', paddingHorizontal: 7},
-  summaryDivider: {borderRightWidth: 1, borderRightColor: C.border},
-  summaryTop: {flexDirection: 'row', alignItems: 'center', gap: 7},
+  summaryGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
+  summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 130, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
   summaryIcon: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   summaryCopy: {flex: 1, minWidth: 0},
-  summaryValue: {fontFamily: F.bold, fontSize: 22, lineHeight: 25, color: C.ink},
-  summaryLabel: {fontFamily: F.medium, fontSize: 8.5, lineHeight: 11, color: '#3F4652'},
-  summaryLink: {fontFamily: F.semibold, fontSize: 8.5, color: C.brightBlue, textAlign: 'center', marginTop: 13},
+  summaryValue: {fontFamily: F.bold, fontSize: 24, lineHeight: 29, color: C.ink},
+  summaryLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#252A35'},
   errorBanner: {flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FFF5E7', borderRadius: 13, padding: 13, marginTop: -8},
   errorText: {fontFamily: F.regular, fontSize: 11, lineHeight: 16, color: '#805219', flex: 1},
   retryText: {fontFamily: F.bold, fontSize: 10, color: C.blue},
@@ -576,40 +559,36 @@ const styles = StyleSheet.create({
   clipTop: {position: 'absolute', top: -14, width: 55, height: 24, borderRadius: 7, backgroundColor: '#0B438E'},
   checkRow: {flexDirection: 'row', alignItems: 'center', gap: 5},
   checkLine: {height: 5, borderRadius: 4, backgroundColor: '#ACC0E3'},
-  activityCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, overflow: 'hidden'},
-  tabs: {height: 57, flexDirection: 'row', backgroundColor: '#F5F5F5'},
-  tabButton: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
-  tabText: {fontFamily: F.medium, fontSize: 10.5, color: '#A0A0A0', textAlign: 'center'},
-  tabTextActive: {fontFamily: F.bold, color: C.blue},
-  tabIndicator: {height: 3, width: 48, borderRadius: 3, backgroundColor: C.cyan, position: 'absolute', bottom: 0},
-  activityBody: {padding: 15},
-  activitySeeAllRow: {alignItems: 'flex-end', height: 19},
-  seeAllSmall: {fontFamily: F.semibold, fontSize: 9, color: C.blue},
-  interviewContent: {flexDirection: 'row', minHeight: 145, paddingTop: 4},
-  dateBlock: {width: 90, borderRadius: 10, backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingVertical: 12},
-  dateDay: {fontFamily: F.bold, fontSize: 30, lineHeight: 34, color: 'white'},
+  interviewCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 14, marginTop: 13, overflow: 'hidden'},
+  interviewContent: {flexDirection: 'row', minHeight: 150},
+  dateBlock: {width: 92, borderRadius: 12, backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingVertical: 11},
+  dateDay: {fontFamily: F.bold, fontSize: 31, lineHeight: 34, color: 'white'},
   dateMonth: {fontFamily: F.regular, fontSize: 17, color: 'white'},
-  dateLine: {width: 50, height: 1, backgroundColor: 'rgba(255,255,255,0.35)', marginVertical: 8},
-  dateTime: {fontFamily: F.medium, fontSize: 10, color: 'white'},
-  interviewDetail: {flex: 1, paddingLeft: 15, paddingTop: 5},
+  dateRelative: {fontFamily: F.medium, fontSize: 10.5, color: 'rgba(255,255,255,0.9)', marginTop: 7},
+  dateTime: {fontFamily: F.medium, fontSize: 9, color: 'white', marginTop: 3},
+  interviewDetail: {flex: 1, minWidth: 0, paddingLeft: 14, paddingVertical: 3},
   activityTopline: {flexDirection: 'row', alignItems: 'center'},
-  activityRole: {fontFamily: F.bold, fontSize: 17, color: C.ink, flex: 1},
-  videoBubble: {width: 45, height: 45, borderRadius: 12, backgroundColor: '#E7EEFF', alignItems: 'center', justifyContent: 'center'},
-  activityCompany: {fontFamily: F.regular, fontSize: 10.5, color: C.muted, marginTop: 2},
-  activityMode: {flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 13},
-  activityModeText: {fontFamily: F.semibold, fontSize: 12, color: C.blue},
-  activityLink: {fontFamily: F.regular, fontSize: 8, lineHeight: 13, color: C.blue, marginTop: 7},
+  activityRole: {fontFamily: F.bold, fontSize: 16, color: C.ink, flex: 1},
+  activityCompany: {fontFamily: F.regular, fontSize: 10.5, color: C.muted, marginTop: 3},
+  activityMode: {flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10},
+  activityModeText: {fontFamily: F.medium, fontSize: 10.5, color: '#454B57', flexShrink: 1},
+  zoomBadge: {backgroundColor: '#2D68FF', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 2},
+  zoomBadgeText: {fontFamily: F.bold, fontSize: 6.5, color: 'white'},
+  interviewButtons: {flexDirection: 'row', gap: 8, marginTop: 'auto', paddingTop: 10},
+  joinButton: {flex: 1.5, minHeight: 37, borderRadius: 9, backgroundColor: '#0345AE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
+  joinButtonText: {fontFamily: F.semibold, fontSize: 9.5, color: 'white'},
+  detailInterviewButton: {flex: 1, minHeight: 37, borderRadius: 9, backgroundColor: '#EEF3FC', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
+  detailInterviewText: {fontFamily: F.semibold, fontSize: 9.5, color: C.blue},
   emptyActivity: {minHeight: 130, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 25},
   emptyTitle: {fontFamily: F.semibold, fontSize: 13, color: C.ink, marginTop: 9, textAlign: 'center'},
   emptyText: {fontFamily: F.regular, fontSize: 10.5, lineHeight: 16, color: C.muted, marginTop: 4, textAlign: 'center'},
   sectionHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   sectionTitle: {fontFamily: F.bold, fontSize: 19, color: C.ink},
-  seeAll: {fontFamily: F.semibold, fontSize: 9, color: C.blue},
-  shortcuts: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 17, gap: 9},
-  shortcut: {flex: 1, alignItems: 'center'},
-  shortcutIconBox: {...cardShadow, aspectRatio: 1, width: '100%', maxWidth: 84, backgroundColor: 'white', borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden'},
-  shortcutImage: {width: '76%', height: '76%'},
-  shortcutLabel: {fontFamily: F.medium, fontSize: 11.5, color: '#164DB7', marginTop: 10},
+  seeAllButton: {flexDirection: 'row', alignItems: 'center', gap: 2},
+  seeAll: {fontFamily: F.semibold, fontSize: 10, color: C.blue},
+  shortcuts: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, gap: 9},
+  shortcut: {...cardShadow, flex: 1, minWidth: 0, minHeight: 98, borderRadius: 14, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 12},
+  shortcutLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#164DB7', marginTop: 8, textAlign: 'center'},
   pressed: {opacity: 0.78, transform: [{scale: 0.98}]},
   jobsContent: {paddingTop: 16, paddingBottom: 8, gap: 14, paddingRight: 18},
   loadingJobs: {height: 210, alignItems: 'center', justifyContent: 'center', gap: 9},

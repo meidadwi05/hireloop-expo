@@ -10,6 +10,7 @@ const interviewSchema = z.object({
   meeting_link: z.string().nullable().default(null),
   role_taxonomy_name: z.string().default('Posisi Pekerjaan'),
   candidate_name: z.string().default('Kandidat'),
+  company_name: z.string().nullable().optional(),
 });
 
 export const dashboardResponseSchema = z.object({

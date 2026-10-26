@@ -1,11 +1,24 @@
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import React, {useEffect, useState} from 'react';
-import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {
+  Image,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {GradientIntroTitle} from '../../features/intro/components/GradientIntroTitle';
 import {OnboardingSplash, ONBOARDING_SPLASH_DURATION_MS} from '../../features/intro/components/OnboardingSplash';
+import {clampIntroIndex, getIntroIndexFromOffset} from '../../features/intro/intro-pager';
 import type {IntroSlide, WelcomePhase} from '../../features/intro/intro.types';
 
 const COLORS = {
@@ -57,10 +70,51 @@ const slides: IntroSlide[] = [
 ];
 
 export default function WelcomeRoute() {
+  const {width} = useWindowDimensions();
   const [phase, setPhase] = useState<WelcomePhase>('splash');
   const [index, setIndex] = useState(0);
+  const [pageWidth, setPageWidth] = useState(width - 56);
+  const slidesRef = useRef<ScrollView>(null);
+  const pendingResizeRef = useRef(false);
   const slide = slides[index];
   const isLightSlide = slide.theme === 'light';
+
+  const activateSlide = useCallback((
+    targetIndex: number,
+    options: {scroll?: boolean; animated?: boolean} = {},
+  ) => {
+    const nextIndex = clampIntroIndex(targetIndex, slides.length);
+    setIndex(currentIndex => currentIndex === nextIndex ? currentIndex : nextIndex);
+
+    if (options.scroll) {
+      slidesRef.current?.scrollTo({
+        x: pageWidth * nextIndex,
+        animated: options.animated ?? true,
+      });
+    }
+
+    return nextIndex;
+  }, [pageWidth]);
+
+  const handleSwipeSettled = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const viewportWidth = event.nativeEvent.layoutMeasurement.width || pageWidth;
+    const nextIndex = getIntroIndexFromOffset(
+      event.nativeEvent.contentOffset.x,
+      viewportWidth,
+      slides.length,
+      index,
+    );
+
+    activateSlide(nextIndex);
+  }, [activateSlide, index, pageWidth]);
+
+  const handleSlidesLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextPageWidth = event.nativeEvent.layout.width;
+    if (nextPageWidth <= 0 || nextPageWidth === pageWidth) return;
+
+    pendingResizeRef.current = true;
+    setPageWidth(nextPageWidth);
+  }, [pageWidth]);
 
   useEffect(() => {
     if (phase !== 'splash') return;
@@ -68,10 +122,18 @@ export default function WelcomeRoute() {
     return () => clearTimeout(timer);
   }, [phase]);
 
+  useEffect(() => {
+    if (!pendingResizeRef.current || phase !== 'slides') return;
+
+    pendingResizeRef.current = false;
+    slidesRef.current?.scrollTo({x: pageWidth * index, animated: false});
+  }, [index, pageWidth, phase]);
+
   if (phase === 'splash') return <OnboardingSplash />;
 
   return (
     <SafeAreaView
+      testID="intro-screen"
       edges={['top', 'right', 'bottom', 'left']}
       style={[styles.screen, {backgroundColor: isLightSlide ? COLORS.lightBackground : COLORS.navy}]}
     >
@@ -84,11 +146,28 @@ export default function WelcomeRoute() {
       >
         <Text style={[styles.skipText, {color: isLightSlide ? COLORS.navyText : COLORS.white}]}>Lewati</Text>
       </Pressable>
-      <Image source={slide.image} style={styles.image} resizeMode="contain" />
-      {slide.titleVariant === 'gradient'
-        ? <GradientIntroTitle>{slide.title}</GradientIntroTitle>
-        : <Text style={[styles.title, styles.darkTitle]}>{slide.title}</Text>}
-      <Text style={[styles.body, {color: isLightSlide ? COLORS.lightBody : COLORS.darkBody}]}>{slide.body}</Text>
+      <ScrollView
+        ref={slidesRef}
+        testID="intro-slides"
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        style={styles.slides}
+        onLayout={handleSlidesLayout}
+        onMomentumScrollEnd={handleSwipeSettled}
+        onScrollEndDrag={Platform.OS === 'web' ? handleSwipeSettled : undefined}
+      >
+        {slides.map(item => (
+          <View key={item.id} testID={`intro-slide-${item.id}`} style={[styles.slide, {width: pageWidth}]}>
+            <Image source={item.image} style={styles.image} resizeMode="contain" />
+            {item.titleVariant === 'gradient'
+              ? <GradientIntroTitle>{item.title}</GradientIntroTitle>
+              : <Text style={[styles.title, styles.darkTitle]}>{item.title}</Text>}
+            <Text style={[styles.body, {color: item.theme === 'light' ? COLORS.lightBody : COLORS.darkBody}]}>{item.body}</Text>
+          </View>
+        ))}
+      </ScrollView>
       <View style={styles.dots} accessibilityRole="tablist">
         {slides.map((_, itemIndex) => (
           <View
@@ -106,7 +185,13 @@ export default function WelcomeRoute() {
       </View>
       <Pressable
         accessibilityRole="button"
-        onPress={() => index === slides.length - 1 ? router.replace('/(public)/login') : setIndex(index + 1)}
+        onPress={() => {
+          if (index === slides.length - 1) {
+            router.replace('/(public)/login');
+            return;
+          }
+          activateSlide(index + 1, {scroll: true, animated: true});
+        }}
         style={styles.button}
       >
         <Text style={styles.buttonText}>{index === slides.length - 1 ? 'Mulai Sekarang' : 'Lanjut'}</Text>
@@ -117,6 +202,8 @@ export default function WelcomeRoute() {
 
 const styles = StyleSheet.create({
   screen: {flex: 1, alignItems: 'center', paddingHorizontal: 28, paddingVertical: 18},
+  slides: {flex: 1, width: '100%'},
+  slide: {flex: 1},
   skip: {alignSelf: 'flex-end', minHeight: 44, minWidth: 44, padding: 10, alignItems: 'center', justifyContent: 'center'},
   skipText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12},
   image: {width: '100%', height: '48%', marginTop: 12},

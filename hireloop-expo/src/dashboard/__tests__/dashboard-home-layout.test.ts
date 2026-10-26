@@ -29,9 +29,9 @@ describe('dashboard home responsive layout', () => {
   });
 
   test('menskalakan ikon ringkasan tanpa terlalu kecil atau besar', () => {
-    expect(getDashboardSummaryIconSize(320)).toBe(38);
-    expect(getDashboardSummaryIconSize(550)).toBe(47);
-    expect(getDashboardSummaryIconSize(720)).toBe(54);
-    expect(getDashboardSummaryIconSize(1200)).toBe(54);
+    expect(getDashboardSummaryIconSize(320)).toBe(46);
+    expect(getDashboardSummaryIconSize(390)).toBe(53);
+    expect(getDashboardSummaryIconSize(550)).toBe(58);
+    expect(getDashboardSummaryIconSize(1200)).toBe(58);
   });
 });
