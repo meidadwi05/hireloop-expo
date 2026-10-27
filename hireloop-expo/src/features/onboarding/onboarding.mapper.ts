@@ -96,6 +96,7 @@ export function mapCurrentOnboarding(input: unknown, fallbackName = ''): Onboard
         id: asText(record.id, `education-${index}`),
         educationLevel: asText(record.education_level),
         schoolName: asText(record.school_name),
+        majorId: Number.isFinite(Number(record.major_id ?? major.id)) ? Number(record.major_id ?? major.id) : null,
         majorName: asText(major.name, record.major_name, record.major),
         startDate: asText(record.start_date).split('T')[0],
         endDate: asText(record.end_date).split('T')[0],
@@ -158,6 +159,7 @@ export function toOnboardingPayload(draft: OnboardingDraft): OnboardingPayload {
     educations: draft.educations.map(item => ({
       education_level: item.educationLevel,
       school_name: item.schoolName.trim(),
+      major_id: item.majorId,
       major_name: item.majorName.trim(),
       start_date: item.startDate,
       end_date: item.ongoing ? null : item.endDate,

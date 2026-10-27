@@ -1,4 +1,8 @@
-import {getDashboardHeroLayout, getDashboardSummaryIconSize} from '../dashboard.layout';
+import {
+  getDashboardHeroLayout,
+  getDashboardSummaryIconSize,
+  getDashboardSummaryOverlap,
+} from '../dashboard.layout';
 
 describe('dashboard home responsive layout', () => {
   test('mengikuti rasio asset hero pada ukuran ponsel dan lebar referensi', () => {
@@ -33,5 +37,14 @@ describe('dashboard home responsive layout', () => {
     expect(getDashboardSummaryIconSize(390)).toBe(53);
     expect(getDashboardSummaryIconSize(550)).toBe(58);
     expect(getDashboardSummaryIconSize(1200)).toBe(58);
+  });
+
+  test('menaikkan seluruh grid indikator secara responsif terhadap hero', () => {
+    expect(getDashboardSummaryOverlap(280)).toBe(34);
+    expect(getDashboardSummaryOverlap(320)).toBe(40);
+    expect(getDashboardSummaryOverlap(390)).toBe(48);
+    expect(getDashboardSummaryOverlap(430)).toBe(52);
+    expect(getDashboardSummaryOverlap(720)).toBe(56);
+    expect(getDashboardSummaryOverlap(1200)).toBe(56);
   });
 });

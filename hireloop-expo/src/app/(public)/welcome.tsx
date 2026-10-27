@@ -6,7 +6,6 @@ import {
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -76,6 +75,7 @@ export default function WelcomeRoute() {
   const [pageWidth, setPageWidth] = useState(width - 56);
   const slidesRef = useRef<ScrollView>(null);
   const pendingResizeRef = useRef(false);
+  const programmaticTargetRef = useRef<number | null>(null);
   const slide = slides[index];
   const isLightSlide = slide.theme === 'light';
 
@@ -87,6 +87,7 @@ export default function WelcomeRoute() {
     setIndex(currentIndex => currentIndex === nextIndex ? currentIndex : nextIndex);
 
     if (options.scroll) {
+      programmaticTargetRef.current = nextIndex;
       slidesRef.current?.scrollTo({
         x: pageWidth * nextIndex,
         animated: options.animated ?? true,
@@ -96,7 +97,7 @@ export default function WelcomeRoute() {
     return nextIndex;
   }, [pageWidth]);
 
-  const handleSwipeSettled = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const syncSlideFromScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const viewportWidth = event.nativeEvent.layoutMeasurement.width || pageWidth;
     const nextIndex = getIntroIndexFromOffset(
       event.nativeEvent.contentOffset.x,
@@ -105,8 +106,21 @@ export default function WelcomeRoute() {
       index,
     );
 
+    const programmaticTarget = programmaticTargetRef.current;
+    if (programmaticTarget !== null) {
+      const pagePosition = event.nativeEvent.contentOffset.x / viewportWidth;
+      if (Math.abs(pagePosition - programmaticTarget) <= 0.02) {
+        programmaticTargetRef.current = null;
+      }
+      return;
+    }
+
     activateSlide(nextIndex);
   }, [activateSlide, index, pageWidth]);
+
+  const handleSwipeStart = useCallback(() => {
+    programmaticTargetRef.current = null;
+  }, []);
 
   const handleSlidesLayout = useCallback((event: LayoutChangeEvent) => {
     const nextPageWidth = event.nativeEvent.layout.width;
@@ -153,10 +167,12 @@ export default function WelcomeRoute() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
+        scrollEventThrottle={16}
         style={styles.slides}
         onLayout={handleSlidesLayout}
-        onMomentumScrollEnd={handleSwipeSettled}
-        onScrollEndDrag={Platform.OS === 'web' ? handleSwipeSettled : undefined}
+        onScrollBeginDrag={handleSwipeStart}
+        onScroll={syncSlideFromScroll}
+        onMomentumScrollEnd={syncSlideFromScroll}
       >
         {slides.map(item => (
           <View key={item.id} testID={`intro-slide-${item.id}`} style={[styles.slide, {width: pageWidth}]}>

@@ -2,7 +2,12 @@ import {render} from '@testing-library/react-native';
 import React from 'react';
 import {StyleSheet} from 'react-native';
 
-import {NearestInterviewCard, ShortcutGrid} from '../DashboardHome';
+import {
+  NearestInterviewCard,
+  ProfileCompletionCard,
+  RecentApplicationsCard,
+  ShortcutGrid,
+} from '../DashboardHome';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
@@ -55,5 +60,25 @@ describe('dashboard sections', () => {
 
     const firstTile = screen.getByLabelText('Buka Profil Saya');
     expect(StyleSheet.flatten(firstTile.props.style).backgroundColor).toBe('#EAF3FF');
+  });
+
+  it('menampilkan card kelengkapan profil statis sesuai rancangan', () => {
+    const screen = render(<ProfileCompletionCard completion={75} />);
+
+    expect(screen.getByText('Lengkapi Profilmu')).toBeTruthy();
+    expect(screen.getByText('75%')).toBeTruthy();
+    expect(screen.getByText('Lengkapi sekarang')).toBeTruthy();
+  });
+
+  it('menampilkan dua lamaran terbaru statis setelah integrasi backend ditahan', () => {
+    const screen = render(<RecentApplicationsCard />);
+
+    expect(screen.getByText('Lamaran Terbaru')).toBeTruthy();
+    expect(screen.getByText('UI/UX Designer')).toBeTruthy();
+    expect(screen.getByText('PT. Inovasi Digital')).toBeTruthy();
+    expect(screen.getByText('Screening')).toBeTruthy();
+    expect(screen.getByText('Admin Produksi')).toBeTruthy();
+    expect(screen.getByText('PT. Mitra Industri')).toBeTruthy();
+    expect(screen.getByText('Lamaran Terkirim')).toBeTruthy();
   });
 });

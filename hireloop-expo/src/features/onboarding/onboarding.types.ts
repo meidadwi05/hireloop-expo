@@ -19,6 +19,7 @@ export type EducationDraft = {
   id: string;
   educationLevel: string;
   schoolName: string;
+  majorId: number | null;
   majorName: string;
   startDate: string;
   endDate: string;

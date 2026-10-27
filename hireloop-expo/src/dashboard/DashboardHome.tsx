@@ -19,7 +19,11 @@ import type {CandidateUser} from '../features/auth/auth.types';
 import type {DashboardInterview} from '../features/dashboard/dashboard.types';
 import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
 import type {JobCardModel} from '../features/jobs/jobs.types';
-import {getDashboardHeroLayout, getDashboardSummaryIconSize} from './dashboard.layout';
+import {
+  getDashboardHeroLayout,
+  getDashboardSummaryIconSize,
+  getDashboardSummaryOverlap,
+} from './dashboard.layout';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -58,6 +62,37 @@ const shortcutItems = [
 ];
 
 const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+const staticProfileCompletion = 75;
+
+const staticSummaryItems = [
+  {label: 'Total Lamaran', value: 12, color: C.navy, icon: 'document-text' as const},
+  {label: 'Dalam Seleksi', value: 4, color: C.green, icon: 'people' as const},
+  {label: 'Jadwal Interview', value: 2, color: C.purple, icon: 'calendar' as const},
+  {label: 'Lowongan Disimpan', value: 7, color: C.orange, icon: 'bookmark' as const},
+];
+
+const staticRecentApplications = [
+  {
+    id: 'static-uiux-designer',
+    title: 'UI/UX Designer',
+    company: 'PT. Inovasi Digital',
+    companyInitials: 'iD',
+    appliedAt: '12 Mei 2024',
+    status: 'Screening',
+    statusTone: 'screening' as const,
+    verified: true,
+  },
+  {
+    id: 'static-admin-produksi',
+    title: 'Admin Produksi',
+    company: 'PT. Mitra Industri',
+    companyInitials: 'mi',
+    appliedAt: '10 Mei 2024',
+    status: 'Lamaran Terkirim',
+    statusTone: 'applied' as const,
+    verified: false,
+  },
+];
 
 function resolveMediaUrl(value: string | null): string | null {
   if (!value) return null;
@@ -65,14 +100,6 @@ function resolveMediaUrl(value: string | null): string | null {
 
   const serverUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/api\/?$/, '');
   return serverUrl ? `${serverUrl}/${value.replace(/^\//, '')}` : null;
-}
-
-function applicationStatus(application: unknown): string {
-  if (!application || typeof application !== 'object') return '';
-  const item = application as Record<string, unknown>;
-  const status = [item.status, item.application_status, item.stage_status]
-    .find(value => typeof value === 'string');
-  return typeof status === 'string' ? status.toLowerCase() : '';
 }
 
 function SectionHeader({title, onPress}: {title: string; onPress: () => void}) {
@@ -166,24 +193,14 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
   );
 }
 
-export function SummaryCard({applications, interviews, viewportWidth}: {applications: unknown[]; interviews: DashboardInterview[]; viewportWidth: number}) {
+export function SummaryCard({viewportWidth}: {viewportWidth: number}) {
   const iconSize = getDashboardSummaryIconSize(viewportWidth);
   const iconGlyphSize = Math.round(iconSize * 0.48);
-  const processing = applications.filter(application => {
-    const status = applicationStatus(application);
-    return status && !['rejected', 'hired', 'cancelled', 'canceled'].includes(status);
-  }).length;
-
-  const items = [
-    {label: 'Total Lamaran', value: applications.length, color: C.navy, icon: 'document-text' as const},
-    {label: 'Dalam Seleksi', value: processing, color: C.green, icon: 'people' as const},
-    {label: 'Jadwal Interview', value: interviews.length, color: C.purple, icon: 'calendar' as const},
-    {label: 'Lowongan Disimpan', value: 0, color: C.orange, icon: 'bookmark' as const},
-  ];
+  const overlap = getDashboardSummaryOverlap(viewportWidth);
 
   return (
-    <View testID="dashboard-summary-card" style={styles.summaryGrid}>
-      {items.map((item, index) => (
+    <View testID="dashboard-summary-card" style={[styles.summaryGrid, {marginTop: -overlap}]}>
+      {staticSummaryItems.map((item, index) => (
         <Pressable
           key={item.label}
           testID={`dashboard-summary-item-${index}`}
@@ -209,14 +226,17 @@ export function SummaryCard({applications, interviews, viewportWidth}: {applicat
   );
 }
 
-function ProfileCompletionCard({completion}: {completion: number}) {
+export function ProfileCompletionCard({completion}: {completion: number}) {
+  const {width} = useWindowDimensions();
+  const compact = width < 360;
+
   if (completion >= 100) return null;
 
   return (
-    <View style={styles.profileCard}>
+    <View style={[styles.profileCard, compact && styles.profileCardCompact]}>
       <View style={styles.profileCopy}>
-        <Text style={styles.profileTitle}>Lengkapi Profilmu</Text>
-        <Text style={styles.profileDescription}>Lengkapi data dan pengalaman kerjamu{`\n`}untuk meningkatkan peluang dipanggil interview!</Text>
+        <Text style={[styles.profileTitle, compact && styles.profileTitleCompact]}>Lengkapi Profilmu</Text>
+        <Text style={[styles.profileDescription, compact && styles.profileDescriptionCompact]}>Lengkapi data dan pengalaman kerjamu{`\n`}untuk meningkatkan peluang dipanggil interview!</Text>
         <View style={styles.progressHeader}>
           <View />
           <Text style={styles.progressValue}>{completion}%</Text>
@@ -232,7 +252,7 @@ function ProfileCompletionCard({completion}: {completion: number}) {
           <Text style={styles.profileButtonText}>Lengkapi sekarang</Text>
         </Pressable>
       </View>
-      <View style={styles.profileIllustration}>
+      <View style={[styles.profileIllustration, compact && styles.profileIllustrationCompact]}>
         <View style={styles.clipTop} />
         <Ionicons name="person-circle" size={35} color={C.navy} />
         {[0, 1, 2].map(item => (
@@ -348,6 +368,71 @@ export function ShortcutGrid() {
   );
 }
 
+export function RecentApplicationsCard() {
+  const {width} = useWindowDimensions();
+  const compact = width < 360;
+
+  return (
+    <View testID="dashboard-recent-applications">
+      <SectionHeader
+        title="Lamaran Terbaru"
+        onPress={() => Alert.alert('Lamaran Terbaru', 'Daftar lamaran lengkap akan tersedia setelah integrasi data diaktifkan.')}
+      />
+      <View style={styles.recentApplicationsCard}>
+        {staticRecentApplications.map((application, index) => (
+          <Pressable
+            key={application.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${application.title} di ${application.company}, ${application.status}`}
+            onPress={() => Alert.alert(application.title, `${application.company}\n${application.status}`)}
+            style={({pressed}) => [
+              styles.recentApplicationRow,
+              index < staticRecentApplications.length - 1 && styles.recentApplicationDivider,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={[styles.recentCompanyLogo, compact && styles.recentCompanyLogoCompact, index === 1 && styles.recentCompanyLogoDark]}>
+              <Text style={styles.recentCompanyLogoText}>{application.companyInitials}</Text>
+            </View>
+            <View style={styles.recentApplicationCopy}>
+              <Text numberOfLines={1} style={styles.recentApplicationTitle}>{application.title}</Text>
+              <View style={styles.recentCompanyRow}>
+                <Text numberOfLines={1} style={styles.recentCompanyName}>{application.company}</Text>
+                {application.verified && <Ionicons name="checkmark-circle" size={13} color={C.brightBlue} />}
+              </View>
+              <Text style={styles.recentApplicationDate}>{application.appliedAt}</Text>
+            </View>
+            <View
+              style={[
+                styles.recentStatus,
+                compact && styles.recentStatusCompact,
+                application.statusTone === 'screening' ? styles.recentStatusScreening : styles.recentStatusApplied,
+              ]}
+            >
+              <View
+                style={[
+                  styles.recentStatusDot,
+                  application.statusTone === 'screening' ? styles.recentStatusDotScreening : styles.recentStatusDotApplied,
+                ]}
+              />
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.recentStatusText,
+                  application.statusTone === 'screening' ? styles.recentStatusTextScreening : styles.recentStatusTextApplied,
+                ]}
+              >
+                {application.status}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={19} color={C.brightBlue} />
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function JobCard({job, width}: {job: JobCardModel; width: number}) {
   const [saved, setSaved] = useState(false);
   const visibleSkills = job.skills.slice(0, 5);
@@ -438,8 +523,6 @@ function JobCard({job, width}: {job: JobCardModel; width: number}) {
 export default function DashboardHome({initialUser, onLogout}: DashboardHomeProps) {
   const {width} = useWindowDimensions();
   const {interviews, jobs, unread, jobsLoading, refreshing, error, refresh} = useDashboardHome();
-  const applications = initialUser.job_applications;
-  const profileCompletion = initialUser.profile_completed_at ? 100 : 75;
   const cardWidth = Math.min(Math.max(width * 0.84, 280), 370);
 
   const recommendationContent = useMemo(() => {
@@ -479,7 +562,7 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
       >
         <DashboardHero user={initialUser} unread={unread} />
         <View style={styles.content}>
-          <SummaryCard applications={applications} interviews={interviews} viewportWidth={width} />
+          <SummaryCard viewportWidth={width} />
 
           {!!error && (
             <Pressable accessibilityRole="button" onPress={() => void refresh()} style={styles.errorBanner}>
@@ -490,8 +573,9 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
           )}
 
           <NearestInterviewCard interviews={interviews} />
-          <ProfileCompletionCard completion={profileCompletion} />
+          <ProfileCompletionCard completion={staticProfileCompletion} />
           <ShortcutGrid />
+          <RecentApplicationsCard />
 
           <View>
             <SectionHeader title="Rekomendasi Pekerjaan" onPress={() => Alert.alert('Rekomendasi', 'Buka seluruh rekomendasi pekerjaan.')} />
@@ -535,8 +619,8 @@ const styles = StyleSheet.create({
   greetingSubtitle: {fontFamily: F.regular, fontSize: 14, lineHeight: 22, color: 'rgba(255,255,255,0.92)', marginTop: 7},
   greetingSubtitleCompact: {fontSize: 12, lineHeight: 19, marginTop: 5},
   greetingSubtitleWide: {fontSize: 16, lineHeight: 26},
-  content: {paddingHorizontal: 20, gap: 28, marginTop: -22},
-  summaryGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
+  content: {paddingHorizontal: 20, gap: 28},
+  summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 130, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
   summaryIcon: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   summaryCopy: {flex: 1, minWidth: 0},
@@ -546,9 +630,12 @@ const styles = StyleSheet.create({
   errorText: {fontFamily: F.regular, fontSize: 11, lineHeight: 16, color: '#805219', flex: 1},
   retryText: {fontFamily: F.bold, fontSize: 10, color: C.blue},
   profileCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 20, minHeight: 210, flexDirection: 'row', overflow: 'hidden'},
+  profileCardCompact: {paddingHorizontal: 15},
   profileCopy: {flex: 1, zIndex: 2},
   profileTitle: {fontFamily: F.bold, fontSize: 20, color: C.ink},
+  profileTitleCompact: {fontSize: 17},
   profileDescription: {fontFamily: F.regular, fontSize: 12, lineHeight: 19, color: '#333943', marginTop: 9},
+  profileDescriptionCompact: {fontSize: 10, lineHeight: 16},
   progressHeader: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 1},
   progressValue: {fontFamily: F.bold, fontSize: 17, color: C.ink},
   progressTrack: {height: 7, borderRadius: 5, backgroundColor: '#EEF0F4', marginTop: 4, width: '100%', overflow: 'hidden'},
@@ -556,6 +643,7 @@ const styles = StyleSheet.create({
   profileButton: {height: 42, paddingHorizontal: 20, borderRadius: 10, backgroundColor: '#003FA5', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginTop: 20},
   profileButtonText: {fontFamily: F.semibold, fontSize: 11, color: 'white'},
   profileIllustration: {width: 105, height: 145, borderWidth: 7, borderColor: '#0B438E', borderRadius: 15, marginLeft: 15, alignItems: 'center', paddingTop: 21, gap: 8, backgroundColor: '#F7FAFF'},
+  profileIllustrationCompact: {width: 78, height: 132, borderWidth: 6, marginLeft: 8},
   clipTop: {position: 'absolute', top: -14, width: 55, height: 24, borderRadius: 7, backgroundColor: '#0B438E'},
   checkRow: {flexDirection: 'row', alignItems: 'center', gap: 5},
   checkLine: {height: 5, borderRadius: 4, backgroundColor: '#ACC0E3'},
@@ -589,6 +677,28 @@ const styles = StyleSheet.create({
   shortcuts: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, gap: 9},
   shortcut: {...cardShadow, flex: 1, minWidth: 0, minHeight: 98, borderRadius: 14, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 12},
   shortcutLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#164DB7', marginTop: 8, textAlign: 'center'},
+  recentApplicationsCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, marginTop: 14, paddingHorizontal: 16, overflow: 'hidden'},
+  recentApplicationRow: {minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12},
+  recentApplicationDivider: {borderBottomWidth: 1, borderBottomColor: C.border},
+  recentCompanyLogo: {width: 48, height: 48, borderRadius: 10, backgroundColor: '#1769FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  recentCompanyLogoCompact: {width: 42, height: 42, borderRadius: 9},
+  recentCompanyLogoDark: {backgroundColor: '#00195E'},
+  recentCompanyLogoText: {fontFamily: F.extrabold, fontSize: 17, color: 'white', fontStyle: 'italic'},
+  recentApplicationCopy: {flex: 1, minWidth: 0},
+  recentApplicationTitle: {fontFamily: F.bold, fontSize: 13.5, lineHeight: 18, color: C.ink},
+  recentCompanyRow: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2},
+  recentCompanyName: {fontFamily: F.regular, fontSize: 10.5, lineHeight: 15, color: C.muted, flexShrink: 1},
+  recentApplicationDate: {fontFamily: F.regular, fontSize: 9, lineHeight: 13, color: '#8A919D', marginTop: 1},
+  recentStatus: {maxWidth: 116, minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 16, paddingHorizontal: 10, flexShrink: 0},
+  recentStatusCompact: {maxWidth: 86, gap: 4, paddingHorizontal: 7},
+  recentStatusScreening: {backgroundColor: '#EAF2FF'},
+  recentStatusApplied: {backgroundColor: '#F0F2F5'},
+  recentStatusDot: {width: 7, height: 7, borderRadius: 4},
+  recentStatusDotScreening: {backgroundColor: C.brightBlue},
+  recentStatusDotApplied: {backgroundColor: '#8A919D'},
+  recentStatusText: {fontFamily: F.semibold, fontSize: 8.5},
+  recentStatusTextScreening: {color: C.brightBlue},
+  recentStatusTextApplied: {color: '#69717D'},
   pressed: {opacity: 0.78, transform: [{scale: 0.98}]},
   jobsContent: {paddingTop: 16, paddingBottom: 8, gap: 14, paddingRight: 18},
   loadingJobs: {height: 210, alignItems: 'center', justifyContent: 'center', gap: 9},

@@ -39,6 +39,7 @@ export const educationSchema = z.object({
   id: z.string(),
   educationLevel: z.string().trim().min(1, 'Tingkat pendidikan wajib dipilih'),
   schoolName: z.string().trim(),
+  majorId: z.number().int().positive().nullable(),
   majorName: z.string().trim(),
   startDate: optionalIsoDate,
   endDate: optionalIsoDate,

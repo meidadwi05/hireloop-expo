@@ -8,4 +8,5 @@ export type DateFieldProps = {
   tone?: 'dark' | 'light';
   minimumDate?: Date;
   maximumDate?: Date;
+  presentation?: 'modal' | 'inline';
 };

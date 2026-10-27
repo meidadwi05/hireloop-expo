@@ -27,7 +27,7 @@ function completeDraft(): OnboardingDraft {
     identityAddress: address,
     domicileAddress: address,
     domicileSameAsIdentity: true,
-    educations: [{id: 'education-1', educationLevel: 'S1', schoolName: 'Universitas Indonesia', majorName: 'Manajemen', startDate: '2012-08-01', endDate: '2016-07-01', ongoing: false}],
+    educations: [{id: 'education-1', educationLevel: 'S1', schoolName: 'Universitas Indonesia', majorId: 17, majorName: 'Manajemen', startDate: '2012-08-01', endDate: '2016-07-01', ongoing: false}],
     hasNoExperience: true,
     skills: [{skillId: 12, customName: null, name: 'Kanban'}],
     tools: 'Mesin CNC',
@@ -63,7 +63,7 @@ describe('onboarding domain', () => {
   test('menerima detail pendidikan opsional selama tingkat pendidikan tersedia', () => {
     const draft = {
       ...completeDraft(),
-      educations: [{id: 'education-optional', educationLevel: 'SMA/SMK', schoolName: '', majorName: '', startDate: '', endDate: '', ongoing: false}],
+      educations: [{id: 'education-optional', educationLevel: 'SMA/SMK', schoolName: '', majorId: null, majorName: '', startDate: '', endDate: '', ongoing: false}],
     };
     expect(validatePersonalStep(draft).success).toBe(true);
   });
@@ -91,12 +91,14 @@ describe('onboarding domain', () => {
     expect(payload.domicile_address_detail).toBeNull();
     expect(payload.no_pengalaman_kerja).toBe(true);
     expect(payload.skills[0]).toMatchObject({skill_id: 12, name: 'Kanban'});
+    expect(payload.educations[0]).toMatchObject({major_id: 17, major_name: 'Manajemen'});
   });
 
   test('mapper current onboarding memakai field backend', () => {
-    const draft = mapCurrentOnboarding({data: {user: {full_name: 'Azka'}, job_seeker: {gender: 'male', birth_date: '1993-05-10T00:00:00Z', no_pengalaman_kerja: 1}}});
+    const draft = mapCurrentOnboarding({data: {user: {full_name: 'Azka'}, job_seeker: {gender: 'male', birth_date: '1993-05-10T00:00:00Z', no_pengalaman_kerja: 1, educations: [{id: 4, education_level: 'S1', major_id: 17, major: {id: 17, name: 'Manajemen'}}]}}});
     expect(draft.fullName).toBe('Azka');
     expect(draft.birthDate).toBe('1993-05-10');
     expect(draft.hasNoExperience).toBe(true);
+    expect(draft.educations[0]).toMatchObject({majorId: 17, majorName: 'Manajemen'});
   });
 });

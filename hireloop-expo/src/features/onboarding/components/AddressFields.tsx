@@ -1,6 +1,6 @@
 import {useQuery} from '@tanstack/react-query';
 import React from 'react';
-import {View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 
 import {masterDataApi} from '../../master-data/api/master-data.api';
 import {onboardingKeys} from '../onboarding.keys';
@@ -18,12 +18,13 @@ function normalizeOptions(input: unknown): MasterOption[] {
   }).filter(option => option.value && option.label);
 }
 
-export function AddressFields({label, value, onChange, disabled, error}: {
+export function AddressFields({label, value, onChange, disabled, error, afterAddressLine}: {
   label: string;
   value: AddressDetail;
   onChange: (value: AddressDetail) => void;
   disabled?: boolean;
   error?: string;
+  afterAddressLine?: React.ReactNode;
 }) {
   const provinces = useQuery({queryKey: onboardingKeys.regions('province'), queryFn: async () => normalizeOptions(await masterDataApi.provinces()), staleTime: 60 * 60 * 1000});
   const regencies = useQuery({queryKey: onboardingKeys.regions('regency', value.provinceCode), queryFn: async () => normalizeOptions(await masterDataApi.regencies(value.provinceCode)), enabled: Boolean(value.provinceCode), staleTime: 60 * 60 * 1000});
@@ -35,7 +36,8 @@ export function AddressFields({label, value, onChange, disabled, error}: {
 
   return (
     <View>
-      <TextField label={label} required multiline disabled={disabled} value={value.addressLine} onChangeText={addressLine => onChange({...value, addressLine})} placeholder={`Alamat sesuai ${label.replace('Alamat ', '')}`} error={error} />
+      <TextField groupStyle={afterAddressLine ? styles.addressLineWithSlot : undefined} label={label} required multiline disabled={disabled} value={value.addressLine} onChangeText={addressLine => onChange({...value, addressLine})} placeholder={`Alamat sesuai ${label.replace('Alamat ', '')}`} error={error} />
+      {afterAddressLine}
       <SelectField label="Provinsi" required searchable disabled={disabled || provinces.isLoading} value={value.provinceCode} options={provinces.data ?? []} onChange={next => setOption('provinceCode', 'provinceName', provinces.data ?? [], next, {regencyCode: '', regencyName: '', districtCode: '', districtName: '', villageCode: '', villageName: '', postalCode: ''})} placeholder={provinces.isLoading ? 'Memuat provinsi...' : 'Pilih provinsi'} />
       <SelectField label="Kota / Kabupaten" required searchable disabled={disabled || !value.provinceCode || regencies.isLoading} value={value.regencyCode} options={regencies.data ?? []} onChange={next => setOption('regencyCode', 'regencyName', regencies.data ?? [], next, {districtCode: '', districtName: '', villageCode: '', villageName: '', postalCode: ''})} placeholder="Pilih kota / kabupaten" />
       <SelectField label="Kecamatan" required searchable disabled={disabled || !value.regencyCode || districts.isLoading} value={value.districtCode} options={districts.data ?? []} onChange={next => setOption('districtCode', 'districtName', districts.data ?? [], next, {villageCode: '', villageName: '', postalCode: ''})} placeholder="Pilih kecamatan" />
@@ -44,3 +46,7 @@ export function AddressFields({label, value, onChange, disabled, error}: {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  addressLineWithSlot: {marginBottom: 4},
+});

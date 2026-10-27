@@ -1,59 +1,56 @@
 import React, {useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
+import {localDateToIso} from './date-field.utils';
 import type {DateFieldProps} from './DateField.types';
 import {FieldLabel} from './FormControls';
 
-function toIsoBoundary(value?: Date): string | undefined {
-  if (!value) return undefined;
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+export type {DateFieldProps} from './DateField.types';
+export {isoToLocalDate, localDateToIso} from './date-field.utils';
 
 export function DateField({label, value, onChange, required, error, disabled, tone = 'dark', minimumDate, maximumDate}: DateFieldProps) {
   const [focused, setFocused] = useState(false);
+  const input = React.createElement('input', {
+    'aria-label': `${label}. ${value || 'Belum dipilih'}`,
+    disabled,
+    max: maximumDate ? localDateToIso(maximumDate) : undefined,
+    min: minimumDate ? localDateToIso(minimumDate) : undefined,
+    onBlur: () => setFocused(false),
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.value),
+    onFocus: () => setFocused(true),
+    style: {
+      background: 'transparent',
+      border: 0,
+      boxSizing: 'border-box',
+      color: disabled ? '#5E626B' : '#111827',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      flex: 1,
+      fontFamily: 'PlusJakartaSans_400Regular',
+      fontSize: 14,
+      height: 50,
+      minWidth: 0,
+      outline: 'none',
+      padding: '0 14px',
+      width: '100%',
+    } satisfies React.CSSProperties,
+    type: 'date',
+    value,
+  });
 
   return (
     <View style={styles.group}>
       <FieldLabel label={label} required={required} tone={tone} />
-      <View style={[styles.control, focused && styles.focused, disabled && styles.disabled, error && styles.errorBorder]}>
-        <input
-          aria-label={label}
-          disabled={disabled}
-          type="date"
-          value={value}
-          min={toIsoBoundary(minimumDate)}
-          max={toIsoBoundary(maximumDate)}
-          onChange={event => onChange(event.currentTarget.value)}
-          onBlur={() => setFocused(false)}
-          onFocus={() => setFocused(true)}
-          style={webInputStyle}
-        />
+      <View style={[styles.control, focused && styles.focused, error && styles.errorBorder, disabled && styles.disabled]}>
+        {input}
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
     </View>
   );
 }
 
-const webInputStyle: React.CSSProperties = {
-  appearance: 'none',
-  background: 'transparent',
-  border: 0,
-  color: '#111827',
-  flex: 1,
-  fontFamily: 'PlusJakartaSans_400Regular',
-  fontSize: 14,
-  height: 52,
-  minWidth: 0,
-  outline: 'none',
-  padding: '0 15px',
-};
-
 const styles = StyleSheet.create({
   group: {gap: 8, marginBottom: 20},
-  control: {minHeight: 54, borderRadius: 11, backgroundColor: 'white', borderWidth: 2, borderColor: '#E0E5EC', flexDirection: 'row', alignItems: 'center', overflow: 'hidden'},
+  control: {minHeight: 54, borderRadius: 11, borderWidth: 2, borderColor: '#E0E5EC', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', overflow: 'hidden'},
   focused: {borderColor: '#111111'},
   disabled: {backgroundColor: '#D2CED0'},
   errorBorder: {borderColor: '#FF5B67'},

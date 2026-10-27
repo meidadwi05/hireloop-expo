@@ -24,7 +24,8 @@ function normalizeMasterOptions(input: unknown): MasterOption[] {
   return source.map(item => {
     const record = item && typeof item === 'object' ? item as Record<string, unknown> : {};
     const label = String(record.name ?? record.label ?? '');
-    return {value: label, label};
+    const id = Number(record.id);
+    return {value: Number.isFinite(id) ? String(id) : label, label};
   }).filter(option => option.value);
 }
 
@@ -158,7 +159,16 @@ export function OnboardingScreen() {
           <OnboardingProgress step={state.step} />
           <View style={[styles.formWrap, width < 390 && styles.formWrapNarrow]}>
             {state.step === 1 ? (
-              <PersonalDataStep draft={state.draft} dispatch={dispatch} majorOptions={majors} onNext={continueToWork} runAction={runAction} />
+              <PersonalDataStep
+                draft={state.draft}
+                dispatch={dispatch}
+                majorOptions={majors}
+                majorLoading={onboarding.majors.isFetching}
+                majorError={onboarding.majors.isError}
+                onRetryMajors={() => { void onboarding.majors.refetch(); }}
+                onNext={continueToWork}
+                runAction={runAction}
+              />
             ) : (
               <WorkExperienceStep draft={state.draft} dispatch={dispatch} skills={onboarding.skills.data ?? []} submitting={state.submitting || onboarding.submitting || overlay?.kind === 'loading'} onBack={() => dispatch({type: 'set-step', step: 1})} onFinish={finish} runAction={runAction} onNotify={notify} />
             )}

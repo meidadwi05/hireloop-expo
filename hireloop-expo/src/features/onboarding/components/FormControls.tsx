@@ -4,10 +4,13 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   type TextInputProps,
+  type StyleProp,
   View,
+  type ViewStyle,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
@@ -28,12 +31,13 @@ type TextFieldProps = Omit<TextInputProps, 'onChange' | 'onChangeText'> & {
   error?: string;
   disabled?: boolean;
   tone?: 'dark' | 'light';
+  groupStyle?: StyleProp<ViewStyle>;
   onChangeText?: (text: string) => void;
 };
 
-export function TextField({label, required, error, disabled, multiline, style, tone, ...props}: TextFieldProps) {
+export function TextField({label, required, error, disabled, multiline, style, tone, groupStyle, ...props}: TextFieldProps) {
   return (
-    <View style={styles.fieldGroup}>
+    <View style={[styles.fieldGroup, groupStyle]}>
       <FieldLabel label={label} required={required} tone={tone} />
       <FormTextInput
         {...props}
@@ -63,9 +67,10 @@ type SelectFieldProps = {
   searchable?: boolean;
   disabled?: boolean;
   tone?: 'dark' | 'light';
+  presentation?: 'modal' | 'inline';
 };
 
-export function SelectField({label, value, options, onChange, placeholder, required, error, searchable, disabled, tone}: SelectFieldProps) {
+export function SelectField({label, value, options, onChange, placeholder, required, error, searchable, disabled, tone, presentation = 'modal'}: SelectFieldProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const selected = options.find(option => option.value === value);
@@ -73,6 +78,35 @@ export function SelectField({label, value, options, onChange, placeholder, requi
     const normalized = query.trim().toLowerCase();
     return normalized ? options.filter(option => option.label.toLowerCase().includes(normalized)) : options;
   }, [options, query]);
+  const chooseOption = (option: MasterOption) => {
+    onChange(option.value);
+    setOpen(false);
+    setQuery('');
+  };
+  const optionRow = (option: MasterOption) => (
+    <Pressable
+      key={option.value}
+      accessibilityRole="radio"
+      accessibilityState={{checked: option.value === value}}
+      onPress={() => chooseOption(option)}
+      style={[styles.option, option.value === value && styles.optionSelected]}
+    >
+      <Text style={styles.optionText}>{option.label}</Text>
+      {option.value === value ? <Ionicons name="checkmark" size={21} color={C.blue} /> : null}
+    </Pressable>
+  );
+  const searchField = searchable ? (
+    <FormTextInput
+      accessibilityLabel={`Cari ${label}`}
+      autoFocus
+      containerStyle={styles.searchInputFrame}
+      inputStyle={styles.searchInput}
+      value={query}
+      onChangeText={setQuery}
+      placeholder="Cari..."
+      placeholderTextColor="#98A1B2"
+    />
+  ) : null;
 
   return (
     <View style={styles.fieldGroup}>
@@ -92,7 +126,15 @@ export function SelectField({label, value, options, onChange, placeholder, requi
         <Ionicons name="chevron-down" size={20} color="#111827" />
       </FormFieldPressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
+      {open && presentation === 'inline' ? (
+        <View style={styles.inlineSelect} testID={`inline-options-${label}`}>
+          {searchField}
+          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={styles.inlineOptions}>
+            {filtered.length ? filtered.map(optionRow) : <Text style={styles.emptyText}>Data tidak ditemukan</Text>}
+          </ScrollView>
+        </View>
+      ) : null}
+      {presentation === 'modal' ? <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <SafeAreaView style={styles.modalOverlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={styles.selectModal}>
@@ -102,38 +144,17 @@ export function SelectField({label, value, options, onChange, placeholder, requi
                 <Ionicons name="close" size={24} color="#111827" />
               </Pressable>
             </View>
-            {searchable ? (
-              <FormTextInput
-                accessibilityLabel={`Cari ${label}`}
-                autoFocus
-                containerStyle={styles.searchInputFrame}
-                inputStyle={styles.searchInput}
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Cari..."
-                placeholderTextColor="#98A1B2"
-              />
-            ) : null}
+            {searchField}
             <FlatList
               data={filtered}
               keyExtractor={item => item.value}
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={<Text style={styles.emptyText}>Data tidak ditemukan</Text>}
-              renderItem={({item}) => (
-                <Pressable
-                  accessibilityRole="radio"
-                  accessibilityState={{checked: item.value === value}}
-                  onPress={() => { onChange(item.value); setOpen(false); setQuery(''); }}
-                  style={[styles.option, item.value === value && styles.optionSelected]}
-                >
-                  <Text style={styles.optionText}>{item.label}</Text>
-                  {item.value === value ? <Ionicons name="checkmark" size={21} color={C.blue} /> : null}
-                </Pressable>
-              )}
+              renderItem={({item}) => optionRow(item)}
             />
           </View>
         </SafeAreaView>
-      </Modal>
+      </Modal> : null}
     </View>
   );
 }
@@ -190,6 +211,8 @@ const styles = StyleSheet.create({
   placeholder: {fontFamily: F.regular, color: '#B6BCC7', fontSize: 13},
   modalOverlay: {flex: 1, backgroundColor: 'rgba(2,7,25,0.72)', justifyContent: 'center', padding: 12},
   selectModal: {width: '100%', maxWidth: 430, maxHeight: '72%', alignSelf: 'center', backgroundColor: 'white', borderRadius: 22, padding: 18},
+  inlineSelect: {borderWidth: 1, borderColor: '#D9DFE8', borderRadius: 12, backgroundColor: '#FFFFFF', padding: 10, marginTop: -2, marginBottom: 4},
+  inlineOptions: {maxHeight: 210},
   selectHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14},
   selectTitle: {fontFamily: F.bold, color: '#111827', fontSize: 18},
   searchInputFrame: {height: 46, borderRadius: 10, borderColor: '#D9DFE8', paddingHorizontal: 13, marginBottom: 10},

@@ -14,10 +14,13 @@ import {IdentityUploadCards} from './IdentityUploadCards';
 const genderOptions: MasterOption[] = [{value: 'male', label: 'Laki-laki'}, {value: 'female', label: 'Perempuan'}];
 const maritalOptions: MasterOption[] = [{value: 'single', label: 'Belum Menikah'}, {value: 'married', label: 'Menikah'}, {value: 'other', label: 'Lainnya'}];
 
-export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runAction}: {
+export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, majorError, onRetryMajors, onNext, runAction}: {
   draft: OnboardingDraft;
   dispatch: React.Dispatch<OnboardingAction>;
   majorOptions: MasterOption[];
+  majorLoading?: boolean;
+  majorError?: boolean;
+  onRetryMajors?: () => void;
   onNext: () => void;
   runAction: RunOnboardingAction;
 }) {
@@ -76,8 +79,17 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runActi
       <SelectField label="Status Pernikahan" required value={draft.maritalStatus} onChange={value => setField('maritalStatus', value as OnboardingDraft['maritalStatus'])} options={maritalOptions} placeholder="Pilih status pernikahan" />
       <TextField label="No. Handphone / WhatsApp" required value={draft.phone} onChangeText={value => setField('phone', value)} keyboardType="phone-pad" placeholder="628xxxxxxxxxx" />
       <AddressFields label="Alamat KTP" value={draft.identityAddress} onChange={address => dispatch({type: 'set-address', target: 'identityAddress', address})} />
-      <AddressFields label="Alamat Domisili" disabled={draft.domicileSameAsIdentity} value={draft.domicileAddress} onChange={address => dispatch({type: 'set-address', target: 'domicileAddress', address})} />
-      <View style={styles.sameAddress}><CheckboxField label="Sama dengan alamat di KTP" checked={draft.domicileSameAsIdentity} onChange={value => setField('domicileSameAsIdentity', value)} /></View>
+      <AddressFields
+        label="Alamat Domisili"
+        disabled={draft.domicileSameAsIdentity}
+        value={draft.domicileAddress}
+        onChange={address => dispatch({type: 'set-address', target: 'domicileAddress', address})}
+        afterAddressLine={(
+          <View style={styles.sameAddress} testID="same-address-after-domicile">
+            <CheckboxField label="Sama dengan alamat di KTP" checked={draft.domicileSameAsIdentity} onChange={value => setField('domicileSameAsIdentity', value)} />
+          </View>
+        )}
+      />
 
       <AddField label="Pendidikan Terakhir" required placeholder={draft.educations.length ? 'Tambah pendidikan lainnya' : 'Belum ada pendidikan ditambahkan'} onPress={() => openEducation()} />
       {draft.educations.map(item => (
@@ -100,7 +112,7 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runActi
         <LinearGradient colors={['#0B5CFF', '#00D8F4']} end={{x: 1, y: 0}} start={{x: 0, y: 0}} style={styles.gradient}><Text style={styles.primaryText}>Selanjutnya</Text></LinearGradient>
       </Pressable>
 
-        {educationOpen ? <EducationModal visible initialValue={editingEducation} majorOptions={majorOptions} onCancel={() => setEducationOpen(false)} onSave={saveEducation} /> : null}
+        {educationOpen ? <EducationModal visible initialValue={editingEducation} majorOptions={majorOptions} majorLoading={majorLoading} majorError={majorError} onRetryMajors={onRetryMajors} onCancel={() => setEducationOpen(false)} onSave={saveEducation} /> : null}
       </View>
     </View>
   );
@@ -108,14 +120,14 @@ export function PersonalDataStep({draft, dispatch, majorOptions, onNext, runActi
 
 const styles = StyleSheet.create({
   stepContent: {width: '100%', gap: 16},
-  card: {width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: '#061D52', borderRadius: 34, paddingHorizontal: 24, paddingTop: 31, paddingBottom: 30},
-  cardNarrow: {borderRadius: 26, paddingHorizontal: 16, paddingTop: 25},
+  card: {width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: '#061D52', borderRadius: 22, paddingHorizontal: 24, paddingTop: 31, paddingBottom: 30},
+  cardNarrow: {borderRadius: 18, paddingHorizontal: 16, paddingTop: 25},
   sectionTitle: {flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 31},
   sectionTitleText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 19},
   columns: {flexDirection: 'row', gap: 12},
   columnsNarrow: {flexDirection: 'column', gap: 0},
   column: {flex: 1, minWidth: 0},
-  sameAddress: {marginTop: 2, marginBottom: 18},
+  sameAddress: {marginBottom: 10},
   itemCard: {backgroundColor: 'white', borderRadius: 11, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
   itemIcon: {width: 28, height: 28, borderRadius: 14, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center'},
   itemCopy: {flex: 1, minWidth: 0},

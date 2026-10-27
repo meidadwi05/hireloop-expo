@@ -116,6 +116,37 @@ describe('alur onboarding intro', () => {
     expect(StyleSheet.flatten(screen.getByText('Lewati').props.style).color).toBe('#00195E');
   });
 
+  it('menyinkronkan ulang tema ketika swipe kembali tersnap ke halaman asal', () => {
+    const screen = render(<WelcomeRoute />);
+    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
+    jest.useRealTimers();
+    const carousel = screen.getByTestId('intro-slides');
+
+    fireEvent.press(screen.getByText('Lanjut'));
+    fireEvent.press(screen.getByText('Lanjut'));
+    fireEvent.press(screen.getByText('Lanjut'));
+    expect(screen.getByLabelText('Halaman onboarding 4').props.accessibilityState).toEqual({selected: true});
+
+    fireEvent(carousel, 'scrollBeginDrag', {
+      nativeEvent: {contentOffset: {x: 960, y: 0}, layoutMeasurement: {width: 320, height: 700}},
+    });
+    fireEvent.scroll(carousel, {
+      nativeEvent: {contentOffset: {x: 640, y: 0}, layoutMeasurement: {width: 320, height: 700}},
+    });
+
+    expect(screen.getByLabelText('Halaman onboarding 3').props.accessibilityState).toEqual({selected: true});
+    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#FFFFFF');
+    expect(screen.getByText('Lanjut')).toBeTruthy();
+
+    fireEvent.scroll(carousel, {
+      nativeEvent: {contentOffset: {x: 960, y: 0}, layoutMeasurement: {width: 320, height: 700}},
+    });
+
+    expect(screen.getByLabelText('Halaman onboarding 4').props.accessibilityState).toEqual({selected: true});
+    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#050D49');
+    expect(screen.getByText('Mulai Sekarang')).toBeTruthy();
+  });
+
   it('melanjutkan tombol dari halaman terakhir hasil swipe', () => {
     const screen = render(<WelcomeRoute />);
     act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));

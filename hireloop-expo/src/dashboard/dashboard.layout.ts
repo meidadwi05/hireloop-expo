@@ -32,3 +32,18 @@ export function getDashboardSummaryIconSize(viewportWidth: number) {
   const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
   return Math.round(clamp(safeWidth * 0.135, 46, 58));
 }
+
+export function getDashboardSummaryOverlap(viewportWidth: number) {
+  const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
+  const pageWidth = clamp(safeWidth, 280, 720);
+
+  if (pageWidth <= 320) {
+    return Math.round(34 + ((pageWidth - 280) / 40) * 6);
+  }
+
+  if (pageWidth <= 430) {
+    return Math.round(40 + ((pageWidth - 320) / 110) * 12);
+  }
+
+  return Math.round(52 + ((pageWidth - 430) / 290) * 4);
+}
