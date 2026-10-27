@@ -4,9 +4,13 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
 
-type JobsLocationFilterProps = {onUnavailablePress: () => void};
+type JobsLocationFilterProps = {
+  controlIconSize: number;
+  chevronIconSize: number;
+  onUnavailablePress: () => void;
+};
 
-export function JobsLocationFilter({onUnavailablePress}: JobsLocationFilterProps) {
+export function JobsLocationFilter({controlIconSize, chevronIconSize, onUnavailablePress}: JobsLocationFilterProps) {
   return (
     <View style={styles.row}>
       <Pressable
@@ -15,9 +19,9 @@ export function JobsLocationFilter({onUnavailablePress}: JobsLocationFilterProps
         onPress={onUnavailablePress}
         style={({pressed}) => [styles.control, styles.location, pressed && styles.pressed]}
       >
-        <Ionicons name="location-outline" size={24} color="#49607F" />
+        <Ionicons name="location-outline" size={controlIconSize} color="#49607F" />
         <Text numberOfLines={1} style={styles.text}>Semua lokasi</Text>
-        <Ionicons name="chevron-down" size={20} color="#49607F" />
+        <Ionicons name="chevron-down" size={chevronIconSize} color="#49607F" />
       </Pressable>
       <Pressable
         accessibilityHint="Filter lanjutan belum didukung oleh server"
@@ -25,7 +29,7 @@ export function JobsLocationFilter({onUnavailablePress}: JobsLocationFilterProps
         onPress={onUnavailablePress}
         style={({pressed}) => [styles.control, styles.filter, pressed && styles.pressed]}
       >
-        <Ionicons name="options-outline" size={23} color="#49607F" />
+        <Ionicons name="options-outline" size={controlIconSize} color="#49607F" />
         <Text style={styles.text}>Filter</Text>
         <View style={styles.dot} />
       </Pressable>

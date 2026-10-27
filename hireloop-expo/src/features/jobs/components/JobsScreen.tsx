@@ -13,6 +13,7 @@ import {
 
 import {toAppApiError} from '../../../core/api/api-error';
 import {useCandidateJobs} from '../hooks/use-candidate-jobs';
+import {getJobsHeaderIconLayout} from '../jobs-header.layout';
 import type {CandidateJobCard, CandidateJobQuery} from '../jobs.types';
 import {JobListingCard} from './JobListingCard';
 import {JobsCategoryTabs} from './JobsCategoryTabs';
@@ -31,6 +32,7 @@ export function JobsScreen() {
   const [savedKeys, setSavedKeys] = useState<Set<string>>(() => new Set());
   const jobs = useCandidateJobs(priority);
   const pagePadding = width <= 350 ? 14 : 20;
+  const headerIconLayout = getJobsHeaderIconLayout(width);
 
   const openJob = useCallback((job: CandidateJobCard, intent?: 'apply') => {
     router.push({
@@ -71,7 +73,11 @@ export function JobsScreen() {
         onOpenSaved={() => Alert.alert('Lowongan tersimpan', 'Penyimpanan lowongan masih berlaku untuk sesi aplikasi ini.')}
       />
       <View style={[styles.controls, {paddingHorizontal: pagePadding}]}>
-        <JobsLocationFilter onUnavailablePress={showUnsupported} />
+        <JobsLocationFilter
+          controlIconSize={headerIconLayout.controlIconSize}
+          chevronIconSize={headerIconLayout.chevronIconSize}
+          onUnavailablePress={showUnsupported}
+        />
         <JobsCategoryTabs value={priority} onChange={setPriority} />
         <JobsResultHeader
           total={jobs.total}

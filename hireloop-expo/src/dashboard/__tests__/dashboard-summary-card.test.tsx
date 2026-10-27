@@ -29,14 +29,18 @@ describe('dashboard summary card', () => {
     expect(gridStyle.zIndex).toBe(3);
   });
 
-  it('memakai lingkaran ikon solid dan teks rata kiri', () => {
+  it('memakai ikon solid rounded-square dengan shadow lembut dan teks rata kiri', () => {
     const screen = render(
       <SummaryCard viewportWidth={390} />,
     );
 
-    expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style).backgroundColor).toBe('#00195E');
-    expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style).borderRadius).toBe(13);
-    expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style).width).toBe(47);
+    const iconStyle = StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style);
+    expect(iconStyle.backgroundColor).toBe('#00195E');
+    expect(iconStyle.borderRadius).toBe(11);
+    expect(iconStyle.width).toBe(47);
+    expect(iconStyle.height).toBe(47);
+    expect(iconStyle.shadowOpacity).toBe(0.22);
+    expect(iconStyle.shadowRadius).toBe(5);
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-value-0').props.style).textAlign).toBeUndefined();
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-label-0').props.style).textAlign).toBeUndefined();
   });

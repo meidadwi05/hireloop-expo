@@ -34,6 +34,10 @@ export function getDashboardSummaryIconSize(viewportWidth: number) {
   return Math.round(clamp(safeWidth * 0.12, 42, 48));
 }
 
+export function getDashboardSummaryIconRadius(viewportWidth: number) {
+  return Math.round(getDashboardSummaryIconSize(viewportWidth) * 0.23);
+}
+
 export function getDashboardSummaryOverlap(viewportWidth: number) {
   const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
   const pageWidth = clamp(safeWidth, 280, 720);

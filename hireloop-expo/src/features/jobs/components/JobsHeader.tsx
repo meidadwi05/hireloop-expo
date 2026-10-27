@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
-import {ImageBackground, Pressable, StyleSheet, Text, View} from 'react-native';
+import {ImageBackground, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
+import {getJobsHeaderIconLayout} from '../jobs-header.layout';
 import {JOBS_FONTS} from './jobs.ui';
 import {JobsSearchField} from './JobsSearchField';
 
@@ -17,6 +18,8 @@ type JobsHeaderProps = {
 
 export function JobsHeader({search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
   const insets = useSafeAreaInsets();
+  const {width} = useWindowDimensions();
+  const iconLayout = getJobsHeaderIconLayout(width);
 
   return (
     <ImageBackground
@@ -32,9 +35,12 @@ export function JobsHeader({search, onChangeSearch, onOpenSaved}: JobsHeaderProp
           accessibilityRole="button"
           hitSlop={10}
           onPress={() => goBackOrReplace('/(candidate)/(tabs)/home')}
-          style={styles.iconButton}
+          style={[
+            styles.iconButton,
+            {height: iconLayout.navigationButtonSize, width: iconLayout.navigationButtonSize},
+          ]}
         >
-          <Ionicons name="arrow-back" color="white" size={27} />
+          <Ionicons name="arrow-back" color="white" size={iconLayout.navigationIconSize} />
         </Pressable>
         <View style={styles.copy}>
           <Text style={styles.title}>Lowongan Kerja</Text>
@@ -45,12 +51,19 @@ export function JobsHeader({search, onChangeSearch, onOpenSaved}: JobsHeaderProp
           accessibilityRole="button"
           hitSlop={10}
           onPress={onOpenSaved}
-          style={styles.iconButton}
+          style={[
+            styles.iconButton,
+            {height: iconLayout.navigationButtonSize, width: iconLayout.navigationButtonSize},
+          ]}
         >
-          <Ionicons name="bookmark-outline" color="white" size={26} />
+          <Ionicons name="bookmark-outline" color="white" size={iconLayout.navigationIconSize} />
         </Pressable>
       </View>
-      <JobsSearchField value={search} onChangeText={onChangeSearch} />
+      <JobsSearchField
+        value={search}
+        iconSize={iconLayout.searchIconSize}
+        onChangeText={onChangeSearch}
+      />
     </ImageBackground>
   );
 }
@@ -58,8 +71,8 @@ export function JobsHeader({search, onChangeSearch, onOpenSaved}: JobsHeaderProp
 const styles = StyleSheet.create({
   background: {paddingHorizontal: 20, paddingBottom: 50, gap: 23, backgroundColor: '#00419E'},
   image: {opacity: 0.96},
-  titleRow: {flexDirection: 'row', alignItems: 'center', gap: 11},
-  iconButton: {width: 34, height: 44, alignItems: 'center', justifyContent: 'center'},
+  titleRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 11},
+  iconButton: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   copy: {flex: 1, minWidth: 0},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},
   subtitle: {fontFamily: JOBS_FONTS.regular, fontSize: 12.5, lineHeight: 18, color: 'rgba(255,255,255,0.88)', marginTop: 2},

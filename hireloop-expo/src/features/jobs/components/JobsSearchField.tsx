@@ -6,15 +6,16 @@ import {JOBS_COLORS, JOBS_FONTS} from './jobs.ui';
 
 type JobsSearchFieldProps = {
   value: string;
+  iconSize: number;
   onChangeText: (value: string) => void;
 };
 
-export function JobsSearchField({value, onChangeText}: JobsSearchFieldProps) {
+export function JobsSearchField({value, iconSize, onChangeText}: JobsSearchFieldProps) {
   const [focused, setFocused] = useState(false);
 
   return (
     <View style={[styles.container, focused && styles.focused]}>
-      <Ionicons name="search-outline" color="#536684" size={27} />
+      <Ionicons name="search-outline" color="#536684" size={iconSize} />
       <TextInput
         accessibilityLabel="Cari posisi atau perusahaan"
         autoCapitalize="none"
@@ -35,7 +36,7 @@ export function JobsSearchField({value, onChangeText}: JobsSearchFieldProps) {
           hitSlop={8}
           onPress={() => onChangeText('')}
         >
-          <Ionicons name="close-circle" color="#8F9AB0" size={21} />
+          <Ionicons name="close-circle" color="#8F9AB0" size={Math.max(18, iconSize - 1)} />
         </Pressable>
       )}
     </View>

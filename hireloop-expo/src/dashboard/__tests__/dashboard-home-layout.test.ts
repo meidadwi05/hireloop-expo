@@ -1,5 +1,6 @@
 import {
   getDashboardHeroLayout,
+  getDashboardSummaryIconRadius,
   getDashboardSummaryIconSize,
   getDashboardSummaryOverlap,
 } from '../dashboard.layout';
@@ -39,6 +40,13 @@ describe('dashboard home responsive layout', () => {
     expect(getDashboardSummaryIconSize(390)).toBe(47);
     expect(getDashboardSummaryIconSize(550)).toBe(48);
     expect(getDashboardSummaryIconSize(1200)).toBe(48);
+  });
+
+  test('menjaga sudut ikon sebagai rounded-square secara proporsional', () => {
+    expect(getDashboardSummaryIconRadius(320)).toBe(10);
+    expect(getDashboardSummaryIconRadius(390)).toBe(11);
+    expect(getDashboardSummaryIconRadius(550)).toBe(11);
+    expect(getDashboardSummaryIconRadius(1200)).toBe(11);
   });
 
   test('menaikkan seluruh grid indikator secara responsif terhadap hero', () => {
