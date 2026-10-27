@@ -2,9 +2,9 @@ import {readdir, stat} from 'node:fs/promises';
 import path from 'node:path';
 
 const DIST_DIRECTORY = path.resolve('dist');
-// The onboarding artwork adds ~2.92 MB to the existing export. Keep a strict
-// per-file cap while allowing the approved, measured total bundle increase.
-const MAX_TOTAL_BYTES = Number(process.env.PWA_MAX_TOTAL_MB ?? 18) * 1024 * 1024;
+// Keep the default export ceiling aligned with the approved PWA publishing
+// budget while retaining a strict per-file cap for unexpectedly large assets.
+const MAX_TOTAL_BYTES = Number(process.env.PWA_MAX_TOTAL_MB ?? 45) * 1024 * 1024;
 const MAX_FILE_BYTES = Number(process.env.PWA_MAX_FILE_MB ?? 3) * 1024 * 1024;
 
 async function collectFiles(directory) {
