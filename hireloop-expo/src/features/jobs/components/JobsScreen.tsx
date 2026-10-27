@@ -71,11 +71,11 @@ export function JobsScreen() {
     <>
       <JobsHeader
         containerWidth={containerWidth}
+        horizontalPadding={pagePadding}
         search={jobs.search}
         onChangeSearch={jobs.setSearch}
         onOpenSaved={() => Alert.alert('Lowongan tersimpan', 'Penyimpanan lowongan masih berlaku untuk sesi aplikasi ini.')}
-      />
-      <View style={[styles.controls, {paddingHorizontal: pagePadding}]}>
+      >
         <JobsLocationFilter
           controlHeight={iconLayout.controlHeight}
           controlIconSize={iconLayout.controlIconSize}
@@ -83,6 +83,8 @@ export function JobsScreen() {
           iconSlotSize={iconLayout.iconSlotSize}
           onUnavailablePress={showUnsupported}
         />
+      </JobsHeader>
+      <View style={[styles.controls, {paddingHorizontal: pagePadding}]}>
         <JobsCategoryTabs value={priority} onChange={setPriority} />
         <JobsResultHeader
           total={jobs.total}
@@ -145,7 +147,7 @@ export function JobsScreen() {
 const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   content: {paddingBottom: 22},
-  controls: {gap: 18, marginTop: -28, marginBottom: 18},
+  controls: {gap: 18, paddingTop: 18, marginBottom: 18},
   separator: {height: 16},
   footerLoader: {paddingVertical: 24},
   footerSpace: {height: 10},

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React from 'react';
-import {ImageBackground, Pressable, StyleSheet, Text, View} from 'react-native';
+import React, {type ReactNode} from 'react';
+import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
@@ -11,24 +11,33 @@ import {JobsSearchField} from './JobsSearchField';
 const headerBackground = require('../../../assets/up_background.png');
 
 type JobsHeaderProps = {
+  children: ReactNode;
   containerWidth: number;
+  horizontalPadding: number;
   search: string;
   onChangeSearch: (value: string) => void;
   onOpenSaved: () => void;
 };
 
-export function JobsHeader({containerWidth, search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
+export function JobsHeader({children, containerWidth, horizontalPadding, search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
   const insets = useSafeAreaInsets();
   const iconLayout = getJobsIconLayout(containerWidth);
 
   return (
-    <ImageBackground
-      source={headerBackground}
-      resizeMode="cover"
-      style={[styles.background, {paddingTop: insets.top + 10}]}
-      imageStyle={styles.image}
+    <View
+      style={[
+        styles.background,
+        {paddingHorizontal: horizontalPadding, paddingTop: insets.top + 10},
+      ]}
       testID="jobs-header-background"
     >
+      <Image
+        accessibilityIgnoresInvertColors
+        resizeMode="contain"
+        source={headerBackground}
+        style={styles.image}
+        testID="jobs-header-artwork"
+      />
       <View style={styles.titleRow}>
         <Pressable
           accessibilityLabel="Kembali ke Beranda"
@@ -66,13 +75,14 @@ export function JobsHeader({containerWidth, search, onChangeSearch, onOpenSaved}
         height={iconLayout.searchFieldHeight}
         onChangeText={onChangeSearch}
       />
-    </ImageBackground>
+      {children}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {paddingHorizontal: 20, paddingBottom: 50, gap: 23, backgroundColor: '#00419E'},
-  image: {opacity: 0.96},
+  background: {position: 'relative', overflow: 'hidden', paddingBottom: 12, gap: 12, backgroundColor: '#00419E'},
+  image: {position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%', opacity: 0.96},
   titleRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 11},
   iconButton: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   copy: {flex: 1, minWidth: 0},
