@@ -35,12 +35,13 @@ describe('dashboard summary card', () => {
     );
 
     const iconStyle = StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style);
+    const shadowStyle = StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-shadow-0').props.style);
     expect(iconStyle.backgroundColor).toBe('#00195E');
-    expect(iconStyle.borderRadius).toBe(11);
-    expect(iconStyle.width).toBe(47);
-    expect(iconStyle.height).toBe(47);
-    expect(iconStyle.shadowOpacity).toBe(0.22);
-    expect(iconStyle.shadowRadius).toBe(5);
+    expect(iconStyle.borderRadius).toBe(21);
+    expect(shadowStyle.width).toBe(50);
+    expect(shadowStyle.height).toBe(50);
+    expect(shadowStyle.shadowOpacity).toBe(0.22);
+    expect(shadowStyle.shadowRadius).toBe(5);
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-value-0').props.style).textAlign).toBeUndefined();
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-label-0').props.style).textAlign).toBeUndefined();
   });

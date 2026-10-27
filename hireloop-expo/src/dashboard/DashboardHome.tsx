@@ -22,6 +22,7 @@ import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
 import type {JobCardModel} from '../features/jobs/jobs.types';
 import {
   getDashboardHeroLayout,
+  getDashboardSummaryGlyphSize,
   getDashboardSummaryIconRadius,
   getDashboardSummaryIconSize,
   getDashboardSummaryOverlap,
@@ -198,7 +199,7 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
 export function SummaryCard({viewportWidth}: {viewportWidth: number}) {
   const iconSize = getDashboardSummaryIconSize(viewportWidth);
   const iconRadius = getDashboardSummaryIconRadius(viewportWidth);
-  const iconGlyphSize = Math.round(iconSize * 0.48);
+  const iconGlyphSize = getDashboardSummaryGlyphSize(viewportWidth);
   const overlap = getDashboardSummaryOverlap(viewportWidth);
 
   return (
@@ -213,11 +214,10 @@ export function SummaryCard({viewportWidth}: {viewportWidth: number}) {
           style={({pressed}) => [styles.summaryItem, pressed && styles.pressed]}
         >
           <View
-            testID={`dashboard-summary-icon-${index}`}
+            testID={`dashboard-summary-icon-shadow-${index}`}
             style={[
-              styles.summaryIcon,
+              styles.summaryIconShadow,
               {
-                backgroundColor: item.color,
                 borderRadius: iconRadius,
                 height: iconSize,
                 shadowColor: item.color,
@@ -225,7 +225,15 @@ export function SummaryCard({viewportWidth}: {viewportWidth: number}) {
               },
             ]}
           >
-            <Ionicons name={item.icon} size={iconGlyphSize} color="white" />
+            <View
+              testID={`dashboard-summary-icon-${index}`}
+              style={[
+                styles.summaryIcon,
+                {backgroundColor: item.color, borderRadius: iconRadius},
+              ]}
+            >
+              <Ionicons name={item.icon} size={iconGlyphSize} color="white" />
+            </View>
           </View>
           <View style={styles.summaryCopy}>
             <Text testID={`dashboard-summary-value-${index}`} style={styles.summaryValue}>{item.value}</Text>
@@ -572,7 +580,9 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
 }
 
 export default function DashboardHome({initialUser, onLogout}: DashboardHomeProps) {
-  const {width} = useWindowDimensions();
+  const {width: viewportWidth} = useWindowDimensions();
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const width = measuredWidth ?? Math.min(viewportWidth, 720);
   const {interviews, jobs, unread, jobsLoading, refreshing, error, refresh} = useDashboardHome();
   const cardWidth = Math.min(Math.max(width * 0.84, 280), 370);
 
@@ -605,7 +615,13 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
   }, [cardWidth, jobs, jobsLoading]);
 
   return (
-    <View style={styles.screen}>
+    <View
+      style={styles.screen}
+      onLayout={event => {
+        const nextWidth = Math.round(event.nativeEvent.layout.width);
+        if (nextWidth > 0) setMeasuredWidth(current => current === nextWidth ? current : nextWidth);
+      }}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={C.blue} colors={[C.blue]} />}
@@ -681,7 +697,8 @@ const styles = StyleSheet.create({
   content: {paddingHorizontal: 20, gap: 28},
   summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 130, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
-  summaryIcon: {alignItems: 'center', justifyContent: 'center', flexShrink: 0, shadowOffset: {width: 0, height: 3}, shadowOpacity: 0.22, shadowRadius: 5, elevation: 3},
+  summaryIconShadow: {flexShrink: 0, shadowOffset: {width: 0, height: 3}, shadowOpacity: 0.22, shadowRadius: 5, elevation: 3},
+  summaryIcon: {width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'},
   summaryCopy: {flex: 1, minWidth: 0},
   summaryValue: {fontFamily: F.bold, fontSize: 24, lineHeight: 29, color: C.ink},
   summaryLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#252A35'},

@@ -2,6 +2,7 @@ import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
 
 import {JobListingCard} from '../components/JobListingCard';
+import {getJobsIconLayout} from '../jobs-header.layout';
 import type {CandidateJobCard} from '../jobs.types';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
@@ -33,12 +34,15 @@ const job: CandidateJobCard = {
   salary: 'Rp6.000.000 - Rp7.000.000 / bulan',
 };
 
+const iconLayout = getJobsIconLayout(390);
+
 describe('JobListingCard', () => {
   it('renders API-backed vacancy fields and keeps both actions available', () => {
     const onApply = jest.fn();
     const onOpen = jest.fn();
     const screen = render(
       <JobListingCard
+        iconLayout={iconLayout}
         job={job}
         saved={false}
         onApply={onApply}
@@ -63,6 +67,7 @@ describe('JobListingCard', () => {
   it('labels session-only bookmark state accessibly', () => {
     const screen = render(
       <JobListingCard
+        iconLayout={iconLayout}
         job={job}
         saved={false}
         onApply={jest.fn()}

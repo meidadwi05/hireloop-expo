@@ -1,5 +1,6 @@
 import {
   getDashboardHeroLayout,
+  getDashboardSummaryGlyphSize,
   getDashboardSummaryIconRadius,
   getDashboardSummaryIconSize,
   getDashboardSummaryOverlap,
@@ -37,16 +38,24 @@ describe('dashboard home responsive layout', () => {
 
   test('menskalakan ikon ringkasan tanpa terlalu kecil atau besar', () => {
     expect(getDashboardSummaryIconSize(320)).toBe(42);
-    expect(getDashboardSummaryIconSize(390)).toBe(47);
-    expect(getDashboardSummaryIconSize(550)).toBe(48);
-    expect(getDashboardSummaryIconSize(1200)).toBe(48);
+    expect(getDashboardSummaryIconSize(390)).toBe(50);
+    expect(getDashboardSummaryIconSize(430)).toBe(52);
+    expect(getDashboardSummaryIconSize(550)).toBe(54);
+    expect(getDashboardSummaryIconSize(1200)).toBe(56);
   });
 
-  test('menjaga sudut ikon sebagai rounded-square secara proporsional', () => {
-    expect(getDashboardSummaryIconRadius(320)).toBe(10);
-    expect(getDashboardSummaryIconRadius(390)).toBe(11);
-    expect(getDashboardSummaryIconRadius(550)).toBe(11);
-    expect(getDashboardSummaryIconRadius(1200)).toBe(11);
+  test('menjaga sudut ikon sebagai squircle yang mendekati lingkaran', () => {
+    expect(getDashboardSummaryIconRadius(320)).toBe(18);
+    expect(getDashboardSummaryIconRadius(390)).toBe(21);
+    expect(getDashboardSummaryIconRadius(430)).toBe(22);
+    expect(getDashboardSummaryIconRadius(1200)).toBe(24);
+  });
+
+  test('menskalakan glyph indikator berdasarkan lebar container aktual', () => {
+    expect(getDashboardSummaryGlyphSize(320)).toBe(20);
+    expect(getDashboardSummaryGlyphSize(390)).toBe(23);
+    expect(getDashboardSummaryGlyphSize(430)).toBe(24);
+    expect(getDashboardSummaryGlyphSize(720)).toBe(26);
   });
 
   test('menaikkan seluruh grid indikator secara responsif terhadap hero', () => {

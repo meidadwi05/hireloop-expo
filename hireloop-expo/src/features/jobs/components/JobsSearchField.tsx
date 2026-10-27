@@ -6,16 +6,20 @@ import {JOBS_COLORS, JOBS_FONTS} from './jobs.ui';
 
 type JobsSearchFieldProps = {
   value: string;
+  height: number;
   iconSize: number;
+  iconSlotSize: number;
   onChangeText: (value: string) => void;
 };
 
-export function JobsSearchField({value, iconSize, onChangeText}: JobsSearchFieldProps) {
+export function JobsSearchField({value, height, iconSize, iconSlotSize, onChangeText}: JobsSearchFieldProps) {
   const [focused, setFocused] = useState(false);
 
   return (
-    <View style={[styles.container, focused && styles.focused]}>
-      <Ionicons name="search-outline" color="#536684" size={iconSize} />
+    <View style={[styles.container, {height, minHeight: height}, focused && styles.focused]}>
+      <View style={[styles.iconSlot, {width: iconSlotSize}]}>
+        <Ionicons name="search-outline" color="#536684" size={iconSize} />
+      </View>
       <TextInput
         accessibilityLabel="Cari posisi atau perusahaan"
         autoCapitalize="none"
@@ -45,7 +49,6 @@ export function JobsSearchField({value, iconSize, onChangeText}: JobsSearchField
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 59,
     borderRadius: 15,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -56,6 +59,7 @@ const styles = StyleSheet.create({
     gap: 11,
   },
   focused: {borderColor: JOBS_COLORS.blue},
+  iconSlot: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   input: {
     flex: 1,
     minWidth: 0,

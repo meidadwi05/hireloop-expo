@@ -1,25 +1,25 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
-import {ImageBackground, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {ImageBackground, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
-import {getJobsHeaderIconLayout} from '../jobs-header.layout';
+import {getJobsIconLayout} from '../jobs-header.layout';
 import {JOBS_FONTS} from './jobs.ui';
 import {JobsSearchField} from './JobsSearchField';
 
 const headerBackground = require('../../../assets/up_background.png');
 
 type JobsHeaderProps = {
+  containerWidth: number;
   search: string;
   onChangeSearch: (value: string) => void;
   onOpenSaved: () => void;
 };
 
-export function JobsHeader({search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
+export function JobsHeader({containerWidth, search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
   const insets = useSafeAreaInsets();
-  const {width} = useWindowDimensions();
-  const iconLayout = getJobsHeaderIconLayout(width);
+  const iconLayout = getJobsIconLayout(containerWidth);
 
   return (
     <ImageBackground
@@ -62,6 +62,8 @@ export function JobsHeader({search, onChangeSearch, onOpenSaved}: JobsHeaderProp
       <JobsSearchField
         value={search}
         iconSize={iconLayout.searchIconSize}
+        iconSlotSize={iconLayout.iconSlotSize}
+        height={iconLayout.searchFieldHeight}
         onChangeText={onChangeSearch}
       />
     </ImageBackground>

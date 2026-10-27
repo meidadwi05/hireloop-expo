@@ -4,9 +4,11 @@ import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import type {CandidateJobCard} from '../jobs.types';
+import type {JobsIconLayout} from '../jobs-header.layout';
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
 
 type JobListingCardProps = {
+  iconLayout: JobsIconLayout;
   job: CandidateJobCard;
   saved: boolean;
   onOpen: () => void;
@@ -15,16 +17,17 @@ type JobListingCardProps = {
   onShare: () => void;
 };
 
-function MetaItem({icon, label}: {icon: React.ComponentProps<typeof Ionicons>['name']; label: string}) {
+function MetaItem({icon, label, size}: {icon: React.ComponentProps<typeof Ionicons>['name']; label: string; size: number}) {
   return (
     <View style={styles.metaItem}>
-      <Ionicons name={icon} size={15} color={JOBS_COLORS.blue} />
+      <Ionicons name={icon} size={size} color={JOBS_COLORS.blue} />
       <Text numberOfLines={1} style={styles.metaText}>{label}</Text>
     </View>
   );
 }
 
 export function JobListingCard({
+  iconLayout,
   job,
   saved,
   onOpen,
@@ -44,8 +47,8 @@ export function JobListingCard({
       testID="job-listing-card"
     >
       <View style={styles.header}>
-        <View style={styles.companyIcon}>
-          <Ionicons name="business-outline" size={25} color={JOBS_COLORS.blue} />
+        <View style={[styles.companyIcon, {height: iconLayout.companyContainerSize, width: iconLayout.companyContainerSize}]}>
+          <Ionicons name="business-outline" size={iconLayout.companyIconSize} color={JOBS_COLORS.blue} />
         </View>
         <View style={styles.titleCopy}>
           <Text numberOfLines={2} style={styles.title}>{job.title}</Text>
@@ -61,7 +64,7 @@ export function JobListingCard({
               onToggleSaved();
             }}
           >
-            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={21} color="#60708A" />
+            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={iconLayout.cardActionIconSize} color="#60708A" />
           </Pressable>
           <Pressable
             accessibilityLabel="Bagikan lowongan"
@@ -72,7 +75,7 @@ export function JobListingCard({
               onShare();
             }}
           >
-            <Ionicons name="share-social-outline" size={21} color="#60708A" />
+            <Ionicons name="share-social-outline" size={iconLayout.cardActionIconSize} color="#60708A" />
           </Pressable>
         </View>
       </View>
@@ -92,15 +95,15 @@ export function JobListingCard({
       </View>
 
       <View style={styles.metaRow}>
-        <MetaItem icon="location-outline" label={job.location} />
+        <MetaItem icon="location-outline" label={job.location} size={iconLayout.cardMetaIconSize} />
         <View style={styles.metaDivider} />
-        <MetaItem icon="briefcase-outline" label={job.contractType} />
+        <MetaItem icon="briefcase-outline" label={job.contractType} size={iconLayout.cardMetaIconSize} />
         <View style={styles.metaDivider} />
-        <MetaItem icon="business-outline" label={job.workMode} />
+        <MetaItem icon="business-outline" label={job.workMode} size={iconLayout.cardMetaIconSize} />
       </View>
 
       <View style={styles.salaryRow}>
-        <Ionicons name="cash-outline" size={17} color={JOBS_COLORS.blue} />
+        <Ionicons name="cash-outline" size={iconLayout.cardMetaIconSize + 1} color={JOBS_COLORS.blue} />
         <Text style={styles.salary}>{job.salaryLabel}</Text>
       </View>
 
@@ -119,7 +122,7 @@ export function JobListingCard({
 
       <View style={styles.stats}>
         <View style={styles.applicants}>
-          <Ionicons name="people-outline" size={19} color="#52627A" />
+          <Ionicons name="people-outline" size={iconLayout.cardStatIconSize} color="#52627A" />
           <View>
             <Text style={styles.applicantValue}>{job.applicantsCount}</Text>
             <Text style={styles.statLabel}>Total Pelamar</Text>
@@ -127,7 +130,7 @@ export function JobListingCard({
         </View>
         <View style={styles.statDivider} />
         <View style={styles.deadline}>
-          <Ionicons name="calendar-outline" size={18} color="#52627A" />
+          <Ionicons name="calendar-outline" size={iconLayout.cardStatIconSize} color="#52627A" />
           <Text numberOfLines={2} style={styles.deadlineText}>{job.closingLabel}</Text>
         </View>
       </View>
@@ -168,7 +171,7 @@ export function JobListingCard({
           style={({pressed}) => [styles.detailButton, pressed && styles.buttonPressed]}
         >
           <Text style={styles.detailText}>Lihat Detail</Text>
-          <Ionicons name="chevron-forward" size={18} color={JOBS_COLORS.blue} />
+          <Ionicons name="chevron-forward" size={iconLayout.cardChevronIconSize} color={JOBS_COLORS.blue} />
         </Pressable>
       </View>
     </Pressable>
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
   card: {...jobsCardShadow, backgroundColor: 'white', borderRadius: 18, padding: 17, borderWidth: 1, borderColor: '#EEF2F8'},
   cardPressed: {opacity: 0.94},
   header: {flexDirection: 'row', alignItems: 'flex-start', gap: 11},
-  companyIcon: {width: 50, height: 50, borderRadius: 13, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  companyIcon: {borderRadius: 13, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   titleCopy: {flex: 1, minWidth: 0, paddingTop: 1},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 16, lineHeight: 21, color: JOBS_COLORS.ink},
   company: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 17, color: JOBS_COLORS.body, marginTop: 3},

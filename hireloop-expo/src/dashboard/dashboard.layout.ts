@@ -31,11 +31,36 @@ export function getDashboardHeroLayout(viewportWidth: number) {
 
 export function getDashboardSummaryIconSize(viewportWidth: number) {
   const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
-  return Math.round(clamp(safeWidth * 0.12, 42, 48));
+  const pageWidth = clamp(safeWidth, 320, 720);
+
+  if (pageWidth <= 390) {
+    return Math.round(42 + ((pageWidth - 320) / 70) * 8);
+  }
+
+  if (pageWidth <= 430) {
+    return Math.round(50 + ((pageWidth - 390) / 40) * 2);
+  }
+
+  return Math.round(52 + ((pageWidth - 430) / 290) * 4);
 }
 
 export function getDashboardSummaryIconRadius(viewportWidth: number) {
-  return Math.round(getDashboardSummaryIconSize(viewportWidth) * 0.23);
+  return Math.round(getDashboardSummaryIconSize(viewportWidth) * 0.42);
+}
+
+export function getDashboardSummaryGlyphSize(viewportWidth: number) {
+  const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
+  const pageWidth = clamp(safeWidth, 320, 720);
+
+  if (pageWidth <= 390) {
+    return Math.round(20 + ((pageWidth - 320) / 70) * 3);
+  }
+
+  if (pageWidth <= 430) {
+    return Math.round(23 + ((pageWidth - 390) / 40));
+  }
+
+  return Math.round(24 + ((pageWidth - 430) / 290) * 2);
 }
 
 export function getDashboardSummaryOverlap(viewportWidth: number) {

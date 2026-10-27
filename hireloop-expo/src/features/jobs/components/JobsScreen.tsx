@@ -13,7 +13,7 @@ import {
 
 import {toAppApiError} from '../../../core/api/api-error';
 import {useCandidateJobs} from '../hooks/use-candidate-jobs';
-import {getJobsHeaderIconLayout} from '../jobs-header.layout';
+import {getJobsIconLayout} from '../jobs-header.layout';
 import type {CandidateJobCard, CandidateJobQuery} from '../jobs.types';
 import {JobListingCard} from './JobListingCard';
 import {JobsCategoryTabs} from './JobsCategoryTabs';
@@ -28,11 +28,13 @@ type Priority = NonNullable<CandidateJobQuery['priority']>;
 
 export function JobsScreen() {
   const {width} = useWindowDimensions();
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const [priority, setPriority] = useState<Priority>('all');
   const [savedKeys, setSavedKeys] = useState<Set<string>>(() => new Set());
   const jobs = useCandidateJobs(priority);
-  const pagePadding = width <= 350 ? 14 : 20;
-  const headerIconLayout = getJobsHeaderIconLayout(width);
+  const containerWidth = measuredWidth ?? Math.min(width, 720);
+  const pagePadding = containerWidth <= 350 ? 14 : 20;
+  const iconLayout = getJobsIconLayout(containerWidth);
 
   const openJob = useCallback((job: CandidateJobCard, intent?: 'apply') => {
     router.push({
@@ -68,14 +70,17 @@ export function JobsScreen() {
   const header = (
     <>
       <JobsHeader
+        containerWidth={containerWidth}
         search={jobs.search}
         onChangeSearch={jobs.setSearch}
         onOpenSaved={() => Alert.alert('Lowongan tersimpan', 'Penyimpanan lowongan masih berlaku untuk sesi aplikasi ini.')}
       />
       <View style={[styles.controls, {paddingHorizontal: pagePadding}]}>
         <JobsLocationFilter
-          controlIconSize={headerIconLayout.controlIconSize}
-          chevronIconSize={headerIconLayout.chevronIconSize}
+          controlHeight={iconLayout.controlHeight}
+          controlIconSize={iconLayout.controlIconSize}
+          chevronIconSize={iconLayout.chevronIconSize}
+          iconSlotSize={iconLayout.iconSlotSize}
           onUnavailablePress={showUnsupported}
         />
         <JobsCategoryTabs value={priority} onChange={setPriority} />
@@ -88,7 +93,13 @@ export function JobsScreen() {
   );
 
   return (
-    <View style={styles.viewport}>
+    <View
+      style={styles.viewport}
+      onLayout={event => {
+        const nextWidth = Math.round(event.nativeEvent.layout.width);
+        if (nextWidth > 0) setMeasuredWidth(current => current === nextWidth ? current : nextWidth);
+      }}
+    >
       <StatusBar style="light" />
       <FlatList
         data={jobs.items}
@@ -96,6 +107,7 @@ export function JobsScreen() {
         renderItem={({item}) => (
           <View style={{paddingHorizontal: pagePadding}}>
             <JobListingCard
+              iconLayout={iconLayout}
               job={item}
               saved={savedKeys.has(item.key)}
               onApply={() => openJob(item, 'apply')}
