@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {LinearGradient} from 'expo-linear-gradient';
 import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
@@ -159,7 +160,7 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
       <View
         style={[
           styles.heroActions,
-          {right: layout.horizontalPadding, top: Math.max(insets.top + 12, layout.contentTop)},
+          {right: layout.horizontalPadding, top: Math.max(insets.top + 8, layout.actionsTop)},
         ]}
       >
         <Pressable
@@ -211,7 +212,7 @@ export function SummaryCard({viewportWidth}: {viewportWidth: number}) {
         >
           <View
             testID={`dashboard-summary-icon-${index}`}
-            style={[styles.summaryIcon, {backgroundColor: item.color, width: iconSize, height: iconSize, borderRadius: iconSize / 2}]}
+            style={[styles.summaryIcon, {backgroundColor: item.color, width: iconSize, height: iconSize}]}
           >
             <Ionicons name={item.icon} size={iconGlyphSize} color="white" />
           </View>
@@ -249,19 +250,25 @@ export function ProfileCompletionCard({completion}: {completion: number}) {
           onPress={() => Alert.alert('Lengkapi profil', 'Buka menu Profil untuk melengkapi data kandidat.')}
           style={styles.profileButton}
         >
-          <Text style={styles.profileButtonText}>Lengkapi sekarang</Text>
+          <LinearGradient
+            colors={['#0145C0', '#00205A']}
+            end={{x: 1, y: 0}}
+            start={{x: 0, y: 0}}
+            style={styles.profileButtonGradient}
+            testID="profile-completion-gradient"
+          >
+            <Text style={styles.profileButtonText}>Lengkapi sekarang</Text>
+          </LinearGradient>
         </Pressable>
       </View>
-      <View style={[styles.profileIllustration, compact && styles.profileIllustrationCompact]}>
-        <View style={styles.clipTop} />
-        <Ionicons name="person-circle" size={35} color={C.navy} />
-        {[0, 1, 2].map(item => (
-          <View key={item} style={styles.checkRow}>
-            <Ionicons name="checkmark" size={16} color="#1FC969" />
-            <View style={[styles.checkLine, {width: 34 + item * 5}]} />
-          </View>
-        ))}
-      </View>
+      <Image
+        accessibilityIgnoresInvertColors
+        accessibilityLabel="Ilustrasi kelengkapan profil"
+        resizeMode="contain"
+        source={require('../assets/profil_complete.png')}
+        style={[styles.profileIllustration, compact && styles.profileIllustrationCompact]}
+        testID="profile-completion-illustration"
+      />
     </View>
   );
 }
@@ -433,9 +440,11 @@ export function RecentApplicationsCard() {
   );
 }
 
-function JobCard({job, width}: {job: JobCardModel; width: number}) {
+export function JobCard({job, width}: {job: JobCardModel; width: number}) {
   const [saved, setSaved] = useState(false);
-  const visibleSkills = job.skills.slice(0, 5);
+  const visibleSkills = job.skills.slice(0, 4);
+  const hiddenSkillCount = Math.max(0, job.skills.length - visibleSkills.length);
+  const workMode = job.workType || 'On Site';
 
   return (
     <Pressable
@@ -443,18 +452,17 @@ function JobCard({job, width}: {job: JobCardModel; width: number}) {
       accessibilityLabel={`Lowongan ${job.title} di ${job.company}`}
       onPress={() => Alert.alert(job.title, `${job.company}\n${job.location}`)}
       style={[styles.jobCard, {width}]}
+      testID="dashboard-job-card"
     >
-      <View style={styles.jobCardTop}>
-        {job.urgent ? (
-          <View style={styles.urgentBadge}>
-            <Ionicons name="flash" size={12} color="#16B75D" />
-            <Text style={styles.urgentText}>Dibutuhkan segera</Text>
-          </View>
-        ) : <View />}
+      <View style={styles.jobHeader}>
+        <View style={styles.jobCategoryIcon}>
+          <Ionicons name="business-outline" size={25} color={C.brightBlue} />
+        </View>
+        <View style={styles.jobTitleWrap}>
+          <Text numberOfLines={1} style={styles.jobTitle}>{job.title}</Text>
+          <Text numberOfLines={1} style={styles.companyName}>{job.company}</Text>
+        </View>
         <View style={styles.jobActions}>
-          <View style={styles.openDetailIcon}>
-            <Ionicons name="open-outline" size={15} color="white" />
-          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={saved ? 'Hapus dari tersimpan' : 'Simpan lowongan'}
@@ -464,27 +472,42 @@ function JobCard({job, width}: {job: JobCardModel; width: number}) {
             }}
             hitSlop={8}
           >
-            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={22} color={C.blue} />
+            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color="#63728A" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Bagikan lowongan"
+            onPress={event => {
+              event.stopPropagation();
+              Alert.alert('Bagikan lowongan', `${job.title} di ${job.company}`);
+            }}
+            hitSlop={8}
+          >
+            <Ionicons name="share-social-outline" size={20} color="#63728A" />
           </Pressable>
         </View>
       </View>
 
-      <View style={styles.jobIdentity}>
-        <View style={styles.companyLogo}>
-          <Text style={styles.companyLogoText}>{job.company.slice(0, 2).toUpperCase()}</Text>
+      <View style={styles.jobBadgeRow}>
+        <View style={[styles.activeBadge, !job.active && styles.inactiveBadge]}>
+          <Text style={[styles.activeBadgeText, !job.active && styles.inactiveBadgeText]}>{job.active ? 'Aktif' : 'Tidak aktif'}</Text>
         </View>
-        <View style={styles.jobTitleWrap}>
-          <Text numberOfLines={1} style={styles.jobTitle}>{job.title}</Text>
-          <Text numberOfLines={1} style={styles.companyName}>{job.company}  <Ionicons name="checkmark-circle" size={13} color={C.brightBlue} /></Text>
-        </View>
+        {job.urgent && (
+          <View style={styles.urgentBadge}>
+            <Ionicons name="flame" size={12} color="#FF3B48" />
+            <Text style={styles.urgentText}>Dibutuhkan Segera</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.metaRow}>
-        <Ionicons name="location-outline" size={15} color="#7B8390" />
+        <Ionicons name="location-outline" size={16} color={C.brightBlue} />
         <Text numberOfLines={1} style={styles.metaText}>{job.location}</Text>
         <Text style={styles.metaDot}>•</Text>
-        <Ionicons name="briefcase-outline" size={15} color="#7B8390" />
-        <Text style={styles.metaText}>{job.workType}</Text>
+        <Ionicons name="briefcase-outline" size={16} color={C.brightBlue} />
+        <Text style={styles.metaText}>{job.contractType}</Text>
+        <View style={styles.metaSeparator} />
+        <Text numberOfLines={1} style={styles.metaText}>{workMode}</Text>
       </View>
       <View style={styles.salaryRow}>
         <Ionicons name="cash-outline" size={16} color={C.blue} />
@@ -493,11 +516,27 @@ function JobCard({job, width}: {job: JobCardModel; width: number}) {
 
       <View style={styles.skillWrap}>
         {visibleSkills.map(skill => <View key={skill} style={styles.skillChip}><Text style={styles.skillText}>{skill}</Text></View>)}
-        {job.skills.length > 5 && <View style={styles.skillChip}><Text style={styles.skillText}>+{job.skills.length - 5}</Text></View>}
+        {hiddenSkillCount > 0 && <View style={styles.skillChip}><Text style={styles.skillText}>+{hiddenSkillCount}</Text></View>}
       </View>
 
+      <View style={styles.jobStats}>
+        <View style={styles.jobStatItem}>
+          <Ionicons name="people-outline" size={18} color="#52627A" />
+          <View>
+            <Text style={styles.jobStatValue}>{job.applicantsCount}</Text>
+            <Text style={styles.jobStatLabel}>Total Pelamar</Text>
+          </View>
+        </View>
+        <View style={styles.jobStatDivider} />
+        <View style={styles.jobDeadline}>
+          <Ionicons name="calendar-outline" size={17} color="#52627A" />
+          <Text numberOfLines={1} style={styles.jobDeadlineText}>{job.closingLabel}</Text>
+        </View>
+      </View>
+
+      <View style={styles.jobDivider} />
       <View style={styles.timestamps}>
-        <Text style={styles.timestamp}>◷ {job.publishedLabel}</Text>
+        <Text style={styles.timestamp}>{job.publishedLabel}</Text>
         <Text style={styles.timestampDot}>•</Text>
         <Text style={styles.timestamp}>{job.updatedLabel}</Text>
       </View>
@@ -511,6 +550,7 @@ function JobCard({job, width}: {job: JobCardModel; width: number}) {
             Alert.alert('Lamar sekarang', `Lanjutkan lamaran untuk ${job.title}?`);
           }}
           style={styles.applyButton}
+          testID="dashboard-job-apply-button"
         >
           <Text style={styles.applyButtonText}>Lamar sekarang</Text>
         </Pressable>
@@ -548,7 +588,7 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
         snapToInterval={cardWidth + 14}
         decelerationRate="fast"
       >
-        {jobs.map(job => <JobCard key={job.id} job={job} width={cardWidth} />)}
+        {jobs.map(job => <JobCard key={job.key} job={job} width={cardWidth} />)}
       </ScrollView>
     );
   }, [cardWidth, jobs, jobsLoading]);
@@ -600,13 +640,21 @@ const cardShadow = {
   elevation: 4,
 };
 
+const shortcutShadow = {
+  shadowColor: '#36517F',
+  shadowOffset: {width: 0, height: 2},
+  shadowOpacity: 0.06,
+  shadowRadius: 6,
+  elevation: 2,
+};
+
 const styles = StyleSheet.create({
   screen: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: C.background},
   scrollContent: {paddingBottom: 24},
   hero: {width: '100%', overflow: 'hidden'},
   heroImage: {backgroundColor: C.navy},
   heroCopy: {position: 'absolute', alignItems: 'flex-start'},
-  heroActions: {position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 8},
+  heroActions: {position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 12},
   notificationButton: {width: 40, height: 40, alignItems: 'center', justifyContent: 'center'},
   notificationBadge: {position: 'absolute', top: 0, right: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: 'white'},
   notificationBadgeText: {fontFamily: F.bold, fontSize: 10, color: 'white'},
@@ -622,7 +670,7 @@ const styles = StyleSheet.create({
   content: {paddingHorizontal: 20, gap: 28},
   summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 130, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
-  summaryIcon: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  summaryIcon: {borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   summaryCopy: {flex: 1, minWidth: 0},
   summaryValue: {fontFamily: F.bold, fontSize: 24, lineHeight: 29, color: C.ink},
   summaryLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#252A35'},
@@ -640,13 +688,11 @@ const styles = StyleSheet.create({
   progressValue: {fontFamily: F.bold, fontSize: 17, color: C.ink},
   progressTrack: {height: 7, borderRadius: 5, backgroundColor: '#EEF0F4', marginTop: 4, width: '100%', overflow: 'hidden'},
   progressFill: {height: '100%', borderRadius: 5, backgroundColor: C.blue},
-  profileButton: {height: 42, paddingHorizontal: 20, borderRadius: 10, backgroundColor: '#003FA5', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginTop: 20},
+  profileButton: {height: 42, minWidth: 156, borderRadius: 10, alignSelf: 'flex-start', marginTop: 20, overflow: 'hidden'},
+  profileButtonGradient: {flex: 1, width: '100%', paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center'},
   profileButtonText: {fontFamily: F.semibold, fontSize: 11, color: 'white'},
-  profileIllustration: {width: 105, height: 145, borderWidth: 7, borderColor: '#0B438E', borderRadius: 15, marginLeft: 15, alignItems: 'center', paddingTop: 21, gap: 8, backgroundColor: '#F7FAFF'},
-  profileIllustrationCompact: {width: 78, height: 132, borderWidth: 6, marginLeft: 8},
-  clipTop: {position: 'absolute', top: -14, width: 55, height: 24, borderRadius: 7, backgroundColor: '#0B438E'},
-  checkRow: {flexDirection: 'row', alignItems: 'center', gap: 5},
-  checkLine: {height: 5, borderRadius: 4, backgroundColor: '#ACC0E3'},
+  profileIllustration: {width: 132, height: 160, marginLeft: 10, alignSelf: 'center'},
+  profileIllustrationCompact: {width: 88, height: 132, marginLeft: 5},
   interviewCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 14, marginTop: 13, overflow: 'hidden'},
   interviewContent: {flexDirection: 'row', minHeight: 150},
   dateBlock: {width: 92, borderRadius: 12, backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingVertical: 11},
@@ -675,7 +721,7 @@ const styles = StyleSheet.create({
   seeAllButton: {flexDirection: 'row', alignItems: 'center', gap: 2},
   seeAll: {fontFamily: F.semibold, fontSize: 10, color: C.blue},
   shortcuts: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, gap: 9},
-  shortcut: {...cardShadow, flex: 1, minWidth: 0, minHeight: 98, borderRadius: 14, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 12},
+  shortcut: {...shortcutShadow, flex: 1, minWidth: 0, minHeight: 98, borderRadius: 14, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 12},
   shortcutLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#164DB7', marginTop: 8, textAlign: 'center'},
   recentApplicationsCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, marginTop: 14, paddingHorizontal: 16, overflow: 'hidden'},
   recentApplicationRow: {minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12},
@@ -704,28 +750,38 @@ const styles = StyleSheet.create({
   loadingJobs: {height: 210, alignItems: 'center', justifyContent: 'center', gap: 9},
   loadingText: {fontFamily: F.regular, fontSize: 11, color: C.muted},
   emptyJobs: {height: 185, backgroundColor: 'white', borderRadius: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 35, marginTop: 16},
-  jobCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 17, minHeight: 365},
-  jobCardTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  urgentBadge: {flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#DFF7E6', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5},
-  urgentText: {fontFamily: F.medium, fontSize: 8.5, color: '#16A454'},
-  jobActions: {flexDirection: 'row', alignItems: 'center', gap: 9},
-  openDetailIcon: {width: 24, height: 24, borderRadius: 12, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center'},
-  jobIdentity: {flexDirection: 'row', alignItems: 'center', gap: 13, marginTop: 17},
-  companyLogo: {width: 55, height: 55, borderRadius: 10, backgroundColor: '#1769FF', alignItems: 'center', justifyContent: 'center'},
-  companyLogoText: {fontFamily: F.extrabold, fontSize: 19, color: 'white', fontStyle: 'italic'},
+  jobCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: '#EDF1F7', padding: 17, minHeight: 440},
+  jobHeader: {flexDirection: 'row', alignItems: 'center', gap: 10},
+  jobCategoryIcon: {width: 48, height: 48, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   jobTitleWrap: {flex: 1},
-  jobTitle: {fontFamily: F.bold, fontSize: 21, color: C.ink},
-  companyName: {fontFamily: F.regular, fontSize: 11.5, color: C.muted, marginTop: 4},
-  metaRow: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 18},
-  metaText: {fontFamily: F.regular, fontSize: 10, color: '#707782', maxWidth: 135},
-  metaDot: {fontFamily: F.regular, color: '#C0C5CD', marginHorizontal: 3},
-  salaryRow: {flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8},
-  salaryText: {fontFamily: F.semibold, fontSize: 10.5, color: C.blue, flex: 1},
-  skillWrap: {flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 18},
-  skillChip: {backgroundColor: '#EEF4FF', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5},
-  skillText: {fontFamily: F.medium, fontSize: 8.5, color: '#3470DE'},
-  timestamps: {flexDirection: 'row', alignItems: 'center', marginTop: 17, gap: 7},
-  timestamp: {fontFamily: F.medium, fontSize: 7.5, color: '#2EAE5D'},
+  jobTitle: {fontFamily: F.bold, fontSize: 15.5, lineHeight: 20, color: C.ink},
+  companyName: {fontFamily: F.regular, fontSize: 10.5, color: C.muted, marginTop: 3},
+  jobActions: {flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0},
+  jobBadgeRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16},
+  activeBadge: {borderRadius: 14, backgroundColor: '#E5FAF1', paddingHorizontal: 12, paddingVertical: 6},
+  activeBadgeText: {fontFamily: F.semibold, fontSize: 9, color: '#00A968'},
+  inactiveBadge: {backgroundColor: '#EEF0F4'},
+  inactiveBadgeText: {color: '#747C89'},
+  urgentBadge: {flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF0F2', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6},
+  urgentText: {fontFamily: F.medium, fontSize: 8.5, color: '#FF3B48'},
+  metaRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5, marginTop: 16},
+  metaText: {fontFamily: F.regular, fontSize: 9.5, color: '#52627A', maxWidth: 145},
+  metaDot: {fontFamily: F.regular, color: '#A8B2C1', marginHorizontal: 2},
+  metaSeparator: {width: 1, height: 16, backgroundColor: '#D9DFE8', marginHorizontal: 3},
+  salaryRow: {flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 11},
+  salaryText: {fontFamily: F.semibold, fontSize: 11.5, color: '#074FE6', flex: 1},
+  skillWrap: {flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 17},
+  skillChip: {backgroundColor: '#EEF4FF', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6},
+  skillText: {fontFamily: F.medium, fontSize: 8.5, color: '#2261D6'},
+  jobStats: {flexDirection: 'row', alignItems: 'center', marginTop: 18, minHeight: 43},
+  jobStatItem: {flexDirection: 'row', alignItems: 'center', gap: 7, paddingRight: 14},
+  jobStatValue: {fontFamily: F.semibold, fontSize: 10, color: C.ink},
+  jobStatLabel: {fontFamily: F.regular, fontSize: 7.5, color: '#8892A2', marginTop: 1},
+  jobStatDivider: {width: 1, height: 34, backgroundColor: '#E3E7EE'},
+  jobDeadline: {flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 14},
+  jobDeadlineText: {fontFamily: F.regular, fontSize: 9, color: '#68768B', flex: 1},
+  timestamps: {flexDirection: 'row', alignItems: 'center', gap: 7},
+  timestamp: {fontFamily: F.medium, fontSize: 8, color: '#00A968'},
   timestampDot: {fontFamily: F.regular, color: '#CDD1D8'},
   jobDivider: {height: 1, backgroundColor: C.border, marginVertical: 14},
   jobButtons: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},

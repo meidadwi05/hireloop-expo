@@ -1,3 +1,7 @@
 import React from 'react';
-import {FeaturePlaceholder} from '../../../shared/components/FeaturePlaceholder';
-export default function JobsRoute() { return <FeaturePlaceholder title="Lowongan" description="Daftar dan pencarian lowongan kandidat akan menggunakan jobsApi dan query cache." />; }
+
+import {JobsScreen} from '../../../features/jobs/components/JobsScreen';
+
+export default function JobsRoute() {
+  return <JobsScreen />;
+}

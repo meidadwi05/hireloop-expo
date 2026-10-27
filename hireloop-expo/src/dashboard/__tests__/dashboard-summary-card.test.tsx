@@ -35,6 +35,8 @@ describe('dashboard summary card', () => {
     );
 
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style).backgroundColor).toBe('#00195E');
+    expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style).borderRadius).toBe(13);
+    expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-icon-0').props.style).width).toBe(47);
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-value-0').props.style).textAlign).toBeUndefined();
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-label-0').props.style).textAlign).toBeUndefined();
   });

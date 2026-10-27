@@ -1,6 +1,6 @@
 import {render} from '@testing-library/react-native';
 import React from 'react';
-import {StyleSheet} from 'react-native';
+import {processColor, StyleSheet} from 'react-native';
 
 import {
   NearestInterviewCard,
@@ -60,6 +60,8 @@ describe('dashboard sections', () => {
 
     const firstTile = screen.getByLabelText('Buka Profil Saya');
     expect(StyleSheet.flatten(firstTile.props.style).backgroundColor).toBe('#EAF3FF');
+    expect(StyleSheet.flatten(firstTile.props.style).shadowOpacity).toBe(0.06);
+    expect(StyleSheet.flatten(firstTile.props.style).elevation).toBe(2);
   });
 
   it('menampilkan card kelengkapan profil statis sesuai rancangan', () => {
@@ -68,6 +70,11 @@ describe('dashboard sections', () => {
     expect(screen.getByText('Lengkapi Profilmu')).toBeTruthy();
     expect(screen.getByText('75%')).toBeTruthy();
     expect(screen.getByText('Lengkapi sekarang')).toBeTruthy();
+    expect(screen.getByTestId('profile-completion-illustration').props.source).toBeTruthy();
+    expect(screen.getByTestId('profile-completion-gradient').props.colors).toEqual([
+      processColor('#0145C0'),
+      processColor('#00205A'),
+    ]);
   });
 
   it('menampilkan dua lamaran terbaru statis setelah integrasi backend ditahan', () => {

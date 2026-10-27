@@ -7,12 +7,14 @@ import {
 describe('dashboard home responsive layout', () => {
   test('mengikuti rasio asset hero pada ukuran ponsel dan lebar referensi', () => {
     expect(getDashboardHeroLayout(320)).toMatchObject({
+      actionsTop: 57,
       compact: true,
       heroHeight: 223,
       horizontalPadding: 18,
       logoWidth: 120,
     });
     expect(getDashboardHeroLayout(390)).toMatchObject({
+      actionsTop: 69,
       compact: false,
       heroHeight: 271,
       horizontalPadding: 28,
@@ -33,10 +35,10 @@ describe('dashboard home responsive layout', () => {
   });
 
   test('menskalakan ikon ringkasan tanpa terlalu kecil atau besar', () => {
-    expect(getDashboardSummaryIconSize(320)).toBe(46);
-    expect(getDashboardSummaryIconSize(390)).toBe(53);
-    expect(getDashboardSummaryIconSize(550)).toBe(58);
-    expect(getDashboardSummaryIconSize(1200)).toBe(58);
+    expect(getDashboardSummaryIconSize(320)).toBe(42);
+    expect(getDashboardSummaryIconSize(390)).toBe(47);
+    expect(getDashboardSummaryIconSize(550)).toBe(48);
+    expect(getDashboardSummaryIconSize(1200)).toBe(48);
   });
 
   test('menaikkan seluruh grid indikator secara responsif terhadap hero', () => {

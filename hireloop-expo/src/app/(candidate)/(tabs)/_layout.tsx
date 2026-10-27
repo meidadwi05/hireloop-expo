@@ -15,9 +15,9 @@ export default function CandidateTabsLayout() {
     }}>
       <Tabs.Screen name="home" options={{title: 'Beranda', tabBarIcon: ({color, size}) => <Ionicons name="home" color={color} size={size} />}} />
       <Tabs.Screen name="jobs" options={{title: 'Lowongan', tabBarIcon: ({color, size}) => <Ionicons name="briefcase-outline" color={color} size={size} />}} />
-      <Tabs.Screen name="career" options={{title: 'Karir', tabBarIcon: ({color, size}) => <Ionicons name="trending-up-outline" color={color} size={size} />}} />
+      <Tabs.Screen name="career" options={{title: 'Lamaran', tabBarIcon: ({color, size}) => <Ionicons name="document-text-outline" color={color} size={size} />}} />
       <Tabs.Screen name="notifications" options={{title: 'Notifikasi', tabBarIcon: ({color, size}) => <Ionicons name="notifications-outline" color={color} size={size} />}} />
-      <Tabs.Screen name="profile" options={{title: 'Profil', tabBarIcon: ({color, size}) => <Ionicons name="person-outline" color={color} size={size} />}} />
+      <Tabs.Screen name="profile" options={{title: 'Akun', tabBarIcon: ({color, size}) => <Ionicons name="person-outline" color={color} size={size} />}} />
     </Tabs>
   );
 }

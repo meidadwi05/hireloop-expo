@@ -18,6 +18,7 @@ export function getDashboardHeroLayout(viewportWidth: number) {
   const logoWidth = Math.round(clamp(pageWidth * 0.29, 120, 190));
 
   return {
+    actionsTop: Math.round(Math.max(48, Math.round(clamp(heroHeight * 0.29, 64, 145)) - clamp(pageWidth * 0.025, 8, 12))),
     compact,
     contentTop: Math.round(clamp(heroHeight * 0.29, 64, 145)),
     heroHeight,
@@ -30,7 +31,7 @@ export function getDashboardHeroLayout(viewportWidth: number) {
 
 export function getDashboardSummaryIconSize(viewportWidth: number) {
   const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
-  return Math.round(clamp(safeWidth * 0.135, 46, 58));
+  return Math.round(clamp(safeWidth * 0.12, 42, 48));
 }
 
 export function getDashboardSummaryOverlap(viewportWidth: number) {
