@@ -14,6 +14,7 @@ import {
 import {toAppApiError} from '../../../core/api/api-error';
 import {useCandidateJobs} from '../hooks/use-candidate-jobs';
 import {getJobsIconLayout} from '../jobs-header.layout';
+import {useSavedJobs} from '../saved-jobs-provider';
 import type {CandidateJobCard, CandidateJobQuery} from '../jobs.types';
 import {JobListingCard} from './JobListingCard';
 import {JobsCategoryTabs} from './JobsCategoryTabs';
@@ -30,7 +31,7 @@ export function JobsScreen() {
   const {width} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const [priority, setPriority] = useState<Priority>('all');
-  const [savedKeys, setSavedKeys] = useState<Set<string>>(() => new Set());
+  const {isSaved, toggleSaved} = useSavedJobs();
   const jobs = useCandidateJobs(priority);
   const containerWidth = measuredWidth ?? Math.min(width, 720);
   const pagePadding = containerWidth <= 350 ? 14 : 20;
@@ -41,15 +42,6 @@ export function JobsScreen() {
       pathname: '/(candidate)/jobs/[source]/[id]',
       params: {source: job.source, id: String(job.id), ...(intent ? {intent} : {})},
     } as never);
-  }, []);
-
-  const toggleSaved = useCallback((key: string) => {
-    setSavedKeys(current => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   }, []);
 
   const showUnsupported = useCallback(() => {
@@ -111,14 +103,14 @@ export function JobsScreen() {
             <JobListingCard
               iconLayout={iconLayout}
               job={item}
-              saved={savedKeys.has(item.key)}
+              saved={isSaved(item.key)}
               onApply={() => openJob(item, 'apply')}
               onOpen={() => openJob(item)}
               onShare={() => {
                 void Share.share({message: `${item.title} di ${item.company} - ${item.location}`})
                   .catch(() => Alert.alert('Bagikan lowongan', `${item.title} di ${item.company}`));
               }}
-              onToggleSaved={() => toggleSaved(item.key)}
+              onToggleSaved={() => toggleSaved(item)}
             />
           </View>
         )}

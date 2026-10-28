@@ -2,6 +2,7 @@ import {Redirect, Stack} from 'expo-router';
 import React from 'react';
 
 import {useAuth} from '../../features/auth/auth-provider';
+import {SavedJobsProvider} from '../../features/jobs/saved-jobs-provider';
 import {FullScreenLoader} from '../../shared/components/FullScreenLoader';
 
 export default function CandidateLayout() {
@@ -11,5 +12,9 @@ export default function CandidateLayout() {
   }
   if (status === 'unauthenticated') return <Redirect href="/(public)/login" />;
   if (user && !user.onboarding_finished) return <Redirect href="/(onboarding)/onboarding" />;
-  return <Stack screenOptions={{headerShown: false}} />;
+  return (
+    <SavedJobsProvider>
+      <Stack screenOptions={{headerShown: false}} />
+    </SavedJobsProvider>
+  );
 }

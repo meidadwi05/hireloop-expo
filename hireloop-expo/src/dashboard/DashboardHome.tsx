@@ -55,12 +55,19 @@ const C = {
 type DashboardHomeProps = {
   initialUser: CandidateUser;
   onLogout: () => Promise<void> | void;
+  onNavigate?: (route: DashboardRoute) => void;
 };
 
+export type DashboardRoute =
+  | '/(candidate)/(tabs)/profile'
+  | '/(candidate)/(tabs)/jobs'
+  | '/(candidate)/(tabs)/career'
+  | '/(candidate)/(tabs)/notifications';
+
 const shortcutItems = [
-  {label: 'Profil Saya', icon: 'person-outline' as const},
-  {label: 'Lowongan Kerja', icon: 'briefcase-outline' as const},
-  {label: 'Lamaran Saya', icon: 'document-text-outline' as const},
+  {label: 'Profil Saya', icon: 'person-outline' as const, route: '/(candidate)/(tabs)/profile'},
+  {label: 'Lowongan Kerja', icon: 'briefcase-outline' as const, route: '/(candidate)/(tabs)/jobs'},
+  {label: 'Lamaran Saya', icon: 'document-text-outline' as const, route: '/(candidate)/(tabs)/career'},
   {label: 'Performance', icon: 'stats-chart-outline' as const},
 ];
 
@@ -117,7 +124,7 @@ function SectionHeader({title, onPress}: {title: string; onPress: () => void}) {
   );
 }
 
-function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
+function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread: number; onNavigate?: (route: DashboardRoute) => void}) {
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const layout = getDashboardHeroLayout(width);
@@ -168,7 +175,7 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${unread} notifikasi belum dibaca`}
-          onPress={() => Alert.alert('Notifikasi', 'Halaman notifikasi akan dibuka dari navigasi utama.')}
+          onPress={() => onNavigate?.('/(candidate)/(tabs)/notifications')}
           style={styles.notificationButton}
         >
           <Ionicons name="notifications" size={25} color="white" />
@@ -181,7 +188,7 @@ function DashboardHero({user, unread}: {user: CandidateUser; unread: number}) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Buka profil"
-          onPress={() => Alert.alert('Profil', 'Halaman profil akan dibuka dari navigasi utama.')}
+          onPress={() => onNavigate?.('/(candidate)/(tabs)/profile')}
         >
           {avatarUrl ? (
             <Image source={{uri: avatarUrl}} style={styles.avatar} />
@@ -372,7 +379,7 @@ export function NearestInterviewCard({interviews}: {interviews: DashboardIntervi
   );
 }
 
-export function ShortcutGrid() {
+export function ShortcutGrid({onNavigate}: {onNavigate?: (route: DashboardRoute) => void} = {}) {
   return (
     <View>
       <Text style={styles.sectionTitle}>Pintasan</Text>
@@ -382,7 +389,9 @@ export function ShortcutGrid() {
             key={item.label}
             accessibilityRole="button"
             accessibilityLabel={`Buka ${item.label}`}
-            onPress={() => Alert.alert(item.label, `Halaman ${item.label} akan dibuka dari navigasi aplikasi.`)}
+            onPress={() => item.route
+              ? onNavigate?.(item.route as DashboardRoute)
+              : Alert.alert(item.label, `Halaman ${item.label} akan tersedia pada pembaruan berikutnya.`)}
             style={({pressed}) => [styles.shortcut, pressed && styles.pressed]}
           >
             <Ionicons name={item.icon} size={31} color={C.brightBlue} />
@@ -394,7 +403,7 @@ export function ShortcutGrid() {
   );
 }
 
-export function RecentApplicationsCard() {
+export function RecentApplicationsCard({onOpen}: {onOpen?: () => void} = {}) {
   const {width} = useWindowDimensions();
   const compact = width < 360;
 
@@ -402,7 +411,7 @@ export function RecentApplicationsCard() {
     <View testID="dashboard-recent-applications">
       <SectionHeader
         title="Lamaran Terbaru"
-        onPress={() => Alert.alert('Lamaran Terbaru', 'Daftar lamaran lengkap akan tersedia setelah integrasi data diaktifkan.')}
+        onPress={() => onOpen?.()}
       />
       <View style={styles.recentApplicationsCard}>
         {staticRecentApplications.map((application, index) => (
@@ -579,7 +588,7 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
   );
 }
 
-export default function DashboardHome({initialUser, onLogout}: DashboardHomeProps) {
+export default function DashboardHome({initialUser, onLogout, onNavigate}: DashboardHomeProps) {
   const {width: viewportWidth} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const width = measuredWidth ?? Math.min(viewportWidth, 720);
@@ -627,7 +636,7 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={C.blue} colors={[C.blue]} />}
         contentContainerStyle={styles.scrollContent}
       >
-        <DashboardHero user={initialUser} unread={unread} />
+        <DashboardHero user={initialUser} unread={unread} onNavigate={onNavigate} />
         <View style={styles.content}>
           <SummaryCard viewportWidth={width} />
 
@@ -641,8 +650,8 @@ export default function DashboardHome({initialUser, onLogout}: DashboardHomeProp
 
           <NearestInterviewCard interviews={interviews} />
           <ProfileCompletionCard completion={staticProfileCompletion} />
-          <ShortcutGrid />
-          <RecentApplicationsCard />
+          <ShortcutGrid onNavigate={onNavigate} />
+          <RecentApplicationsCard onOpen={() => onNavigate?.('/(candidate)/(tabs)/career')} />
 
           <View>
             <SectionHeader title="Rekomendasi Pekerjaan" onPress={() => Alert.alert('Rekomendasi', 'Buka seluruh rekomendasi pekerjaan.')} />
