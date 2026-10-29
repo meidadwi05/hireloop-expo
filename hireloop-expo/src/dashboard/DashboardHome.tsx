@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
+import {router} from 'expo-router';
 import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
@@ -8,6 +9,7 @@ import {
   ImageBackground,
   Pressable,
   RefreshControl,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,9 +19,13 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import type {CandidateUser} from '../features/auth/auth.types';
+import type {CandidateApplication} from '../features/applications/applications.types';
+import {applicationStatePresentation, formatApplicationDate} from '../features/applications/components/applications.ui';
 import type {DashboardInterview} from '../features/dashboard/dashboard.types';
 import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
+import {useSavedJobs} from '../features/jobs/saved-jobs-provider';
 import type {JobCardModel} from '../features/jobs/jobs.types';
+import {CandidateEvaluationNotice} from './components/CandidateEvaluationNotice';
 import {
   getDashboardHeroLayout,
   getDashboardSummaryGlyphSize,
@@ -53,19 +59,22 @@ const C = {
 };
 
 type DashboardHomeProps = {
+  onEvaluationClose?: () => void;
+  openEvaluation?: boolean;
   initialUser: CandidateUser;
   onLogout: () => Promise<void> | void;
   onNavigate?: (route: DashboardRoute) => void;
 };
 
 export type DashboardRoute =
-  | '/(candidate)/(tabs)/profile'
+  | '/profile'
   | '/(candidate)/(tabs)/jobs'
   | '/(candidate)/(tabs)/career'
-  | '/(candidate)/(tabs)/notifications';
+  | '/(candidate)/(tabs)/notifications'
+  | '/(candidate)/jobs/saved';
 
 const shortcutItems = [
-  {label: 'Profil Saya', icon: 'person-outline' as const, route: '/(candidate)/(tabs)/profile'},
+  {label: 'Profil Saya', icon: 'person-outline' as const, route: '/profile'},
   {label: 'Lowongan Kerja', icon: 'briefcase-outline' as const, route: '/(candidate)/(tabs)/jobs'},
   {label: 'Lamaran Saya', icon: 'document-text-outline' as const, route: '/(candidate)/(tabs)/career'},
   {label: 'Performance', icon: 'stats-chart-outline' as const},
@@ -73,36 +82,6 @@ const shortcutItems = [
 
 const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
 const staticProfileCompletion = 75;
-
-const staticSummaryItems = [
-  {label: 'Total Lamaran', value: 12, color: C.navy, icon: 'document-text' as const},
-  {label: 'Dalam Seleksi', value: 4, color: C.green, icon: 'people' as const},
-  {label: 'Jadwal Interview', value: 2, color: C.purple, icon: 'calendar' as const},
-  {label: 'Lowongan Disimpan', value: 7, color: C.orange, icon: 'bookmark' as const},
-];
-
-const staticRecentApplications = [
-  {
-    id: 'static-uiux-designer',
-    title: 'UI/UX Designer',
-    company: 'PT. Inovasi Digital',
-    companyInitials: 'iD',
-    appliedAt: '12 Mei 2024',
-    status: 'Screening',
-    statusTone: 'screening' as const,
-    verified: true,
-  },
-  {
-    id: 'static-admin-produksi',
-    title: 'Admin Produksi',
-    company: 'PT. Mitra Industri',
-    companyInitials: 'mi',
-    appliedAt: '10 Mei 2024',
-    status: 'Lamaran Terkirim',
-    statusTone: 'applied' as const,
-    verified: false,
-  },
-];
 
 function resolveMediaUrl(value: string | null): string | null {
   if (!value) return null;
@@ -169,7 +148,7 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
       <View
         style={[
           styles.heroActions,
-          {right: layout.horizontalPadding, top: Math.max(insets.top + 8, layout.actionsTop)},
+          {right: layout.horizontalPadding, top: insets.top + 12},
         ]}
       >
         <Pressable
@@ -185,11 +164,7 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
             </View>
           )}
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Buka profil"
-          onPress={() => onNavigate?.('/(candidate)/(tabs)/profile')}
-        >
+        <Pressable accessibilityLabel="Buka Profil Saya" accessibilityRole="button" onPress={() => onNavigate?.('/profile')} style={styles.avatarButton}>
           {avatarUrl ? (
             <Image source={{uri: avatarUrl}} style={styles.avatar} />
           ) : (
@@ -203,42 +178,39 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
   );
 }
 
-export function SummaryCard({viewportWidth}: {viewportWidth: number}) {
+export function SummaryCard({applications, interviewsCount, savedCount, viewportWidth, onNavigate}: {
+  applications: CandidateApplication[];
+  interviewsCount: number;
+  savedCount: number;
+  viewportWidth: number;
+  onNavigate?: (route: DashboardRoute) => void;
+}) {
   const iconSize = getDashboardSummaryIconSize(viewportWidth);
   const iconRadius = getDashboardSummaryIconRadius(viewportWidth);
   const iconGlyphSize = getDashboardSummaryGlyphSize(viewportWidth);
   const overlap = getDashboardSummaryOverlap(viewportWidth);
+  const summaryItems = [
+    {label: 'Total Lamaran', value: applications.length, color: C.navy, icon: 'document-text' as const, route: '/(candidate)/(tabs)/career' as const},
+    {label: 'Dalam Seleksi', value: applications.filter(item => ['in-progress', 'transferred'].includes(item.state)).length, color: C.green, icon: 'people' as const, route: '/(candidate)/(tabs)/career' as const},
+    {label: 'Interview Mendatang', value: interviewsCount, color: C.purple, icon: 'calendar' as const, disabled: true},
+    {label: 'Lowongan Disimpan', value: savedCount, color: C.orange, icon: 'bookmark' as const, route: '/(candidate)/jobs/saved' as const},
+  ];
 
   return (
     <View testID="dashboard-summary-card" style={[styles.summaryGrid, {marginTop: -overlap}]}>
-      {staticSummaryItems.map((item, index) => (
+      {summaryItems.map((item, index) => (
         <Pressable
           key={item.label}
           testID={`dashboard-summary-item-${index}`}
           accessibilityRole="button"
           accessibilityLabel={`${item.value} ${item.label}`}
-          onPress={() => Alert.alert(item.label, 'Daftar lengkap akan tersedia pada halaman terkait.')}
-          style={({pressed}) => [styles.summaryItem, pressed && styles.pressed]}
+          accessibilityState={{disabled: item.disabled}}
+          disabled={item.disabled}
+          onPress={() => item.route && onNavigate?.(item.route)}
+          style={({pressed}) => [styles.summaryItem, item.disabled && styles.summaryDisabled, pressed && styles.pressed]}
         >
-          <View
-            testID={`dashboard-summary-icon-shadow-${index}`}
-            style={[
-              styles.summaryIconShadow,
-              {
-                borderRadius: iconRadius,
-                height: iconSize,
-                shadowColor: item.color,
-                width: iconSize,
-              },
-            ]}
-          >
-            <View
-              testID={`dashboard-summary-icon-${index}`}
-              style={[
-                styles.summaryIcon,
-                {backgroundColor: item.color, borderRadius: iconRadius},
-              ]}
-            >
+          <View testID={`dashboard-summary-icon-shadow-${index}`} style={[styles.summaryIconShadow, {borderRadius: iconRadius, height: iconSize, shadowColor: item.color, width: iconSize}]}>
+            <View testID={`dashboard-summary-icon-${index}`} style={[styles.summaryIcon, {backgroundColor: item.color, borderRadius: iconRadius}]}>
               <Ionicons name={item.icon} size={iconGlyphSize} color="white" />
             </View>
           </View>
@@ -246,14 +218,14 @@ export function SummaryCard({viewportWidth}: {viewportWidth: number}) {
             <Text testID={`dashboard-summary-value-${index}`} style={styles.summaryValue}>{item.value}</Text>
             <Text testID={`dashboard-summary-label-${index}`} numberOfLines={2} style={styles.summaryLabel}>{item.label}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={C.brightBlue} />
+          <Ionicons name="chevron-forward" size={20} color={item.disabled ? '#A6B0C1' : C.brightBlue} />
         </Pressable>
       ))}
     </View>
   );
 }
 
-export function ProfileCompletionCard({completion}: {completion: number}) {
+export function ProfileCompletionCard({completion, onOpenProfile}: {completion: number; onOpenProfile?: () => void}) {
   const {width} = useWindowDimensions();
   const compact = width < 360;
 
@@ -273,7 +245,7 @@ export function ProfileCompletionCard({completion}: {completion: number}) {
         </View>
         <Pressable
           accessibilityRole="button"
-          onPress={() => Alert.alert('Lengkapi profil', 'Buka menu Profil untuk melengkapi data kandidat.')}
+          onPress={onOpenProfile}
           style={styles.profileButton}
         >
           <LinearGradient
@@ -403,73 +375,70 @@ export function ShortcutGrid({onNavigate}: {onNavigate?: (route: DashboardRoute)
   );
 }
 
-export function RecentApplicationsCard({onOpen}: {onOpen?: () => void} = {}) {
+export function RecentApplicationsCard({applications, onOpen, onOpenAll}: {
+  applications: CandidateApplication[];
+  onOpen?: (application: CandidateApplication) => void;
+  onOpenAll?: () => void;
+}) {
   const {width} = useWindowDimensions();
   const compact = width < 360;
+  const recent = [...applications]
+    .sort((left, right) => (Date.parse(right.updatedAt ?? right.submittedAt ?? '') || 0) - (Date.parse(left.updatedAt ?? left.submittedAt ?? '') || 0))
+    .slice(0, 3);
 
   return (
     <View testID="dashboard-recent-applications">
-      <SectionHeader
-        title="Lamaran Terbaru"
-        onPress={() => onOpen?.()}
-      />
+      <SectionHeader title="Lamaran Terbaru" onPress={() => onOpenAll?.()} />
       <View style={styles.recentApplicationsCard}>
-        {staticRecentApplications.map((application, index) => (
-          <Pressable
-            key={application.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${application.title} di ${application.company}, ${application.status}`}
-            onPress={() => Alert.alert(application.title, `${application.company}\n${application.status}`)}
-            style={({pressed}) => [
-              styles.recentApplicationRow,
-              index < staticRecentApplications.length - 1 && styles.recentApplicationDivider,
-              pressed && styles.pressed,
-            ]}
-          >
-            <View style={[styles.recentCompanyLogo, compact && styles.recentCompanyLogoCompact, index === 1 && styles.recentCompanyLogoDark]}>
-              <Text style={styles.recentCompanyLogoText}>{application.companyInitials}</Text>
-            </View>
-            <View style={styles.recentApplicationCopy}>
-              <Text numberOfLines={1} style={styles.recentApplicationTitle}>{application.title}</Text>
-              <View style={styles.recentCompanyRow}>
-                <Text numberOfLines={1} style={styles.recentCompanyName}>{application.company}</Text>
-                {application.verified && <Ionicons name="checkmark-circle" size={13} color={C.brightBlue} />}
-              </View>
-              <Text style={styles.recentApplicationDate}>{application.appliedAt}</Text>
-            </View>
-            <View
-              style={[
-                styles.recentStatus,
-                compact && styles.recentStatusCompact,
-                application.statusTone === 'screening' ? styles.recentStatusScreening : styles.recentStatusApplied,
-              ]}
+        {!recent.length && (
+          <View style={styles.recentEmpty}>
+            <Ionicons name="document-text-outline" size={29} color="#93A1B6" />
+            <Text style={styles.emptyTitle}>Belum ada lamaran</Text>
+            <Text style={styles.emptyText}>Lamaran yang kamu kirim akan tampil di bagian ini.</Text>
+          </View>
+        )}
+        {recent.map((application, index) => {
+          const presentation = applicationStatePresentation(application.state, application.currentStageLabel);
+          return (
+            <Pressable
+              key={application.applicationId}
+              accessibilityRole="button"
+              accessibilityLabel={`${application.title} di ${application.company}, ${presentation.label}`}
+              onPress={() => onOpen?.(application)}
+              style={({pressed}) => [styles.recentApplicationRow, index < recent.length - 1 && styles.recentApplicationDivider, pressed && styles.pressed]}
             >
-              <View
-                style={[
-                  styles.recentStatusDot,
-                  application.statusTone === 'screening' ? styles.recentStatusDotScreening : styles.recentStatusDotApplied,
-                ]}
-              />
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.recentStatusText,
-                  application.statusTone === 'screening' ? styles.recentStatusTextScreening : styles.recentStatusTextApplied,
-                ]}
-              >
-                {application.status}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={19} color={C.brightBlue} />
-          </Pressable>
-        ))}
+              <View style={[styles.recentCompanyLogo, compact && styles.recentCompanyLogoCompact]}>
+                <Ionicons name="business-outline" size={compact ? 22 : 25} color={C.brightBlue} />
+              </View>
+              <View style={styles.recentApplicationCopy}>
+                <Text numberOfLines={1} style={styles.recentApplicationTitle}>{application.title}</Text>
+                <View style={styles.recentCompanyRow}>
+                  <Text numberOfLines={1} style={styles.recentCompanyName}>{application.company}</Text>
+                </View>
+                <Text style={styles.recentApplicationDate}>{formatApplicationDate(application.updatedAt ?? application.submittedAt, false)}</Text>
+              </View>
+              <View style={[styles.recentStatus, compact && styles.recentStatusCompact, {backgroundColor: presentation.background}]}>
+                <View style={[styles.recentStatusDot, {backgroundColor: presentation.color}]} />
+                <Text numberOfLines={1} style={[styles.recentStatusText, {color: presentation.color}]}>{presentation.label}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={19} color={C.brightBlue} />
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
 }
 
-export function JobCard({job, width}: {job: JobCardModel; width: number}) {
-  const [saved, setSaved] = useState(false);
+export function JobCard({job, width, saved, onApply, onOpen, onShare, onToggleSaved}: {
+  job: JobCardModel;
+  width: number;
+  saved: boolean;
+  onApply: () => void;
+  onOpen: () => void;
+  onShare: () => void;
+  onToggleSaved: () => void;
+}) {
   const visibleSkills = job.skills.slice(0, 4);
   const hiddenSkillCount = Math.max(0, job.skills.length - visibleSkills.length);
   const workMode = job.workType || 'On Site';
@@ -478,7 +447,7 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Lowongan ${job.title} di ${job.company}`}
-      onPress={() => Alert.alert(job.title, `${job.company}\n${job.location}`)}
+      onPress={onOpen}
       style={[styles.jobCard, {width}]}
       testID="dashboard-job-card"
     >
@@ -496,7 +465,7 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
             accessibilityLabel={saved ? 'Hapus dari tersimpan' : 'Simpan lowongan'}
             onPress={event => {
               event.stopPropagation();
-              setSaved(value => !value);
+              onToggleSaved();
             }}
             hitSlop={8}
           >
@@ -507,7 +476,7 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
             accessibilityLabel="Bagikan lowongan"
             onPress={event => {
               event.stopPropagation();
-              Alert.alert('Bagikan lowongan', `${job.title} di ${job.company}`);
+              onShare();
             }}
             hitSlop={8}
           >
@@ -531,7 +500,7 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
       <View style={styles.metaRow}>
         <Ionicons name="location-outline" size={16} color={C.brightBlue} />
         <Text numberOfLines={1} style={styles.metaText}>{job.location}</Text>
-        <Text style={styles.metaDot}>•</Text>
+        <Text style={styles.metaDot}>{'\u2022'}</Text>
         <Ionicons name="briefcase-outline" size={16} color={C.brightBlue} />
         <Text style={styles.metaText}>{job.contractType}</Text>
         <View style={styles.metaSeparator} />
@@ -565,7 +534,7 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
       <View style={styles.jobDivider} />
       <View style={styles.timestamps}>
         <Text style={styles.timestamp}>{job.publishedLabel}</Text>
-        <Text style={styles.timestampDot}>•</Text>
+        <Text style={styles.timestampDot}>{'\u2022'}</Text>
         <Text style={styles.timestamp}>{job.updatedLabel}</Text>
       </View>
       <View style={styles.jobDivider} />
@@ -575,24 +544,34 @@ export function JobCard({job, width}: {job: JobCardModel; width: number}) {
           accessibilityRole="button"
           onPress={event => {
             event.stopPropagation();
-            Alert.alert('Lamar sekarang', `Lanjutkan lamaran untuk ${job.title}?`);
+            onApply();
           }}
           style={styles.applyButton}
           testID="dashboard-job-apply-button"
         >
           <Text style={styles.applyButtonText}>Lamar sekarang</Text>
         </Pressable>
-        <Text style={styles.detailButtonText}>Lihat Detail  ›</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={event => {
+            event.stopPropagation();
+            onOpen();
+          }}
+          hitSlop={8}
+        >
+          <Text style={styles.detailButtonText}>Lihat Detail  {'\u203A'}</Text>
+        </Pressable>
       </View>
     </Pressable>
   );
 }
 
-export default function DashboardHome({initialUser, onLogout, onNavigate}: DashboardHomeProps) {
+export default function DashboardHome({initialUser, onEvaluationClose, onNavigate, openEvaluation = false}: DashboardHomeProps) {
   const {width: viewportWidth} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const width = measuredWidth ?? Math.min(viewportWidth, 720);
-  const {interviews, jobs, unread, jobsLoading, refreshing, error, refresh} = useDashboardHome();
+  const {applications, candidate, interviews, jobs, unread, jobsLoading, refreshing, error, refresh} = useDashboardHome();
+  const {hydrated: savedHydrated, isSaved, savedCount, toggleSaved} = useSavedJobs();
   const cardWidth = Math.min(Math.max(width * 0.84, 280), 370);
 
   const recommendationContent = useMemo(() => {
@@ -618,10 +597,21 @@ export default function DashboardHome({initialUser, onLogout, onNavigate}: Dashb
         snapToInterval={cardWidth + 14}
         decelerationRate="fast"
       >
-        {jobs.map(job => <JobCard key={job.key} job={job} width={cardWidth} />)}
+        {jobs.map(job => (
+          <JobCard
+            key={job.key}
+            job={job}
+            width={cardWidth}
+            saved={isSaved(job.key)}
+            onApply={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id), intent: 'apply'}} as never)}
+            onOpen={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id)}} as never)}
+            onShare={() => void Share.share({message: `${job.title} di ${job.company} - ${job.location}`})}
+            onToggleSaved={() => toggleSaved(job)}
+          />
+        ))}
       </ScrollView>
     );
-  }, [cardWidth, jobs, jobsLoading]);
+  }, [cardWidth, isSaved, jobs, jobsLoading, toggleSaved]);
 
   return (
     <View
@@ -636,9 +626,15 @@ export default function DashboardHome({initialUser, onLogout, onNavigate}: Dashb
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={C.blue} colors={[C.blue]} />}
         contentContainerStyle={styles.scrollContent}
       >
-        <DashboardHero user={initialUser} unread={unread} onNavigate={onNavigate} />
+        <DashboardHero user={candidate ?? initialUser} unread={unread} onNavigate={onNavigate} />
         <View style={styles.content}>
-          <SummaryCard viewportWidth={width} />
+          <SummaryCard
+            applications={applications}
+            interviewsCount={interviews.length}
+            savedCount={savedHydrated ? savedCount : 0}
+            viewportWidth={width}
+            onNavigate={onNavigate}
+          />
 
           {!!error && (
             <Pressable accessibilityRole="button" onPress={() => void refresh()} style={styles.errorBanner}>
@@ -648,20 +644,25 @@ export default function DashboardHome({initialUser, onLogout, onNavigate}: Dashb
             </Pressable>
           )}
 
+          <CandidateEvaluationNotice
+            initiallyVisible={openEvaluation}
+            notice={candidate?.blacklist_info ?? initialUser.blacklist_info ?? null}
+            onInitialOpenHandled={onEvaluationClose}
+          />
           <NearestInterviewCard interviews={interviews} />
-          <ProfileCompletionCard completion={staticProfileCompletion} />
+          <ProfileCompletionCard completion={staticProfileCompletion} onOpenProfile={() => onNavigate?.('/profile')} />
           <ShortcutGrid onNavigate={onNavigate} />
-          <RecentApplicationsCard onOpen={() => onNavigate?.('/(candidate)/(tabs)/career')} />
+          <RecentApplicationsCard
+            applications={applications}
+            onOpen={application => router.push({pathname: '/(candidate)/applications/[source]/[id]', params: {source: application.source, id: String(application.referenceId)}} as never)}
+            onOpenAll={() => onNavigate?.('/(candidate)/(tabs)/career')}
+          />
 
           <View>
-            <SectionHeader title="Rekomendasi Pekerjaan" onPress={() => Alert.alert('Rekomendasi', 'Buka seluruh rekomendasi pekerjaan.')} />
+            <SectionHeader title="Rekomendasi Pekerjaan" onPress={() => onNavigate?.('/(candidate)/(tabs)/jobs')} />
             {recommendationContent}
           </View>
 
-          <Pressable accessibilityRole="button" onPress={() => void onLogout()} style={styles.logoutButton}>
-            <Ionicons name="log-out-outline" size={18} color="#8A94A6" />
-            <Text style={styles.logoutText}>Keluar dari akun</Text>
-          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -694,6 +695,7 @@ const styles = StyleSheet.create({
   notificationButton: {width: 40, height: 40, alignItems: 'center', justifyContent: 'center'},
   notificationBadge: {position: 'absolute', top: 0, right: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: 'white'},
   notificationBadgeText: {fontFamily: F.bold, fontSize: 10, color: 'white'},
+  avatarButton: {width: 44, height: 44, borderRadius: 22},
   avatar: {width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: 'white'},
   avatarFallback: {width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: 'white', backgroundColor: '#E7F0FF', alignItems: 'center', justifyContent: 'center'},
   avatarText: {fontFamily: F.bold, fontSize: 15, color: C.blue},
@@ -706,6 +708,7 @@ const styles = StyleSheet.create({
   content: {paddingHorizontal: 20, gap: 28},
   summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 130, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
+  summaryDisabled: {opacity: 0.58},
   summaryIconShadow: {flexShrink: 0, shadowOffset: {width: 0, height: 3}, shadowOpacity: 0.22, shadowRadius: 5, elevation: 3},
   summaryIcon: {width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'},
   summaryCopy: {flex: 1, minWidth: 0},
@@ -761,6 +764,7 @@ const styles = StyleSheet.create({
   shortcut: {...shortcutShadow, flex: 1, minWidth: 0, minHeight: 98, borderRadius: 14, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 12},
   shortcutLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#164DB7', marginTop: 8, textAlign: 'center'},
   recentApplicationsCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, marginTop: 14, paddingHorizontal: 16, overflow: 'hidden'},
+  recentEmpty: {minHeight: 140, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24},
   recentApplicationRow: {minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12},
   recentApplicationDivider: {borderBottomWidth: 1, borderBottomColor: C.border},
   recentCompanyLogo: {width: 48, height: 48, borderRadius: 10, backgroundColor: '#1769FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
@@ -825,8 +829,6 @@ const styles = StyleSheet.create({
   applyButton: {height: 40, borderRadius: 10, backgroundColor: '#0345AE', paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center'},
   applyButtonText: {fontFamily: F.bold, fontSize: 10.5, color: 'white'},
   detailButtonText: {fontFamily: F.semibold, fontSize: 9.5, color: C.blue},
-  logoutButton: {height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: -7},
-  logoutText: {fontFamily: F.medium, fontSize: 11, color: '#8A94A6'},
   bottomNav: {...cardShadow, minHeight: 68, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#EFF1F5', flexDirection: 'row', paddingTop: 9, paddingHorizontal: 7},
   bottomNavItem: {flex: 1, minHeight: 49, alignItems: 'center', justifyContent: 'center', gap: 3},
   bottomLabel: {fontFamily: F.medium, fontSize: 8.5, color: '#A1A7B2'},

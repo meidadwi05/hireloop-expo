@@ -1,5 +1,21 @@
 import {z} from 'zod';
 
+const candidateBlacklistInfoSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  tier: z.enum(['tier_1', 'tier_2']),
+  status: z.string().default('active'),
+  reason: z.string().nullable().default(null),
+  notes: z.string().nullable().default(null),
+  evidence_file_url: z.string().nullable().default(null),
+  evidence_file_name: z.string().nullable().default(null),
+  company_name: z.string().nullable().default(null),
+  position_name: z.string().nullable().default(null),
+  blacklisted_from: z.string().nullable().default(null),
+  blacklisted_at: z.string().nullable().default(null),
+  supervisor_validated_at: z.string().nullable().default(null),
+  supervisor_notes: z.string().nullable().default(null),
+});
+
 export const candidateUserSchema = z.object({
   id: z.number(),
   full_name: z.string(),
@@ -13,6 +29,10 @@ export const candidateUserSchema = z.object({
   role: z.string().nullable(),
   roles: z.array(z.string()),
   job_applications: z.array(z.record(z.string(), z.unknown())).default([]),
+  is_blacklisted: z.boolean().optional().default(false),
+  is_banned: z.boolean().optional().default(false),
+  blacklist_tier: z.enum(['tier_1', 'tier_2']).nullable().optional().default(null),
+  blacklist_info: candidateBlacklistInfoSchema.nullable().optional().default(null),
 });
 
 export const loginResponseSchema = z.object({

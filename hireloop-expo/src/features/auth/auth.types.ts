@@ -1,3 +1,19 @@
+export type CandidateBlacklistInfo = {
+  id: number;
+  tier: 'tier_1' | 'tier_2';
+  status: string;
+  reason: string | null;
+  notes: string | null;
+  evidence_file_url: string | null;
+  evidence_file_name: string | null;
+  company_name: string | null;
+  position_name: string | null;
+  blacklisted_from: string | null;
+  blacklisted_at: string | null;
+  supervisor_validated_at: string | null;
+  supervisor_notes: string | null;
+};
+
 export type CandidateUser = {
   id: number;
   full_name: string;
@@ -11,6 +27,10 @@ export type CandidateUser = {
   role: string | null;
   roles: string[];
   job_applications: Record<string, unknown>[];
+  is_blacklisted?: boolean;
+  is_banned?: boolean;
+  blacklist_tier?: 'tier_1' | 'tier_2' | null;
+  blacklist_info?: CandidateBlacklistInfo | null;
 };
 
 export type LoginInput = {

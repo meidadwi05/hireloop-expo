@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {ImageBackground, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {StatusBar} from 'expo-status-bar';
 import React, {useState} from 'react';
 import {router} from 'expo-router';
 
+import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {applicationsKeys} from '../../applications/applications.keys';
@@ -14,8 +15,6 @@ import {jobsKeys} from '../jobs.keys';
 import type {CandidateJobSource} from '../jobs.types';
 import {ApplyConfirmationModal} from './ApplyConfirmationModal';
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
-
-const headerBackground = require('../../../assets/up_background.png');
 
 type JobDetailScreenProps = {
   source: CandidateJobSource;
@@ -42,6 +41,8 @@ function DetailSection({title, items, fallback}: {title: string; items?: string[
 
 export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProps) {
   const insets = useSafeAreaInsets();
+  const {width} = useWindowDimensions();
+  const containerWidth = Math.min(width, 720);
   const queryClient = useQueryClient();
   const [confirmVisible, setConfirmVisible] = useState(autoOpenApply);
   const [feedback, setFeedback] = useState('');
@@ -76,13 +77,18 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <StatusBar style="light" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <ImageBackground source={headerBackground} resizeMode="cover" style={[styles.header, {paddingTop: insets.top + 10}]} imageStyle={styles.headerImage}>
+        <BrandedHeaderBackground
+          containerWidth={containerWidth}
+          topInset={insets.top}
+          variant="compact-detail"
+          style={[styles.header, {paddingTop: insets.top + 8}]}
+        >
           <Pressable accessibilityLabel="Kembali ke daftar lowongan" accessibilityRole="button" onPress={() => goBackOrReplace('/(candidate)/(tabs)/jobs')} style={styles.backButton}>
             <Ionicons name="arrow-back" size={26} color="white" />
           </Pressable>
           <Text style={styles.headerTitle}>Detail Lowongan</Text>
           <View style={styles.headerSpacer} />
-        </ImageBackground>
+        </BrandedHeaderBackground>
 
         <View style={styles.content}>
           {detail.isPending && (
@@ -125,7 +131,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
                 <View style={[styles.feedback, requiresNik ? styles.feedbackWarning : styles.feedbackSuccess]}>
                   <Text style={styles.feedbackText}>{feedback}</Text>
                   {requiresNik && (
-                    <Pressable accessibilityRole="button" onPress={() => router.replace('/(candidate)/(tabs)/profile')} style={styles.profileLink}>
+                    <Pressable accessibilityRole="button" onPress={() => router.replace('/profile')} style={styles.profileLink}>
                       <Text style={styles.profileLinkText}>Lengkapi Profil</Text>
                     </Pressable>
                   )}
@@ -174,8 +180,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
 const styles = StyleSheet.create({
   safeArea: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   scrollContent: {paddingBottom: 24},
-  header: {minHeight: 104, paddingHorizontal: 18, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: '#003E9A'},
-  headerImage: {opacity: 0.96},
+  header: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},
   headerTitle: {flex: 1, fontFamily: JOBS_FONTS.bold, fontSize: 21, color: 'white', textAlign: 'center'},
   headerSpacer: {width: 42},

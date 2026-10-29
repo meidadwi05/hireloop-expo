@@ -1,4 +1,4 @@
-import {render} from '@testing-library/react-native';
+import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
 import {StyleSheet} from 'react-native';
 
@@ -12,6 +12,10 @@ jest.mock('../../features/dashboard/hooks/use-dashboard-home', () => ({
 
 describe('dashboard job card', () => {
   it('mengikuti struktur visual lowongan terbaru tanpa mengubah tombol utama', () => {
+    const onApply = jest.fn();
+    const onOpen = jest.fn();
+    const onShare = jest.fn();
+    const onToggleSaved = jest.fn();
     const screen = render(
       <JobCard
         job={{
@@ -38,6 +42,11 @@ describe('dashboard job card', () => {
           updatedLabel: 'Diperbarui 5 hari yang lalu',
         }}
         width={360}
+        saved={false}
+        onApply={onApply}
+        onOpen={onOpen}
+        onShare={onShare}
+        onToggleSaved={onToggleSaved}
       />,
     );
 
@@ -55,12 +64,23 @@ describe('dashboard job card', () => {
     expect(screen.getByText('Diperbarui 5 hari yang lalu')).toBeTruthy();
     expect(screen.getByText('+2')).toBeTruthy();
     expect(screen.getByText('Lamar sekarang')).toBeTruthy();
-    expect(screen.getByText('Lihat Detail  ›')).toBeTruthy();
+    expect(screen.getByText(/Lihat Detail/)).toBeTruthy();
 
     const cardStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-card').props.style);
     const buttonStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-apply-button').props.style);
 
     expect(cardStyle.borderColor).toBe('#EDF1F7');
     expect(buttonStyle.backgroundColor).toBe('#0345AE');
+
+    const pressEvent = () => ({stopPropagation: jest.fn()});
+    fireEvent.press(screen.getByTestId('dashboard-job-apply-button'), pressEvent());
+    fireEvent.press(screen.getByText(/Lihat Detail/), pressEvent());
+    fireEvent.press(screen.getByLabelText('Simpan lowongan'), pressEvent());
+    fireEvent.press(screen.getByLabelText('Bagikan lowongan'), pressEvent());
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onToggleSaved).toHaveBeenCalledTimes(1);
+    expect(onShare).toHaveBeenCalledTimes(1);
   });
 });

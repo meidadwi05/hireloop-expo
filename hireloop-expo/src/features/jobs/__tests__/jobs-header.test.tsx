@@ -1,6 +1,6 @@
 import {render} from '@testing-library/react-native';
 import React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {StyleSheet} from 'react-native';
 
 import {JobsHeader} from '../components/JobsHeader';
 
@@ -18,7 +18,7 @@ jest.mock('@expo/vector-icons/Ionicons', () => {
 });
 
 describe('JobsHeader', () => {
-  it('keeps the complete artwork and location controls inside the blue header', () => {
+  it('keeps the complete artwork explicitly anchored inside the blue header', () => {
     const screen = render(
       <JobsHeader
         containerWidth={390}
@@ -26,18 +26,21 @@ describe('JobsHeader', () => {
         search=""
         onChangeSearch={jest.fn()}
         onOpenSaved={jest.fn()}
-      >
-        <View testID="jobs-location-controls" />
-      </JobsHeader>,
+      />,
     );
 
     const header = screen.getByTestId('jobs-header-background');
     const artwork = screen.getByTestId('jobs-header-artwork');
     const headerStyle = StyleSheet.flatten(header.props.style);
+    const artworkStyle = StyleSheet.flatten(artwork.props.style);
 
     expect(artwork.props.resizeMode).toBe('contain');
     expect(headerStyle.backgroundColor).toBe('#00419E');
+    expect(headerStyle.height).toBe(157);
     expect(headerStyle.paddingHorizontal).toBe(20);
-    expect(header.findByProps({testID: 'jobs-location-controls'})).toBeTruthy();
+    expect(artworkStyle.top).toBe(0);
+    expect(artworkStyle.right).toBe(0);
+    expect(artworkStyle.width).toBeLessThanOrEqual(390);
+    expect(artworkStyle.height).toBeLessThanOrEqual(157);
   });
 });

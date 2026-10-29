@@ -1,17 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, {type ReactNode} from 'react';
-import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import React from 'react';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {JOBS_FONTS} from './jobs.ui';
 import {JobsSearchField} from './JobsSearchField';
 
-const headerBackground = require('../../../assets/up_background.png');
-
 type JobsHeaderProps = {
-  children: ReactNode;
   containerWidth: number;
   horizontalPadding: number;
   search: string;
@@ -19,25 +17,22 @@ type JobsHeaderProps = {
   onOpenSaved: () => void;
 };
 
-export function JobsHeader({children, containerWidth, horizontalPadding, search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
+export function JobsHeader({containerWidth, horizontalPadding, search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
   const insets = useSafeAreaInsets();
   const iconLayout = getJobsIconLayout(containerWidth);
 
   return (
-    <View
+    <BrandedHeaderBackground
+      artworkTestID="jobs-header-artwork"
+      containerWidth={containerWidth}
+      topInset={insets.top}
+      variant="jobs-list"
       style={[
         styles.background,
-        {paddingHorizontal: horizontalPadding, paddingTop: insets.top + 10},
+        {paddingHorizontal: horizontalPadding, paddingTop: insets.top + 8},
       ]}
       testID="jobs-header-background"
     >
-      <Image
-        accessibilityIgnoresInvertColors
-        resizeMode="contain"
-        source={headerBackground}
-        style={styles.image}
-        testID="jobs-header-artwork"
-      />
       <View style={styles.titleRow}>
         <Pressable
           accessibilityLabel="Kembali ke Beranda"
@@ -75,14 +70,12 @@ export function JobsHeader({children, containerWidth, horizontalPadding, search,
         height={iconLayout.searchFieldHeight}
         onChangeText={onChangeSearch}
       />
-      {children}
-    </View>
+    </BrandedHeaderBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {position: 'relative', overflow: 'hidden', paddingBottom: 12, gap: 12, backgroundColor: '#00419E'},
-  image: {position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%', opacity: 0.96},
+  background: {paddingBottom: 10, gap: 10},
   titleRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 11},
   iconButton: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   copy: {flex: 1, minWidth: 0},

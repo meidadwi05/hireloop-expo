@@ -6,7 +6,6 @@ import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  ImageBackground,
   Modal,
   Pressable,
   StyleSheet,
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {toAppApiError} from '../../../core/api/api-error';
 import {jobsApi} from '../../jobs/api/jobs.api';
 import {jobsKeys} from '../../jobs/jobs.keys';
@@ -26,8 +26,6 @@ import {useApplications} from '../hooks/use-applications';
 import type {ApplicationCardModel, ApplicationUiState, CandidateApplication} from '../applications.types';
 import {ApplicationCard} from '../components/ApplicationCard';
 import {APPLICATION_COLORS, APPLICATION_FONTS} from '../components/applications.ui';
-
-const headerBackground = require('../../../assets/up_background.png');
 
 type ActiveTab = 'all' | 'saved' | 'canceled';
 type StatusFilter = 'all' | ApplicationUiState;
@@ -135,6 +133,7 @@ export function ApplicationsScreen() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const pagePadding = width <= 350 ? 14 : 18;
+  const containerWidth = Math.min(width, 720);
   const applications = applicationsQuery.data ?? EMPTY_APPLICATIONS;
 
   const jobQueries = useQueries({
@@ -191,7 +190,12 @@ export function ApplicationsScreen() {
 
   const header = (
     <>
-      <ImageBackground source={headerBackground} resizeMode="cover" style={[styles.hero, {paddingTop: insets.top + 8}]} imageStyle={styles.heroImage}>
+      <BrandedHeaderBackground
+        containerWidth={containerWidth}
+        topInset={insets.top}
+        variant="application-list"
+        style={[styles.hero, {paddingTop: insets.top + 8}]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Kembali ke Beranda"
@@ -204,7 +208,7 @@ export function ApplicationsScreen() {
           <Text style={styles.heroTitle}>Lamaran Saya</Text>
           <Text style={styles.heroSubtitle}>Pantau perkembangan lamaranmu</Text>
         </View>
-      </ImageBackground>
+      </BrandedHeaderBackground>
 
       <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
         <View accessibilityRole="tablist" style={styles.tabs}>
@@ -342,8 +346,7 @@ export function ApplicationsScreen() {
 const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
   content: {backgroundColor: APPLICATION_COLORS.background},
-  hero: {minHeight: 151, paddingHorizontal: 18, paddingBottom: 30, flexDirection: 'row', alignItems: 'center', backgroundColor: APPLICATION_COLORS.blueDark},
-  heroImage: {opacity: 0.98},
+  hero: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: 4},
   heroCopy: {flex: 1, minWidth: 0},
   heroTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},

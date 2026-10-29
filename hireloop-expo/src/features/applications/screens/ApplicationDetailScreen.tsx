@@ -5,15 +5,16 @@ import {StatusBar} from 'expo-status-bar';
 import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {dashboardKeys} from '../../dashboard/dashboard.keys';
@@ -35,8 +36,6 @@ import {
   applicationStatePresentation,
   formatApplicationDate,
 } from '../components/applications.ui';
-
-const headerBackground = require('../../../assets/up_background.png');
 
 function fallbackJob(application: CandidateApplication): CandidateJobDetail {
   return {
@@ -93,6 +92,8 @@ function statusHeroCopy(application: CandidateApplication) {
 
 export function ApplicationDetailScreen({source, id}: {source: CandidateJobSource; id: number}) {
   const insets = useSafeAreaInsets();
+  const {width} = useWindowDimensions();
+  const containerWidth = Math.min(width, 720);
   const queryClient = useQueryClient();
   const {refreshUser} = useAuth();
   const applicationsQuery = useApplications();
@@ -175,13 +176,18 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <StatusBar style="light" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, {paddingBottom: Math.max(insets.bottom, 16) + 18}]}>
-        <ImageBackground source={headerBackground} resizeMode="cover" style={[styles.header, {paddingTop: insets.top + 8}]} imageStyle={styles.headerImage}>
+        <BrandedHeaderBackground
+          containerWidth={containerWidth}
+          topInset={insets.top}
+          variant="compact-detail"
+          style={[styles.header, {paddingTop: insets.top + 8}]}
+        >
           <Pressable accessibilityRole="button" accessibilityLabel="Kembali ke Lamaran Saya" onPress={() => goBackOrReplace('/(candidate)/(tabs)/career')} style={styles.backButton}>
             <Ionicons name="arrow-back" size={26} color="white" />
           </Pressable>
           <Text style={styles.headerTitle}>Detail Lamaran</Text>
           <View style={styles.headerSpacer} />
-        </ImageBackground>
+        </BrandedHeaderBackground>
 
         <View style={styles.content}>
           <View style={styles.summaryCard}>
@@ -274,8 +280,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 const styles = StyleSheet.create({
   safeArea: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
   scrollContent: {backgroundColor: APPLICATION_COLORS.background},
-  header: {minHeight: 118, paddingHorizontal: 14, paddingBottom: 17, flexDirection: 'row', alignItems: 'center', backgroundColor: APPLICATION_COLORS.blueDark},
-  headerImage: {opacity: 0.98},
+  header: {paddingHorizontal: 14, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   headerTitle: {flex: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 22, color: 'white', textAlign: 'center'},
   headerSpacer: {width: 44},

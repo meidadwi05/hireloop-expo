@@ -46,7 +46,7 @@ export function ProfileHeader({
   rightLabel,
   rightIcon,
   onRightPress,
-  fallback = '/(candidate)/(tabs)/profile',
+  fallback = '/profile',
 }: HeaderProps) {
   const insets = useSafeAreaInsets();
   return (

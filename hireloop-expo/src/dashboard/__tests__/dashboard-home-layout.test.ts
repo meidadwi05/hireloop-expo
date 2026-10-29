@@ -9,14 +9,12 @@ import {
 describe('dashboard home responsive layout', () => {
   test('mengikuti rasio asset hero pada ukuran ponsel dan lebar referensi', () => {
     expect(getDashboardHeroLayout(320)).toMatchObject({
-      actionsTop: 57,
       compact: true,
       heroHeight: 223,
       horizontalPadding: 18,
       logoWidth: 120,
     });
     expect(getDashboardHeroLayout(390)).toMatchObject({
-      actionsTop: 69,
       compact: false,
       heroHeight: 271,
       horizontalPadding: 28,

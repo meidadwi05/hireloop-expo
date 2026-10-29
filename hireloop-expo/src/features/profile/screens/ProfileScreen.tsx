@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
-import {useAuth} from '../../auth/auth-provider';
 import {profileApi} from '../api/profile.api';
 import {calculateProfileCompletion, formatAddress} from '../profile.mapper';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
@@ -34,7 +33,7 @@ const menuItems = [
   {label: 'Keahlian', subtitle: 'Keahlian, tools & bahasa', icon: 'construct-outline' as const},
   {label: 'Preferensi Kerja', subtitle: 'Posisi, lokasi & gaji', icon: 'options-outline' as const, route: '/(candidate)/profile/work-preferences'},
   {label: 'Dokumen & Sertifikat', subtitle: 'CV dan sertifikasi', icon: 'document-text-outline' as const, route: '/(candidate)/profile/documents'},
-  {label: 'Pengaturan Akun', subtitle: 'Kelola akun Anda', icon: 'settings-outline' as const},
+  {label: 'Pengaturan Akun', subtitle: 'Kelola akun Anda', icon: 'settings-outline' as const, route: '/(candidate)/(tabs)/account'},
 ];
 
 function initials(name: string) {
@@ -42,7 +41,6 @@ function initials(name: string) {
 }
 
 export function ProfileScreen() {
-  const {logout} = useAuth();
   const profile = useProfile();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [about, setAbout] = useState('');
@@ -90,7 +88,7 @@ export function ProfileScreen() {
 
   return (
     <View style={styles.screen}>
-      <ProfileHeader title="Profil Saya" rightIcon="settings-outline" rightLabel="Pengaturan" onRightPress={() => Alert.alert('Pengaturan Akun', 'Pengaturan akun akan tersedia pada pembaruan berikutnya.')} fallback="/(candidate)/(tabs)/home" />
+      <ProfileHeader title="Profil Saya" rightIcon="settings-outline" rightLabel="Pengaturan" onRightPress={() => router.push('/(candidate)/(tabs)/account' as never)} fallback="/(candidate)/(tabs)/home" />
       {profile.isLoading || profile.isError || !data ? (
         <ScreenState
           loading={profile.isLoading}
@@ -146,7 +144,6 @@ export function ProfileScreen() {
             ))}
           </ProfileCard>
 
-          <Pressable onPress={() => void logout()} style={styles.logout}><Ionicons name="log-out-outline" size={20} color="#B42318" /><Text style={styles.logoutText}>Keluar dari akun</Text></Pressable>
           <Text style={styles.hiddenAddress} accessibilityElementsHidden>{formatAddress(data.domicileAddress)}</Text>
         </ProfilePage>
       )}
@@ -207,8 +204,6 @@ const styles = StyleSheet.create({
   menuCopy: {flex: 1, minWidth: 0},
   menuLabel: {fontFamily: profileFonts.semibold, fontSize: 13, color: profileColors.ink},
   menuSubtitle: {fontFamily: profileFonts.regular, fontSize: 10.5, color: profileColors.muted, marginTop: 2},
-  logout: {height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
-  logoutText: {fontFamily: profileFonts.semibold, fontSize: 12, color: '#B42318'},
   hiddenAddress: {position: 'absolute', width: 1, height: 1, opacity: 0},
   modalBackdrop: {flex: 1, backgroundColor: 'rgba(0,20,55,0.55)', justifyContent: 'center', padding: 20},
   modalCard: {backgroundColor: 'white', borderRadius: 18, padding: 18},

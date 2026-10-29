@@ -1,7 +1,8 @@
-import {render} from '@testing-library/react-native';
+import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
 import {processColor, StyleSheet} from 'react-native';
 
+import type {CandidateApplication} from '../../features/applications/applications.types';
 import {
   NearestInterviewCard,
   ProfileCompletionCard,
@@ -37,7 +38,7 @@ describe('dashboard sections', () => {
     expect(screen.getByText('Interview Terdekat')).toBeTruthy();
     expect(screen.getByText('Product Designer')).toBeTruthy();
     expect(screen.getByText(/Tech Solutions Indonesia/)).toBeTruthy();
-    expect(screen.getByText('Online · Zoom')).toBeTruthy();
+    expect(screen.getByText(/Online/)).toBeTruthy();
     expect(screen.getByText('Gabung Interview')).toBeTruthy();
     expect(screen.getByText('Detail')).toBeTruthy();
     expect(screen.queryByText('Progress Lamaran')).toBeNull();
@@ -64,8 +65,18 @@ describe('dashboard sections', () => {
     expect(StyleSheet.flatten(firstTile.props.style).elevation).toBe(2);
   });
 
+  it('membuka Profil Saya melalui route pintasan di luar tab Akun', () => {
+    const onNavigate = jest.fn();
+    const screen = render(<ShortcutGrid onNavigate={onNavigate} />);
+
+    fireEvent.press(screen.getByLabelText('Buka Profil Saya'));
+
+    expect(onNavigate).toHaveBeenCalledWith('/profile');
+  });
+
   it('menampilkan card kelengkapan profil statis sesuai rancangan', () => {
-    const screen = render(<ProfileCompletionCard completion={75} />);
+    const onOpenProfile = jest.fn();
+    const screen = render(<ProfileCompletionCard completion={75} onOpenProfile={onOpenProfile} />);
 
     expect(screen.getByText('Lengkapi Profilmu')).toBeTruthy();
     expect(screen.getByText('75%')).toBeTruthy();
@@ -75,17 +86,46 @@ describe('dashboard sections', () => {
       processColor('#0145C0'),
       processColor('#00205A'),
     ]);
+    fireEvent.press(screen.getByText('Lengkapi sekarang'));
+    expect(onOpenProfile).toHaveBeenCalledTimes(1);
   });
 
-  it('menampilkan dua lamaran terbaru statis setelah integrasi backend ditahan', () => {
-    const screen = render(<RecentApplicationsCard />);
+  it('menampilkan lamaran terbaru dinamis lengkap dengan perusahaan, tanggal, dan status backend', () => {
+    const applications: CandidateApplication[] = [{
+      applicationId: 12,
+      source: 'job-posting',
+      referenceId: 44,
+      storageKind: 'applicant-data',
+      title: 'UI/UX Designer',
+      company: 'PT. Inovasi Digital',
+      location: 'Jakarta',
+      applicationStatus: 'in_progress',
+      stageStatus: 'screening',
+      currentStageIndex: 1,
+      currentStageValue: 'screening',
+      currentStageLabel: 'Screening',
+      stages: [],
+      state: 'in-progress',
+      submittedAt: '2026-10-20T08:00:00Z',
+      updatedAt: '2026-10-28T08:00:00Z',
+      canceledAt: null,
+      isTemporary: false,
+      isTransferred: false,
+      transferNote: null,
+    }];
+    const onOpen = jest.fn();
+    const screen = render(<RecentApplicationsCard applications={applications} onOpen={onOpen} />);
 
     expect(screen.getByText('Lamaran Terbaru')).toBeTruthy();
     expect(screen.getByText('UI/UX Designer')).toBeTruthy();
     expect(screen.getByText('PT. Inovasi Digital')).toBeTruthy();
     expect(screen.getByText('Screening')).toBeTruthy();
-    expect(screen.getByText('Admin Produksi')).toBeTruthy();
-    expect(screen.getByText('PT. Mitra Industri')).toBeTruthy();
-    expect(screen.getByText('Lamaran Terkirim')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('UI/UX Designer di PT. Inovasi Digital, Screening'));
+    expect(onOpen).toHaveBeenCalledWith(applications[0]);
+  });
+
+  it('menampilkan empty state ketika kandidat belum pernah melamar', () => {
+    const screen = render(<RecentApplicationsCard applications={[]} />);
+    expect(screen.getByText('Belum ada lamaran')).toBeTruthy();
   });
 });
