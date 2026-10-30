@@ -169,6 +169,7 @@ export function JobListingCard({
             onOpen();
           }}
           style={({pressed}) => [styles.detailButton, pressed && styles.buttonPressed]}
+          testID="job-listing-detail-button"
         >
           <Text style={styles.detailText}>Lihat Detail</Text>
           <Ionicons name="chevron-forward" size={iconLayout.cardChevronIconSize} color={JOBS_COLORS.blue} />
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   applyGradient: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 9},
   applyText: {fontFamily: JOBS_FONTS.bold, fontSize: 12.5, color: 'white'},
   detailButton: {flex: 1, minHeight: 47, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 4},
-  detailText: {fontFamily: JOBS_FONTS.bold, fontSize: 11.5, color: JOBS_COLORS.blue},
+  detailText: {fontFamily: JOBS_FONTS.bold, fontSize: 12.5, color: JOBS_COLORS.blue, textAlign: 'center'},
   buttonPressed: {opacity: 0.76},
   disabled: {opacity: 0.5},
 });

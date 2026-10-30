@@ -558,6 +558,8 @@ export function JobCard({job, width, saved, onApply, onOpen, onShare, onToggleSa
             onOpen();
           }}
           hitSlop={8}
+          style={styles.detailButton}
+          testID="dashboard-job-detail-button"
         >
           <Text style={styles.detailButtonText}>Lihat Detail  {'\u203A'}</Text>
         </Pressable>
@@ -825,10 +827,11 @@ const styles = StyleSheet.create({
   timestamp: {fontFamily: F.medium, fontSize: 8, color: '#00A968'},
   timestampDot: {fontFamily: F.regular, color: '#CDD1D8'},
   jobDivider: {height: 1, backgroundColor: C.border, marginVertical: 14},
-  jobButtons: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  applyButton: {height: 40, borderRadius: 10, backgroundColor: '#0345AE', paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center'},
+  jobButtons: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  applyButton: {flex: 1.65, height: 40, borderRadius: 10, backgroundColor: '#0345AE', paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center'},
   applyButtonText: {fontFamily: F.bold, fontSize: 10.5, color: 'white'},
-  detailButtonText: {fontFamily: F.semibold, fontSize: 9.5, color: C.blue},
+  detailButton: {flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
+  detailButtonText: {fontFamily: F.bold, fontSize: 12.5, color: C.blue, textAlign: 'center'},
   bottomNav: {...cardShadow, minHeight: 68, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#EFF1F5', flexDirection: 'row', paddingTop: 9, paddingHorizontal: 7},
   bottomNavItem: {flex: 1, minHeight: 49, alignItems: 'center', justifyContent: 'center', gap: 3},
   bottomLabel: {fontFamily: F.medium, fontSize: 8.5, color: '#A1A7B2'},

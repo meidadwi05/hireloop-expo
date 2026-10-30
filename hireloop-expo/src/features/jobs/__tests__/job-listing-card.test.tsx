@@ -1,5 +1,6 @@
 import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
+import {StyleSheet} from 'react-native';
 
 import {JobListingCard} from '../components/JobListingCard';
 import {getJobsIconLayout} from '../jobs-header.layout';
@@ -57,6 +58,13 @@ describe('JobListingCard', () => {
     expect(screen.getByText('Dibutuhkan Segera')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
     expect(screen.getByText('+1')).toBeTruthy();
+
+    const detailButtonStyle = StyleSheet.flatten(screen.getByTestId('job-listing-detail-button').props.style);
+    const detailTextStyle = StyleSheet.flatten(screen.getByText('Lihat Detail').props.style);
+    expect(detailButtonStyle.alignItems).toBe('center');
+    expect(detailButtonStyle.justifyContent).toBe('center');
+    expect(detailTextStyle.fontFamily).toBe('PlusJakartaSans_700Bold');
+    expect(detailTextStyle.fontSize).toBe(12.5);
 
     fireEvent.press(screen.getByText('Lamar sekarang'));
     fireEvent.press(screen.getByText('Lihat Detail'));

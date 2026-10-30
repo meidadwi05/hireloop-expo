@@ -68,9 +68,15 @@ describe('dashboard job card', () => {
 
     const cardStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-card').props.style);
     const buttonStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-apply-button').props.style);
+    const detailButtonStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-detail-button').props.style);
+    const detailTextStyle = StyleSheet.flatten(screen.getByText(/Lihat Detail/).props.style);
 
     expect(cardStyle.borderColor).toBe('#EDF1F7');
     expect(buttonStyle.backgroundColor).toBe('#0345AE');
+    expect(detailButtonStyle.alignItems).toBe('center');
+    expect(detailButtonStyle.justifyContent).toBe('center');
+    expect(detailTextStyle.fontFamily).toBe('PlusJakartaSans_700Bold');
+    expect(detailTextStyle.fontSize).toBe(12.5);
 
     const pressEvent = () => ({stopPropagation: jest.fn()});
     fireEvent.press(screen.getByTestId('dashboard-job-apply-button'), pressEvent());
