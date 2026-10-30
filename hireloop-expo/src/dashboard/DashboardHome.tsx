@@ -19,6 +19,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import type {CandidateUser} from '../features/auth/auth.types';
+import {isCandidateTier2Banned} from '../features/auth/candidate-apply-access';
 import type {CandidateApplication} from '../features/applications/applications.types';
 import {applicationStatePresentation, formatApplicationDate} from '../features/applications/components/applications.ui';
 import type {DashboardInterview} from '../features/dashboard/dashboard.types';
@@ -407,7 +408,11 @@ export function RecentApplicationsCard({applications, onOpen, onOpenAll}: {
               onPress={() => onOpen?.(application)}
               style={({pressed}) => [styles.recentApplicationRow, index < recent.length - 1 && styles.recentApplicationDivider, pressed && styles.pressed]}
             >
-              <View style={[styles.recentCompanyLogo, compact && styles.recentCompanyLogoCompact]}>
+              <View
+                accessibilityLabel={`Ikon perusahaan ${application.company}`}
+                style={[styles.recentCompanyLogo, compact && styles.recentCompanyLogoCompact]}
+                testID="recent-application-company-icon"
+              >
                 <Ionicons name="business-outline" size={compact ? 22 : 25} color={C.brightBlue} />
               </View>
               <View style={styles.recentApplicationCopy}>
@@ -430,10 +435,11 @@ export function RecentApplicationsCard({applications, onOpen, onOpenAll}: {
   );
 }
 
-export function JobCard({job, width, saved, onApply, onOpen, onShare, onToggleSaved}: {
+export function JobCard({job, width, saved, applyBlocked = false, onApply, onOpen, onShare, onToggleSaved}: {
   job: JobCardModel;
   width: number;
   saved: boolean;
+  applyBlocked?: boolean;
   onApply: () => void;
   onOpen: () => void;
   onShare: () => void;
@@ -442,6 +448,7 @@ export function JobCard({job, width, saved, onApply, onOpen, onShare, onToggleSa
   const visibleSkills = job.skills.slice(0, 4);
   const hiddenSkillCount = Math.max(0, job.skills.length - visibleSkills.length);
   const workMode = job.workType || 'On Site';
+  const applyUnavailable = applyBlocked || !job.active;
 
   return (
     <Pressable
@@ -541,15 +548,19 @@ export function JobCard({job, width, saved, onApply, onOpen, onShare, onToggleSa
 
       <View style={styles.jobButtons}>
         <Pressable
+          accessibilityLabel={applyBlocked ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
           accessibilityRole="button"
+          accessibilityState={{disabled: applyUnavailable}}
           onPress={event => {
-            event.stopPropagation();
+            event?.stopPropagation();
+            if (applyUnavailable) return;
             onApply();
           }}
-          style={styles.applyButton}
+          style={[styles.applyButton, applyBlocked && styles.blockedApplyButton, !job.active && styles.disabledApplyButton]}
           testID="dashboard-job-apply-button"
         >
-          <Text style={styles.applyButtonText}>Lamar sekarang</Text>
+          {applyBlocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
+          <Text style={styles.applyButtonText}>{applyBlocked ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -575,6 +586,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
   const {applications, candidate, interviews, jobs, unread, jobsLoading, refreshing, error, refresh} = useDashboardHome();
   const {hydrated: savedHydrated, isSaved, savedCount, toggleSaved} = useSavedJobs();
   const cardWidth = Math.min(Math.max(width * 0.84, 280), 370);
+  const applyBlocked = isCandidateTier2Banned(candidate ?? initialUser);
 
   const recommendationContent = useMemo(() => {
     if (jobsLoading) {
@@ -605,6 +617,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
             job={job}
             width={cardWidth}
             saved={isSaved(job.key)}
+            applyBlocked={applyBlocked}
             onApply={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id), intent: 'apply'}} as never)}
             onOpen={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id)}} as never)}
             onShare={() => void Share.share({message: `${job.title} di ${job.company} - ${job.location}`})}
@@ -613,7 +626,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
         ))}
       </ScrollView>
     );
-  }, [cardWidth, isSaved, jobs, jobsLoading, toggleSaved]);
+  }, [applyBlocked, cardWidth, isSaved, jobs, jobsLoading, toggleSaved]);
 
   return (
     <View
@@ -769,10 +782,8 @@ const styles = StyleSheet.create({
   recentEmpty: {minHeight: 140, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24},
   recentApplicationRow: {minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12},
   recentApplicationDivider: {borderBottomWidth: 1, borderBottomColor: C.border},
-  recentCompanyLogo: {width: 48, height: 48, borderRadius: 10, backgroundColor: '#1769FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
-  recentCompanyLogoCompact: {width: 42, height: 42, borderRadius: 9},
-  recentCompanyLogoDark: {backgroundColor: '#00195E'},
-  recentCompanyLogoText: {fontFamily: F.extrabold, fontSize: 17, color: 'white', fontStyle: 'italic'},
+  recentCompanyLogo: {width: 48, height: 48, borderRadius: 13, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  recentCompanyLogoCompact: {width: 42, height: 42, borderRadius: 12},
   recentApplicationCopy: {flex: 1, minWidth: 0},
   recentApplicationTitle: {fontFamily: F.bold, fontSize: 13.5, lineHeight: 18, color: C.ink},
   recentCompanyRow: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2},
@@ -828,7 +839,9 @@ const styles = StyleSheet.create({
   timestampDot: {fontFamily: F.regular, color: '#CDD1D8'},
   jobDivider: {height: 1, backgroundColor: C.border, marginVertical: 14},
   jobButtons: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  applyButton: {flex: 1.65, height: 40, borderRadius: 10, backgroundColor: '#0345AE', paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center'},
+  applyButton: {flex: 1.65, height: 40, borderRadius: 10, backgroundColor: '#0345AE', paddingHorizontal: 12, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center'},
+  blockedApplyButton: {backgroundColor: '#D92D45'},
+  disabledApplyButton: {opacity: 0.5},
   applyButtonText: {fontFamily: F.bold, fontSize: 10.5, color: 'white'},
   detailButton: {flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},
   detailButtonText: {fontFamily: F.bold, fontSize: 12.5, color: C.blue, textAlign: 'center'},

@@ -6,6 +6,7 @@ import {FlatList, Pressable, Share, StyleSheet, Text, View, useWindowDimensions}
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
+import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {useSavedJobs} from '../saved-jobs-provider';
 import type {CandidateJobCard} from '../jobs.types';
@@ -16,11 +17,13 @@ export function SavedJobsScreen() {
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const {hydrated, isSaved, savedJobs, toggleSaved} = useSavedJobs();
+  const applyAccess = useCandidateApplyAccess();
   const containerWidth = Math.min(width, 720);
   const pagePadding = containerWidth <= 350 ? 14 : 20;
   const iconLayout = getJobsIconLayout(containerWidth);
 
   const openJob = (job: CandidateJobCard, intent?: 'apply') => {
+    if (intent === 'apply' && applyAccess.isTier2Banned) return;
     router.push({
       pathname: '/(candidate)/jobs/[source]/[id]',
       params: {source: job.source, id: String(job.id), ...(intent ? {intent} : {})},
@@ -50,6 +53,7 @@ export function SavedJobsScreen() {
               iconLayout={iconLayout}
               job={item}
               saved={isSaved(item.key)}
+              applyBlocked={applyAccess.isTier2Banned}
               onApply={() => openJob(item, 'apply')}
               onOpen={() => openJob(item)}
               onShare={() => void Share.share({message: `${item.title} di ${item.company} - ${item.location}`})}

@@ -24,7 +24,12 @@ function asStringArray(value: unknown): string[] {
     return value
       .map(item => typeof item === 'string'
         ? item.trim()
-        : asText(asRecord(item).name, asRecord(item).skill_name, asRecord(item).nama_skill))
+        : asText(
+          asRecord(item).name,
+          asRecord(item).nama,
+          asRecord(item).skill_name,
+          asRecord(item).nama_skill,
+        ))
       .filter(Boolean);
   }
 
@@ -193,6 +198,14 @@ function splitTextList(value: unknown): string[] {
   if (Array.isArray(value)) return asStringArray(value);
   const text = asText(value);
   if (!text) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (Array.isArray(parsed)) return asStringArray(parsed);
+  } catch {
+    // Legacy records can still contain newline, semicolon, or bullet-delimited text.
+  }
+
   return text
     .split(/\r?\n|;|\u2022/)
     .map(item => item.replace(/^[-*]\s*/, '').trim())

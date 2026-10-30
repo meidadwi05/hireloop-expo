@@ -5,6 +5,8 @@ import {StyleSheet} from 'react-native';
 import {JobCard} from '../DashboardHome';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
+jest.mock('expo-router', () => ({router: {push: jest.fn()}}));
+jest.mock('expo-linear-gradient', () => ({LinearGradient: ({children}: {children: React.ReactNode}) => children}));
 
 jest.mock('../../features/dashboard/hooks/use-dashboard-home', () => ({
   useDashboardHome: jest.fn(),
@@ -88,5 +90,54 @@ describe('dashboard job card', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
     expect(onToggleSaved).toHaveBeenCalledTimes(1);
     expect(onShare).toHaveBeenCalledTimes(1);
+  });
+
+  it('menampilkan tombol merah Akun Terblokir tanpa menonaktifkan detail card', () => {
+    const onApply = jest.fn();
+    const onOpen = jest.fn();
+    const screen = render(
+      <JobCard
+        applyBlocked
+        job={{
+          id: 1,
+          key: 'job-posting:1',
+          source: 'job-posting',
+          title: 'Operator Produksi',
+          company: 'PT HireLoop Indonesia',
+          location: 'Karawang',
+          contractType: 'Kontrak',
+          workMode: 'On Site',
+          salaryLabel: 'Rp6.000.000 / bulan',
+          urgent: false,
+          active: true,
+          skills: [],
+          applicantsCount: 0,
+          closingDate: null,
+          publishedAt: null,
+          updatedAt: null,
+          closingLabel: 'Masih dibuka',
+          publishedLabel: 'Tayang hari ini',
+          updatedLabel: 'Diperbarui hari ini',
+          workType: 'On Site',
+          salary: 'Rp6.000.000 / bulan',
+        }}
+        width={360}
+        saved={false}
+        onApply={onApply}
+        onOpen={onOpen}
+        onShare={jest.fn()}
+        onToggleSaved={jest.fn()}
+      />,
+    );
+
+    const applyButton = screen.getByTestId('dashboard-job-apply-button');
+    const buttonStyle = StyleSheet.flatten(applyButton.props.style);
+    expect(buttonStyle.backgroundColor).toBe('#D92D45');
+    expect(screen.getByText('Akun Terblokir')).toBeTruthy();
+
+    fireEvent.press(applyButton);
+    fireEvent.press(screen.getByTestId('dashboard-job-detail-button'), {stopPropagation: jest.fn()});
+    expect(onApply).not.toHaveBeenCalled();
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });

@@ -11,6 +11,7 @@ type JobListingCardProps = {
   iconLayout: JobsIconLayout;
   job: CandidateJobCard;
   saved: boolean;
+  applyBlocked?: boolean;
   onOpen: () => void;
   onApply: () => void;
   onToggleSaved: () => void;
@@ -30,6 +31,7 @@ export function JobListingCard({
   iconLayout,
   job,
   saved,
+  applyBlocked = false,
   onOpen,
   onApply,
   onToggleSaved,
@@ -37,6 +39,7 @@ export function JobListingCard({
 }: JobListingCardProps) {
   const visibleSkills = job.skills.slice(0, 4);
   const extraSkills = Math.max(0, job.skills.length - visibleSkills.length);
+  const applyUnavailable = !job.active || applyBlocked;
 
   return (
     <Pressable
@@ -145,21 +148,27 @@ export function JobListingCard({
 
       <View style={styles.buttons}>
         <Pressable
+          accessibilityLabel={applyBlocked ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
           accessibilityRole="button"
-          disabled={!job.active}
+          accessibilityState={{disabled: applyUnavailable}}
           onPress={event => {
             event?.stopPropagation();
+            if (applyUnavailable) return;
             onApply();
           }}
           style={({pressed}) => [styles.applyButton, pressed && styles.buttonPressed, !job.active && styles.disabled]}
+          testID="job-listing-apply-button"
         >
           <LinearGradient
-            colors={['#0865FF', '#003F9F']}
+            colors={applyBlocked ? ['#E33B5B', '#C81E43'] : ['#0865FF', '#003F9F']}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 0}}
             style={styles.applyGradient}
           >
-            <Text style={styles.applyText}>Lamar sekarang</Text>
+            <View style={styles.applyContent}>
+              {applyBlocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
+              <Text style={styles.applyText}>{applyBlocked ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
+            </View>
           </LinearGradient>
         </Pressable>
         <Pressable
@@ -220,6 +229,7 @@ const styles = StyleSheet.create({
   buttons: {flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 13},
   applyButton: {flex: 1.7, minHeight: 47, borderRadius: 10, overflow: 'hidden'},
   applyGradient: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 9},
+  applyContent: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6},
   applyText: {fontFamily: JOBS_FONTS.bold, fontSize: 12.5, color: 'white'},
   detailButton: {flex: 1, minHeight: 47, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 4},
   detailText: {fontFamily: JOBS_FONTS.bold, fontSize: 12.5, color: JOBS_COLORS.blue, textAlign: 'center'},

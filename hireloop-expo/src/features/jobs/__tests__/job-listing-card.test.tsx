@@ -87,4 +87,27 @@ describe('JobListingCard', () => {
 
     expect(screen.getByLabelText('Simpan lowongan untuk sesi ini')).toBeTruthy();
   });
+
+  it('mengubah tombol apply menjadi Akun Terblokir untuk blacklist Tier 2', () => {
+    const onApply = jest.fn();
+    const onOpen = jest.fn();
+    const screen = render(
+      <JobListingCard
+        applyBlocked
+        iconLayout={iconLayout}
+        job={job}
+        saved={false}
+        onApply={onApply}
+        onOpen={onOpen}
+        onShare={jest.fn()}
+        onToggleSaved={jest.fn()}
+      />,
+    );
+
+    const button = screen.getByTestId('job-listing-apply-button');
+    expect(screen.getByText('Akun Terblokir')).toBeTruthy();
+    fireEvent.press(button);
+    expect(onApply).not.toHaveBeenCalled();
+    expect(onOpen).not.toHaveBeenCalled();
+  });
 });

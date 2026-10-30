@@ -1,4 +1,4 @@
-import {mapJobCard} from '../jobs.mapper';
+import {mapJobCard, mapJobDetail} from '../jobs.mapper';
 
 describe('mapJobCard', () => {
   it('maps a wrapped candidate job response into a UI-safe model', () => {
@@ -55,5 +55,39 @@ describe('mapJobCard', () => {
     expect(result.salaryLabel).toBe('Gaji tidak disebutkan');
     expect(result.applicantsCount).toBe(4);
     expect(result.urgent).toBe(true);
+  });
+
+  it('extracts only benefit names from a JSON string', () => {
+    const result = mapJobDetail({
+      data: {
+        id: 14,
+        nama_lowongan: 'Operator Produksi',
+        benefit: JSON.stringify([
+          {nama: 'BPJS Kesehatan & Ketenagakerjaan', status: 'Wajib'},
+          {nama: 'THR', status: 'Wajib'},
+          {nama: 'Uang Makan', status: 'Wajib'},
+        ]),
+      },
+    }, 'project-lowongan');
+
+    expect(result.benefits).toEqual([
+      'BPJS Kesehatan & Ketenagakerjaan',
+      'THR',
+      'Uang Makan',
+    ]);
+    expect(result.benefits.join(' ')).not.toContain('status');
+    expect(result.benefits.join(' ')).not.toContain('Wajib');
+  });
+
+  it('extracts benefit names when the API already returns an array', () => {
+    const result = mapJobDetail({
+      id: 15,
+      benefits: [
+        {nama: 'Asuransi Kesehatan', status: 'Opsional'},
+        {name: 'Tunjangan Transportasi', status: 'Wajib'},
+      ],
+    }, 'job-posting');
+
+    expect(result.benefits).toEqual(['Asuransi Kesehatan', 'Tunjangan Transportasi']);
   });
 });

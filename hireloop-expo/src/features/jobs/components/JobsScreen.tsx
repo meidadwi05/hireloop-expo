@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {useCandidateJobs} from '../hooks/use-candidate-jobs';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {useSavedJobs} from '../saved-jobs-provider';
@@ -32,17 +33,19 @@ export function JobsScreen() {
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const [priority, setPriority] = useState<Priority>('all');
   const {isSaved, toggleSaved} = useSavedJobs();
+  const applyAccess = useCandidateApplyAccess();
   const jobs = useCandidateJobs(priority);
   const containerWidth = measuredWidth ?? Math.min(width, 720);
   const pagePadding = containerWidth <= 350 ? 14 : 20;
   const iconLayout = getJobsIconLayout(containerWidth);
 
   const openJob = useCallback((job: CandidateJobCard, intent?: 'apply') => {
+    if (intent === 'apply' && applyAccess.isTier2Banned) return;
     router.push({
       pathname: '/(candidate)/jobs/[source]/[id]',
       params: {source: job.source, id: String(job.id), ...(intent ? {intent} : {})},
     } as never);
-  }, []);
+  }, [applyAccess.isTier2Banned]);
 
   const showUnsupported = useCallback(() => {
     Alert.alert(
@@ -105,6 +108,7 @@ export function JobsScreen() {
               iconLayout={iconLayout}
               job={item}
               saved={isSaved(item.key)}
+              applyBlocked={applyAccess.isTier2Banned}
               onApply={() => openJob(item, 'apply')}
               onOpen={() => openJob(item)}
               onShare={() => {
@@ -129,8 +133,8 @@ export function JobsScreen() {
           if (jobs.hasNextPage && !jobs.isFetchingNextPage) void jobs.fetchNextPage();
         }}
         onEndReachedThreshold={0.35}
-        onRefresh={() => void jobs.refetch()}
-        refreshing={jobs.isRefetching && !jobs.isFetchingNextPage}
+        onRefresh={() => void Promise.all([jobs.refetch(), applyAccess.refetch()])}
+        refreshing={(jobs.isRefetching && !jobs.isFetchingNextPage) || applyAccess.isRefetching}
         showsVerticalScrollIndicator={false}
       />
     </View>

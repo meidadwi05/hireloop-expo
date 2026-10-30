@@ -120,6 +120,9 @@ describe('dashboard sections', () => {
     expect(screen.getByText('UI/UX Designer')).toBeTruthy();
     expect(screen.getByText('PT. Inovasi Digital')).toBeTruthy();
     expect(screen.getByText('Screening')).toBeTruthy();
+    const companyIconStyle = StyleSheet.flatten(screen.getByTestId('recent-application-company-icon').props.style);
+    expect(companyIconStyle.backgroundColor).toBe('#EDF5FF');
+    expect(companyIconStyle.borderRadius).toBe(13);
     fireEvent.press(screen.getByLabelText('UI/UX Designer di PT. Inovasi Digital, Screening'));
     expect(onOpen).toHaveBeenCalledWith(applications[0]);
   });

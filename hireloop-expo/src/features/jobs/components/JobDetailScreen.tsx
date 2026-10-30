@@ -10,6 +10,7 @@ import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackg
 import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {applicationsKeys} from '../../applications/applications.keys';
+import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {jobsApi} from '../api/jobs.api';
 import {jobsKeys} from '../jobs.keys';
 import type {CandidateJobSource} from '../jobs.types';
@@ -44,7 +45,8 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
   const queryClient = useQueryClient();
-  const [confirmVisible, setConfirmVisible] = useState(autoOpenApply);
+  const applyAccess = useCandidateApplyAccess();
+  const [confirmVisible, setConfirmVisible] = useState(autoOpenApply && !applyAccess.isTier2Banned);
   const [feedback, setFeedback] = useState('');
   const [requiresNik, setRequiresNik] = useState(false);
   const detail = useQuery({
@@ -67,6 +69,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
       setConfirmVisible(false);
       setRequiresNik(apiError.status === 422 && /nik|nomor induk/i.test(apiError.message));
       setFeedback(apiError.message);
+      if (apiError.status === 403) void applyAccess.refetch();
     },
   });
 
@@ -127,6 +130,20 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
                 <View style={styles.infoRow}><Ionicons name="calendar-outline" size={18} color={JOBS_COLORS.blue} /><Text style={styles.infoText}>{job.closingLabel}</Text></View>
               </View>
 
+              {applyAccess.isTier2Banned && (
+                <View style={styles.blacklistBanner}>
+                  <View style={styles.blacklistIcon}>
+                    <Ionicons name="shield-checkmark-outline" size={22} color="#D92D45" />
+                  </View>
+                  <View style={styles.blacklistCopy}>
+                    <Text style={styles.blacklistTitle}>Akun Anda Masuk Daftar Blacklist</Text>
+                    <Text style={styles.blacklistText}>
+                      Anda masuk daftar blacklist secara permanen dan tidak dapat melamar di seluruh proyek HireLoop.
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               {!!feedback && (
                 <View style={[styles.feedback, requiresNik ? styles.feedbackWarning : styles.feedbackSuccess]}>
                   <Text style={styles.feedbackText}>{feedback}</Text>
@@ -147,17 +164,29 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
                 <Text style={[styles.sectionText, styles.extraLine]}>Pengalaman: {job.experience}</Text>
               </View>
 
-              <Pressable accessibilityRole="button" disabled={!job.active || apply.isPending} onPress={() => setConfirmVisible(true)} style={[styles.applyButton, !job.active && styles.disabled]}>
-                <Text style={styles.applyText}>Lamar sekarang</Text>
+              <Pressable
+                accessibilityLabel={applyAccess.isTier2Banned ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
+                accessibilityRole="button"
+                disabled={!job.active || apply.isPending || applyAccess.isTier2Banned}
+                onPress={() => setConfirmVisible(true)}
+                style={[styles.applyButton, applyAccess.isTier2Banned && styles.blockedApplyButton, !job.active && styles.disabled]}
+              >
+                {applyAccess.isTier2Banned && <Ionicons name="shield-checkmark-outline" size={18} color="white" />}
+                <Text style={styles.applyText}>{applyAccess.isTier2Banned ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
               </Pressable>
 
               <ApplyConfirmationModal
                 job={job}
-                visible={confirmVisible}
+                visible={confirmVisible && !applyAccess.isTier2Banned}
                 loading={apply.isPending}
                 onCancel={() => setConfirmVisible(false)}
                 onConfirm={() => {
                   if (apply.isPending) return;
+                  if (applyAccess.isTier2Banned) {
+                    setConfirmVisible(false);
+                    setFeedback('Akun Anda masuk daftar blacklist permanen dan tidak dapat melamar pekerjaan.');
+                    return;
+                  }
                   setFeedback('');
                   apply.mutate({
                     job_reference_type: job.source,
@@ -204,6 +233,11 @@ const styles = StyleSheet.create({
   infoRow: {flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10},
   infoText: {flex: 1, fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 18, color: JOBS_COLORS.body},
   salary: {flex: 1, fontFamily: JOBS_FONTS.semibold, fontSize: 13, color: JOBS_COLORS.blue},
+  blacklistBanner: {borderRadius: 14, borderWidth: 1, borderColor: '#F5A4B2', backgroundColor: '#FFF1F3', padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 11},
+  blacklistIcon: {width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFE0E5', alignItems: 'center', justifyContent: 'center'},
+  blacklistCopy: {flex: 1, minWidth: 0},
+  blacklistTitle: {fontFamily: JOBS_FONTS.bold, fontSize: 13, lineHeight: 18, color: '#A20F2D'},
+  blacklistText: {fontFamily: JOBS_FONTS.regular, fontSize: 10.5, lineHeight: 17, color: '#7E2436', marginTop: 3},
   feedback: {borderRadius: 13, padding: 14},
   feedbackSuccess: {backgroundColor: '#E8F8EF'},
   feedbackWarning: {backgroundColor: '#FFF3E1'},
@@ -216,7 +250,8 @@ const styles = StyleSheet.create({
   bulletRow: {flexDirection: 'row', gap: 9, marginTop: 5},
   bullet: {width: 6, height: 6, borderRadius: 3, backgroundColor: JOBS_COLORS.blue, marginTop: 7},
   extraLine: {marginTop: 7},
-  applyButton: {height: 52, borderRadius: 12, backgroundColor: JOBS_COLORS.blue, alignItems: 'center', justifyContent: 'center'},
+  applyButton: {height: 52, borderRadius: 12, backgroundColor: JOBS_COLORS.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7},
+  blockedApplyButton: {backgroundColor: '#D92D45'},
   applyText: {fontFamily: JOBS_FONTS.bold, fontSize: 13, color: 'white'},
   disabled: {opacity: 0.5},
 });
