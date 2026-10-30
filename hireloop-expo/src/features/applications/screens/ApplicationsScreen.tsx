@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   staleBanner: {minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, backgroundColor: '#FFF7DF', paddingHorizontal: 11, marginTop: 12},
   staleBannerText: {flex: 1, fontFamily: APPLICATION_FONTS.medium, fontSize: 9.5, lineHeight: 15, color: '#7D570F'},
   separator: {height: 15},
-  empty: {minHeight: 290, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, marginHorizontal: 18, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: APPLICATION_COLORS.border},
+  empty: {minHeight: 290, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, marginHorizontal: 18, marginTop: 22, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: APPLICATION_COLORS.border},
   emptyTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 15, color: APPLICATION_COLORS.navy, textAlign: 'center', marginTop: 12},
   emptyText: {fontFamily: APPLICATION_FONTS.regular, fontSize: 11, lineHeight: 18, color: APPLICATION_COLORS.body, textAlign: 'center', marginTop: 7},
   emptyButton: {height: 42, borderRadius: 10, backgroundColor: APPLICATION_COLORS.blue, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, marginTop: 16},

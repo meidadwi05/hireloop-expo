@@ -27,6 +27,18 @@ describe('notification UI helpers', () => {
     expect(notificationPresentation(notification('1', now.toISOString(), 'blacklist'))).toMatchObject({
       icon: 'warning-outline',
       color: '#B54708',
+      label: 'Peringatan',
+    });
+  });
+
+  it('distinguishes a tier 2 blacklist from a tier 1 warning', () => {
+    expect(notificationPresentation({
+      ...notification('1', now.toISOString(), 'blacklist'),
+      meta: {tier: 'tier_2'},
+    })).toMatchObject({
+      icon: 'shield-outline',
+      color: '#C6283D',
+      label: 'Blacklist',
     });
   });
 });

@@ -16,6 +16,7 @@ export type NotificationPresentation = {
   background: string;
   color: string;
   icon: IoniconName;
+  label: string;
 };
 
 export type NotificationSection = {
@@ -25,18 +26,21 @@ export type NotificationSection = {
 
 export function notificationPresentation(notification: CandidateNotification): NotificationPresentation {
   const type = notification.type;
-  if (type === 'blacklist') return {icon: 'warning-outline', color: '#B54708', background: '#FFF0D5'};
-  if (type === 'new_job') return {icon: 'briefcase-outline', color: '#0B63E5', background: '#E8F1FF'};
-  if (type === 'welcome' || type === 'no_fee_recruitment') return {icon: 'megaphone-outline', color: '#7A42D8', background: '#F1EAFE'};
-  if (type.includes('interview') || type === 'interview') return {icon: 'calendar-outline', color: '#7A42D8', background: '#F1EAFE'};
-  if (type.includes('offering') || type.includes('hired')) return {icon: 'ribbon-outline', color: '#07845E', background: '#E3F8F0'};
-  if (type.startsWith('application_') || type.includes('selection') || type.includes('recommendation') || type.includes('transfer')) {
-    return {icon: 'document-text-outline', color: '#0B63E5', background: '#E8F1FF'};
+  if (type === 'blacklist' && notification.meta.tier === 'tier_2') {
+    return {icon: 'shield-outline', color: '#C6283D', background: '#FFE7EB', label: 'Blacklist'};
   }
-  if (notification.level === 'success') return {icon: 'checkmark-circle-outline', color: '#07845E', background: '#E3F8F0'};
-  if (notification.level === 'warning') return {icon: 'warning-outline', color: '#B54708', background: '#FFF0D5'};
-  if (notification.level === 'error') return {icon: 'close-circle-outline', color: '#C4324E', background: '#FFE8ED'};
-  return {icon: 'notifications-outline', color: '#0B63E5', background: '#E8F1FF'};
+  if (type === 'blacklist') return {icon: 'warning-outline', color: '#B54708', background: '#FFF0D5', label: 'Peringatan'};
+  if (type === 'new_job') return {icon: 'briefcase-outline', color: '#0B63E5', background: '#E8F1FF', label: 'Lowongan Baru'};
+  if (type === 'welcome' || type === 'no_fee_recruitment') return {icon: 'megaphone-outline', color: '#7A42D8', background: '#F1EAFE', label: 'Informasi'};
+  if (type.includes('interview') || type === 'interview') return {icon: 'calendar-outline', color: '#7A42D8', background: '#F1EAFE', label: 'Interview'};
+  if (type.includes('offering') || type.includes('hired')) return {icon: 'ribbon-outline', color: '#07845E', background: '#E3F8F0', label: 'Rekrutmen'};
+  if (type.startsWith('application_') || type.includes('selection') || type.includes('recommendation') || type.includes('transfer')) {
+    return {icon: 'document-text-outline', color: '#0B63E5', background: '#E8F1FF', label: 'Lamaran'};
+  }
+  if (notification.level === 'success') return {icon: 'checkmark-circle-outline', color: '#07845E', background: '#E3F8F0', label: 'Berhasil'};
+  if (notification.level === 'warning') return {icon: 'warning-outline', color: '#B54708', background: '#FFF0D5', label: 'Peringatan'};
+  if (notification.level === 'error') return {icon: 'close-circle-outline', color: '#C4324E', background: '#FFE8ED', label: 'Pemberitahuan'};
+  return {icon: 'notifications-outline', color: '#0B63E5', background: '#E8F1FF', label: 'Pemberitahuan'};
 }
 
 function parsedDate(value: string): Date {

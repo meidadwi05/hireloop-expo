@@ -29,7 +29,7 @@ import {
 
 type NotificationFilter = 'all' | 'unread';
 
-function NotificationRow({item, onPress}: {item: CandidateNotification; onPress: () => void}) {
+export function NotificationRow({item, onPress}: {item: CandidateNotification; onPress: () => void}) {
   const presentation = notificationPresentation(item);
   const destination = resolveNotificationDestination(item);
 
@@ -46,14 +46,23 @@ function NotificationRow({item, onPress}: {item: CandidateNotification; onPress:
         <Ionicons name={presentation.icon} size={22} color={presentation.color} />
       </View>
       <View style={styles.notificationCopy}>
-        <View style={styles.notificationTopline}>
-          <Text numberOfLines={2} style={[styles.notificationTitle, !item.isRead && styles.unreadTitle]}>{item.title}</Text>
+        <View style={styles.notificationMetaRow}>
+          <View style={[styles.notificationBadge, {backgroundColor: presentation.background}]}>
+            <Text numberOfLines={1} style={[styles.notificationBadgeText, {color: presentation.color}]}>{presentation.label}</Text>
+          </View>
+          <Text style={styles.metaSeparator}>{'\u2022'}</Text>
+          <Text style={styles.notificationTime}>{formatNotificationTime(item.createdAt)}</Text>
           {!item.isRead && <View accessibilityLabel="Belum dibaca" style={styles.unreadDot} />}
         </View>
-        <Text numberOfLines={3} style={styles.notificationBody}>{item.body}</Text>
-        <Text style={styles.notificationTime}>{formatNotificationTime(item.createdAt)}</Text>
+        <Text style={[styles.notificationTitle, !item.isRead && styles.unreadTitle]}>{item.title}</Text>
+        <Text style={styles.notificationBody}>{item.body}</Text>
+        {destination && (
+          <View style={styles.notificationActionArea}>
+            <Text style={styles.notificationActionText}>Lihat Detail</Text>
+            <Ionicons name="chevron-forward" size={18} color="#1267E8" />
+          </View>
+        )}
       </View>
-      {destination && <Ionicons name="chevron-forward" size={17} color="#A4ADBD" />}
     </Pressable>
   );
 }
@@ -127,7 +136,7 @@ export function NotificationsScreen() {
           {notifications.markingAllRead
             ? <ActivityIndicator size="small" color="white" />
             : <Ionicons name="checkmark-done" size={17} color="white" />}
-          <Text style={styles.markAllText}>Tandai semua</Text>
+          <Text numberOfLines={1} style={styles.markAllText}>Tandai semua</Text>
         </Pressable>
       </View>
     </BrandedHeaderBackground>
@@ -146,7 +155,7 @@ export function NotificationsScreen() {
             onPress={() => setFilter(value)}
             style={[styles.filterPill, selected && styles.filterPillSelected]}
           >
-            <Text style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text>
+            <Text numberOfLines={1} style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text>
           </Pressable>
         );
       })}
@@ -217,30 +226,35 @@ const styles = StyleSheet.create({
   outer: {flex: 1, backgroundColor: '#EEF3FA', alignItems: 'center'},
   screen: {flex: 1, maxWidth: 720, backgroundColor: '#F7F9FC'},
   header: {paddingHorizontal: 20},
-  headerTopline: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
+  headerTopline: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12},
   headerCopy: {flex: 1, minWidth: 0},
   headerTitle: {fontFamily: F.bold, fontSize: 24, lineHeight: 31, color: 'white'},
   headerSubtitle: {fontFamily: F.regular, fontSize: 11, lineHeight: 16, color: 'rgba(255,255,255,0.86)', marginTop: 3},
-  markAllButton: {minHeight: 38, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.42)', backgroundColor: 'rgba(0,27,92,0.25)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 11},
+  markAllButton: {minHeight: 38, maxWidth: 126, flexShrink: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.42)', backgroundColor: 'rgba(0,27,92,0.25)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 11},
   markAllDisabled: {opacity: 0.48},
   markAllText: {fontFamily: F.semibold, fontSize: 9.5, color: 'white'},
   listContent: {paddingHorizontal: 18, paddingBottom: 26, flexGrow: 1},
   filters: {flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 18, paddingBottom: 17},
-  filterPill: {minHeight: 37, borderRadius: 19, borderWidth: 1, borderColor: '#DCE4F0', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 17},
+  filterPill: {flex: 1, minWidth: 0, minHeight: 39, borderRadius: 20, borderWidth: 1, borderColor: '#DCE4F0', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10},
   filterPillSelected: {borderColor: '#1267E8', backgroundColor: '#1267E8'},
   filterText: {fontFamily: F.semibold, fontSize: 10.5, color: '#5B6679'},
   filterTextSelected: {color: 'white'},
   sectionTitle: {fontFamily: F.bold, fontSize: 12.5, color: '#16213B', marginBottom: 9, marginTop: 7},
-  notificationRow: {...cardShadow, minHeight: 112, borderWidth: 1, borderColor: '#E7ECF3', borderRadius: 15, backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 13, paddingVertical: 14, marginBottom: 10},
+  notificationRow: {...cardShadow, minHeight: 148, borderWidth: 1, borderColor: '#E7ECF3', borderRadius: 15, backgroundColor: 'white', flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 15, paddingVertical: 17, marginBottom: 12},
   unreadRow: {borderColor: '#C9DCFF', backgroundColor: '#F4F8FF'},
-  notificationIcon: {width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  notificationIcon: {width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1},
   notificationCopy: {flex: 1, minWidth: 0},
-  notificationTopline: {flexDirection: 'row', alignItems: 'flex-start', gap: 7},
-  notificationTitle: {flex: 1, fontFamily: F.semibold, fontSize: 12.5, lineHeight: 17, color: '#28344D'},
+  notificationMetaRow: {minHeight: 30, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 7, rowGap: 5},
+  notificationBadge: {maxWidth: '58%', minHeight: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 11},
+  notificationBadgeText: {fontFamily: F.bold, fontSize: 10.5, lineHeight: 15},
+  metaSeparator: {fontFamily: F.bold, fontSize: 11, lineHeight: 17, color: '#7D899E'},
+  notificationTitle: {fontFamily: F.semibold, fontSize: 13.5, lineHeight: 21, color: '#28344D', marginTop: 10},
   unreadTitle: {fontFamily: F.bold, color: '#071A45'},
-  unreadDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: '#1267E8', marginTop: 4},
-  notificationBody: {fontFamily: F.regular, fontSize: 10.5, lineHeight: 16, color: '#59657A', marginTop: 4},
-  notificationTime: {fontFamily: F.medium, fontSize: 9, color: '#8A95A8', marginTop: 7},
+  unreadDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: '#1267E8', marginLeft: 'auto'},
+  notificationBody: {fontFamily: F.regular, fontSize: 11.5, lineHeight: 18, color: '#59657A', marginTop: 6},
+  notificationTime: {flexShrink: 1, fontFamily: F.medium, fontSize: 10, lineHeight: 16, color: '#7D899E'},
+  notificationActionArea: {minHeight: 42, borderTopWidth: 1, borderTopColor: '#E6EBF2', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 14, paddingTop: 12},
+  notificationActionText: {fontFamily: F.bold, fontSize: 12, lineHeight: 18, color: '#1267E8'},
   pressed: {opacity: 0.72},
   centerState: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36},
   loadingText: {fontFamily: F.regular, fontSize: 11, color: '#667085', marginTop: 11},

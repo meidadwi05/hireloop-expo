@@ -140,7 +140,7 @@ export function JobsScreen() {
 const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   content: {paddingBottom: 22},
-  locationControls: {zIndex: 1, marginTop: -12},
+  locationControls: {zIndex: 1, marginTop: 14},
   controls: {gap: 18, paddingTop: 18, marginBottom: 18},
   separator: {height: 16},
   footerLoader: {paddingVertical: 24},
