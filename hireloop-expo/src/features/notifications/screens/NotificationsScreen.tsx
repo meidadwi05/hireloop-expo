@@ -84,7 +84,8 @@ function EmptyState({filter}: {filter: NotificationFilter}) {
 export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const {width: viewportWidth} = useWindowDimensions();
-  const containerWidth = Math.min(viewportWidth, 720);
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const containerWidth = measuredWidth ?? Math.min(viewportWidth, 440);
   const pagePadding = containerWidth <= 350 ? 14 : 18;
   const [filter, setFilter] = useState<NotificationFilter>('all');
   const notifications = useNotifications();
@@ -141,6 +142,7 @@ export function NotificationsScreen() {
                 accessibilityState={{selected}}
                 onPress={() => setFilter(value)}
                 style={[styles.filterPill, value === 'unread' && styles.unreadFilterPill, selected && styles.filterPillSelected]}
+                testID={`notification-filter-${value}`}
               >
                 <Text numberOfLines={1} style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text>
               </Pressable>
@@ -172,7 +174,14 @@ export function NotificationsScreen() {
   return (
     <View style={styles.outer}>
       <StatusBar style="dark" />
-      <View style={[styles.screen, {width: containerWidth}]}>
+      <View
+        onLayout={event => {
+          const nextWidth = Math.round(event.nativeEvent.layout.width);
+          if (nextWidth > 0) setMeasuredWidth(current => current === nextWidth ? current : nextWidth);
+        }}
+        style={styles.screen}
+        testID="notifications-screen"
+      >
         {header}
         {notifications.isLoading ? (
           <View style={styles.centerState}>
@@ -236,21 +245,21 @@ const cardShadow = {
 
 const styles = StyleSheet.create({
   outer: {flex: 1, backgroundColor: '#EEF3FA', alignItems: 'center'},
-  screen: {flex: 1, maxWidth: 720, backgroundColor: '#F7F9FC'},
+  screen: {flex: 1, width: '100%', maxWidth: 440, backgroundColor: '#F7F9FC'},
   header: {zIndex: 2, flexShrink: 0, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#E8EDF5', paddingBottom: 16},
   titleRow: {minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10},
   headerIconButton: {width: 42, height: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   headerTitle: {flex: 1, minWidth: 0, fontFamily: F.bold, fontSize: 26, lineHeight: 34, color: '#061A4D'},
   headerBell: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   headerUnreadDot: {position: 'absolute', top: 7, right: 7, width: 9, height: 9, borderRadius: 5, borderWidth: 1.5, borderColor: 'white', backgroundColor: '#1267E8'},
-  controlsRow: {width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 12},
-  markAllButton: {minHeight: 40, flexShrink: 0, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 5},
+  controlsRow: {width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingTop: 12},
+  markAllButton: {minHeight: 40, flexShrink: 0, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 5, marginLeft: 'auto'},
   markAllDisabled: {opacity: 0.48},
   markAllText: {fontFamily: F.bold, fontSize: 11, lineHeight: 16, color: '#1267E8'},
   listContent: {paddingBottom: 26, flexGrow: 1},
-  filters: {minWidth: 210, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8},
-  filterPill: {flex: 0.8, minWidth: 0, minHeight: 42, borderRadius: 22, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
-  unreadFilterPill: {flex: 1.2},
+  filters: {flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 8},
+  filterPill: {minWidth: 92, minHeight: 42, borderRadius: 22, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20},
+  unreadFilterPill: {minWidth: 134},
   filterPillSelected: {borderColor: '#062A70', backgroundColor: '#062A70'},
   filterText: {fontFamily: F.bold, fontSize: 11.5, color: '#283A5C'},
   filterTextSelected: {color: 'white'},

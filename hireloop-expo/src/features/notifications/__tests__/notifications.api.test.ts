@@ -33,4 +33,30 @@ describe('notificationsApi', () => {
     expect(post).toHaveBeenNthCalledWith(1, '/notifications/8/read');
     expect(post).toHaveBeenNthCalledWith(2, '/notifications/read-all');
   });
+
+  it('requests the candidate unread count', async () => {
+    get.mockResolvedValueOnce({data: {count: 7}});
+
+    await expect(notificationsApi.unreadCount()).resolves.toBe(7);
+    expect(get).toHaveBeenCalledWith('/notifications/unread-count');
+  });
+
+  it('keeps blacklist tier metadata from NotificationHistory', async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        data: [
+          {id: 11, type: 'blacklist', level: 'warning', title: 'Anda Menerima Peringatan', body: 'Catatan evaluasi', is_read: false, meta: {tier: 'tier_1'}},
+          {id: 12, type: 'blacklist', level: 'error', title: 'Akun Anda Masuk Daftar Blacklist', body: 'Akses melamar dibatasi', is_read: false, meta: {tier: 'tier_2'}},
+        ],
+        meta: {current_page: 1, last_page: 1, per_page: 20, total: 2},
+      },
+    });
+
+    const page = await notificationsApi.list();
+
+    expect(page.items.map(item => [item.level, item.meta.tier])).toEqual([
+      ['warning', 'tier_1'],
+      ['error', 'tier_2'],
+    ]);
+  });
 });

@@ -72,15 +72,24 @@ describe('NotificationRow', () => {
     });
 
     const screen = render(<NotificationsScreen />);
+    const screenStyle = StyleSheet.flatten(screen.getByTestId('notifications-screen').props.style);
     const headerStyle = StyleSheet.flatten(screen.getByTestId('notifications-header').props.style);
     const filterRowStyle = StyleSheet.flatten(screen.getByTestId('notifications-filter-row').props.style);
+    const allFilterStyle = StyleSheet.flatten(screen.getByTestId('notification-filter-all').props.style);
+    const unreadFilterStyle = StyleSheet.flatten(screen.getByTestId('notification-filter-unread').props.style);
 
+    expect(screenStyle.width).toBe('100%');
+    expect(screenStyle.maxWidth).toBe(440);
     expect(headerStyle.backgroundColor).toBe('white');
     expect(headerStyle.height).toBeUndefined();
     expect(filterRowStyle.flexWrap).toBe('wrap');
+    expect(allFilterStyle.flex).toBeUndefined();
+    expect(allFilterStyle.minWidth).toBe(92);
+    expect(unreadFilterStyle.minWidth).toBe(134);
     expect(screen.queryByTestId('notifications-header-artwork')).toBeNull();
     expect(screen.getByText('Notifikasi')).toBeTruthy();
     expect(screen.getByText('Belum Dibaca (2)')).toBeTruthy();
+    expect(screen.queryByText('Semua pemberitahuan sudah dibaca')).toBeNull();
 
     fireEvent.press(screen.getByLabelText('Kembali ke Beranda'));
     expect(mockGoBackOrReplace).toHaveBeenCalledWith('/(candidate)/(tabs)/home');
