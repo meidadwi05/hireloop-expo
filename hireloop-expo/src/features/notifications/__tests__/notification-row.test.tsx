@@ -2,12 +2,23 @@ import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
 import {StyleSheet} from 'react-native';
 
-import {NotificationRow} from '../screens/NotificationsScreen';
+import {useNotifications} from '../hooks/use-notifications';
+import {NotificationRow, NotificationsScreen} from '../screens/NotificationsScreen';
 import type {CandidateNotification} from '../notifications.types';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('expo-router', () => ({router: {push: jest.fn()}}));
 jest.mock('../hooks/use-notifications', () => ({useNotifications: jest.fn()}));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({top: 24, right: 0, bottom: 12, left: 0}),
+}));
+
+const mockGoBackOrReplace = jest.fn();
+jest.mock('../../../core/navigation/go-back-or-replace', () => ({
+  goBackOrReplace: (...args: unknown[]) => mockGoBackOrReplace(...args),
+}));
+
+const mockedUseNotifications = useNotifications as jest.Mock;
 
 const notification: CandidateNotification = {
   id: '9',
@@ -39,5 +50,41 @@ describe('NotificationRow', () => {
 
     fireEvent.press(screen.getByTestId('notification-9'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a white responsive header without the branded artwork overlay', () => {
+    const markAllRead = jest.fn();
+    mockedUseNotifications.mockReturnValue({
+      items: [],
+      unreadCount: 2,
+      mutationError: null,
+      markingAllRead: false,
+      markAllRead,
+      markRead: jest.fn(),
+      isLoading: false,
+      isError: false,
+      error: null,
+      isFetchingNextPage: false,
+      isRefetching: false,
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      refresh: jest.fn(),
+    });
+
+    const screen = render(<NotificationsScreen />);
+    const headerStyle = StyleSheet.flatten(screen.getByTestId('notifications-header').props.style);
+    const filterRowStyle = StyleSheet.flatten(screen.getByTestId('notifications-filter-row').props.style);
+
+    expect(headerStyle.backgroundColor).toBe('white');
+    expect(headerStyle.height).toBeUndefined();
+    expect(filterRowStyle.flexWrap).toBe('wrap');
+    expect(screen.queryByTestId('notifications-header-artwork')).toBeNull();
+    expect(screen.getByText('Notifikasi')).toBeTruthy();
+    expect(screen.getByText('Belum Dibaca (2)')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Kembali ke Beranda'));
+    expect(mockGoBackOrReplace).toHaveBeenCalledWith('/(candidate)/(tabs)/home');
+    fireEvent.press(screen.getByText('Tandai dibaca'));
+    expect(markAllRead).toHaveBeenCalledTimes(1);
   });
 });

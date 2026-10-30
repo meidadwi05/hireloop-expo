@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {toAppApiError} from '../../../core/api/api-error';
+import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {useNotifications} from '../hooks/use-notifications';
 import {resolveNotificationDestination} from '../notifications.navigation';
 import type {CandidateNotification} from '../notifications.types';
@@ -85,6 +85,7 @@ export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const {width: viewportWidth} = useWindowDimensions();
   const containerWidth = Math.min(viewportWidth, 720);
+  const pagePadding = containerWidth <= 350 ? 14 : 18;
   const [filter, setFilter] = useState<NotificationFilter>('all');
   const notifications = useNotifications();
   const visibleItems = useMemo(
@@ -105,22 +106,46 @@ export function NotificationsScreen() {
   };
 
   const header = (
-    <BrandedHeaderBackground
-      artworkTestID="notifications-header-artwork"
-      containerWidth={containerWidth}
-      style={[styles.header, {paddingTop: insets.top + 13}]}
+    <View
+      style={[styles.header, {paddingHorizontal: pagePadding, paddingTop: insets.top + 8}]}
       testID="notifications-header"
-      topInset={insets.top}
-      variant="notifications"
     >
-      <View style={styles.headerTopline}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle}>Notifikasi</Text>
-          <Text style={styles.headerSubtitle}>
-            {notifications.unreadCount > 0
-              ? `${notifications.unreadCount} pemberitahuan belum dibaca`
-              : 'Semua pemberitahuan sudah dibaca'}
-          </Text>
+      <View style={styles.titleRow}>
+        <Pressable
+          accessibilityLabel="Kembali ke Beranda"
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={() => goBackOrReplace('/(candidate)/(tabs)/home')}
+          style={styles.headerIconButton}
+        >
+          <Ionicons name="arrow-back" size={27} color="#061A4D" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Notifikasi</Text>
+        <View accessibilityLabel={`${notifications.unreadCount} notifikasi belum dibaca`} style={styles.headerBell}>
+          <Ionicons name="notifications-outline" size={28} color="#061A4D" />
+          {notifications.unreadCount > 0 && <View style={styles.headerUnreadDot} />}
+        </View>
+      </View>
+
+      <View style={styles.controlsRow} testID="notifications-filter-row">
+        <View accessibilityRole="tablist" style={styles.filters}>
+          {(['all', 'unread'] as const).map(value => {
+            const selected = filter === value;
+            const label = value === 'all'
+              ? 'Semua'
+              : `Belum Dibaca${notifications.unreadCount ? ` (${notifications.unreadCount})` : ''}`;
+            return (
+              <Pressable
+                key={value}
+                accessibilityRole="tab"
+                accessibilityState={{selected}}
+                onPress={() => setFilter(value)}
+                style={[styles.filterPill, value === 'unread' && styles.unreadFilterPill, selected && styles.filterPillSelected]}
+              >
+                <Text numberOfLines={1} style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
         <Pressable
           accessibilityRole="button"
@@ -134,31 +159,11 @@ export function NotificationsScreen() {
           ]}
         >
           {notifications.markingAllRead
-            ? <ActivityIndicator size="small" color="white" />
-            : <Ionicons name="checkmark-done" size={17} color="white" />}
-          <Text numberOfLines={1} style={styles.markAllText}>Tandai semua</Text>
+            ? <ActivityIndicator size="small" color="#1267E8" />
+            : <Ionicons name="checkmark-done" size={18} color="#1267E8" />}
+          <Text numberOfLines={1} style={styles.markAllText}>Tandai dibaca</Text>
         </Pressable>
       </View>
-    </BrandedHeaderBackground>
-  );
-
-  const listHeader = (
-    <View style={styles.filters}>
-      {(['all', 'unread'] as const).map(value => {
-        const selected = filter === value;
-        const label = value === 'all' ? 'Semua' : `Belum dibaca${notifications.unreadCount ? ` (${notifications.unreadCount})` : ''}`;
-        return (
-          <Pressable
-            key={value}
-            accessibilityRole="tab"
-            accessibilityState={{selected}}
-            onPress={() => setFilter(value)}
-            style={[styles.filterPill, selected && styles.filterPillSelected]}
-          >
-            <Text numberOfLines={1} style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text>
-          </Pressable>
-        );
-      })}
     </View>
   );
 
@@ -166,7 +171,7 @@ export function NotificationsScreen() {
 
   return (
     <View style={styles.outer}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <View style={[styles.screen, {width: containerWidth}]}>
         {header}
         {notifications.isLoading ? (
@@ -187,10 +192,17 @@ export function NotificationsScreen() {
           <SectionList
             sections={sections}
             keyExtractor={item => item.id}
-            renderItem={({item}) => <NotificationRow item={item} onPress={() => openNotification(item)} />}
-            renderSectionHeader={({section}) => <Text style={styles.sectionTitle}>{section.title}</Text>}
-            ListHeaderComponent={listHeader}
-            ListEmptyComponent={<EmptyState filter={filter} />}
+            renderItem={({item}) => (
+              <View style={{paddingHorizontal: pagePadding}}>
+                <NotificationRow item={item} onPress={() => openNotification(item)} />
+              </View>
+            )}
+            renderSectionHeader={({section}) => (
+              <View style={[styles.sectionHeader, {paddingHorizontal: pagePadding}]}>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+              </View>
+            )}
+            ListEmptyComponent={<View style={styles.emptyWrapper}><EmptyState filter={filter} /></View>}
             ListFooterComponent={notifications.isFetchingNextPage ? <ActivityIndicator color="#1267E8" style={styles.footerLoader} /> : null}
             contentContainerStyle={styles.listContent}
             onEndReached={() => {
@@ -225,21 +237,25 @@ const cardShadow = {
 const styles = StyleSheet.create({
   outer: {flex: 1, backgroundColor: '#EEF3FA', alignItems: 'center'},
   screen: {flex: 1, maxWidth: 720, backgroundColor: '#F7F9FC'},
-  header: {paddingHorizontal: 20},
-  headerTopline: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12},
-  headerCopy: {flex: 1, minWidth: 0},
-  headerTitle: {fontFamily: F.bold, fontSize: 24, lineHeight: 31, color: 'white'},
-  headerSubtitle: {fontFamily: F.regular, fontSize: 11, lineHeight: 16, color: 'rgba(255,255,255,0.86)', marginTop: 3},
-  markAllButton: {minHeight: 38, maxWidth: 126, flexShrink: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.42)', backgroundColor: 'rgba(0,27,92,0.25)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 11},
+  header: {zIndex: 2, flexShrink: 0, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#E8EDF5', paddingBottom: 16},
+  titleRow: {minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10},
+  headerIconButton: {width: 42, height: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  headerTitle: {flex: 1, minWidth: 0, fontFamily: F.bold, fontSize: 26, lineHeight: 34, color: '#061A4D'},
+  headerBell: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  headerUnreadDot: {position: 'absolute', top: 7, right: 7, width: 9, height: 9, borderRadius: 5, borderWidth: 1.5, borderColor: 'white', backgroundColor: '#1267E8'},
+  controlsRow: {width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 12},
+  markAllButton: {minHeight: 40, flexShrink: 0, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 5},
   markAllDisabled: {opacity: 0.48},
-  markAllText: {fontFamily: F.semibold, fontSize: 9.5, color: 'white'},
-  listContent: {paddingHorizontal: 18, paddingBottom: 26, flexGrow: 1},
-  filters: {flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 18, paddingBottom: 17},
-  filterPill: {flex: 1, minWidth: 0, minHeight: 39, borderRadius: 20, borderWidth: 1, borderColor: '#DCE4F0', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10},
-  filterPillSelected: {borderColor: '#1267E8', backgroundColor: '#1267E8'},
-  filterText: {fontFamily: F.semibold, fontSize: 10.5, color: '#5B6679'},
+  markAllText: {fontFamily: F.bold, fontSize: 11, lineHeight: 16, color: '#1267E8'},
+  listContent: {paddingBottom: 26, flexGrow: 1},
+  filters: {minWidth: 210, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8},
+  filterPill: {flex: 0.8, minWidth: 0, minHeight: 42, borderRadius: 22, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
+  unreadFilterPill: {flex: 1.2},
+  filterPillSelected: {borderColor: '#062A70', backgroundColor: '#062A70'},
+  filterText: {fontFamily: F.bold, fontSize: 11.5, color: '#283A5C'},
   filterTextSelected: {color: 'white'},
-  sectionTitle: {fontFamily: F.bold, fontSize: 12.5, color: '#16213B', marginBottom: 9, marginTop: 7},
+  sectionHeader: {backgroundColor: '#F7F9FC', paddingTop: 18, paddingBottom: 9},
+  sectionTitle: {fontFamily: F.bold, fontSize: 13, lineHeight: 19, color: '#6E7A90'},
   notificationRow: {...cardShadow, minHeight: 148, borderWidth: 1, borderColor: '#E7ECF3', borderRadius: 15, backgroundColor: 'white', flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 15, paddingVertical: 17, marginBottom: 12},
   unreadRow: {borderColor: '#C9DCFF', backgroundColor: '#F4F8FF'},
   notificationIcon: {width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1},
@@ -258,6 +274,7 @@ const styles = StyleSheet.create({
   pressed: {opacity: 0.72},
   centerState: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36},
   loadingText: {fontFamily: F.regular, fontSize: 11, color: '#667085', marginTop: 11},
+  emptyWrapper: {flex: 1, paddingHorizontal: 18},
   emptyState: {flex: 1, minHeight: 330, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26},
   emptyIcon: {width: 64, height: 64, borderRadius: 32, backgroundColor: '#EAF0F9', alignItems: 'center', justifyContent: 'center'},
   emptyTitle: {fontFamily: F.bold, fontSize: 16, lineHeight: 22, color: '#14203A', textAlign: 'center', marginTop: 15},

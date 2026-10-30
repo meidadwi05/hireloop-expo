@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
 import React, {useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -60,6 +62,7 @@ export function AccountSettingsScreen() {
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const [logoutPending, setLogoutPending] = useState(false);
+  const [logoutConfirmationVisible, setLogoutConfirmationVisible] = useState(false);
   const containerWidth = Math.min(width, 440);
   const fullName = user?.full_name?.trim() || 'Kandidat HireLoop';
   const email = user?.email || 'Email belum tersedia';
@@ -68,23 +71,17 @@ export function AccountSettingsScreen() {
     Alert.alert(title, 'Fitur ini akan tersedia pada pembaruan berikutnya.');
   };
 
-  const confirmLogout = () => {
+  const performLogout = async () => {
     if (logoutPending) return;
-    Alert.alert(
-      'Keluar dari akun?',
-      'Anda perlu masuk kembali untuk mengakses akun HireLoop.',
-      [
-        {text: 'Batal', style: 'cancel'},
-        {
-          text: 'Keluar',
-          style: 'destructive',
-          onPress: async () => {
-            setLogoutPending(true);
-            await logout();
-          },
-        },
-      ],
-    );
+    setLogoutPending(true);
+    try {
+      await logout();
+      setLogoutConfirmationVisible(false);
+      router.replace('/(public)/login');
+    } catch {
+      setLogoutPending(false);
+      Alert.alert('Gagal keluar dari akun', 'Sesi belum dapat diakhiri. Silakan coba kembali.');
+    }
   };
 
   return (
@@ -156,7 +153,7 @@ export function AccountSettingsScreen() {
           accessibilityLabel="Keluar dari akun"
           accessibilityRole="button"
           disabled={logoutPending}
-          onPress={confirmLogout}
+          onPress={() => setLogoutConfirmationVisible(true)}
           style={({pressed}) => [styles.logoutButton, pressed && !logoutPending && styles.rowPressed, logoutPending && styles.logoutDisabled]}
         >
           {logoutPending ? (
@@ -169,6 +166,46 @@ export function AccountSettingsScreen() {
 
         <Text style={styles.footer}>HireLoop</Text>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => {
+          if (!logoutPending) setLogoutConfirmationVisible(false);
+        }}
+        presentationStyle="overFullScreen"
+        transparent
+        visible={logoutConfirmationVisible}
+      >
+        <View accessibilityViewIsModal style={styles.modalBackdrop}>
+          <View style={styles.logoutModal}>
+            <View style={styles.logoutModalIcon}>
+              <Ionicons name="log-out-outline" size={28} color={profileColors.red} />
+            </View>
+            <Text style={styles.logoutModalTitle}>Keluar dari akun?</Text>
+            <Text style={styles.logoutModalDescription}>Anda perlu masuk kembali untuk mengakses akun HireLoop.</Text>
+            <View style={styles.logoutModalActions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={logoutPending}
+                onPress={() => setLogoutConfirmationVisible(false)}
+                style={({pressed}) => [styles.cancelLogoutButton, pressed && styles.rowPressed]}
+              >
+                <Text style={styles.cancelLogoutText}>Batal</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Konfirmasi keluar akun"
+                disabled={logoutPending}
+                onPress={() => void performLogout()}
+                style={({pressed}) => [styles.confirmLogoutButton, pressed && !logoutPending && styles.rowPressed, logoutPending && styles.logoutDisabled]}
+              >
+                {logoutPending && <ActivityIndicator color="white" size="small" />}
+                <Text style={styles.confirmLogoutText}>{logoutPending ? 'Keluar...' : 'Keluar'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,4 +245,14 @@ const styles = StyleSheet.create({
   logoutDisabled: {opacity: 0.6},
   logoutText: {fontFamily: profileFonts.semibold, fontSize: 12.5, color: profileColors.red},
   footer: {fontFamily: profileFonts.medium, fontSize: 10, color: '#8B95A7', textAlign: 'center', marginTop: -4},
+  modalBackdrop: {flex: 1, backgroundColor: 'rgba(0,18,55,0.58)', alignItems: 'center', justifyContent: 'center', padding: 20},
+  logoutModal: {...cardShadow, width: '100%', maxWidth: 380, borderRadius: 20, backgroundColor: 'white', alignItems: 'center', paddingHorizontal: 22, paddingVertical: 24},
+  logoutModalIcon: {width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFF0F2', alignItems: 'center', justifyContent: 'center'},
+  logoutModalTitle: {fontFamily: profileFonts.bold, fontSize: 18, lineHeight: 25, color: profileColors.ink, textAlign: 'center', marginTop: 15},
+  logoutModalDescription: {fontFamily: profileFonts.regular, fontSize: 11.5, lineHeight: 18, color: profileColors.muted, textAlign: 'center', marginTop: 7},
+  logoutModalActions: {width: '100%', flexDirection: 'row', gap: 10, marginTop: 22},
+  cancelLogoutButton: {flex: 1, minHeight: 46, borderRadius: 11, borderWidth: 1, borderColor: '#D7DEE8', alignItems: 'center', justifyContent: 'center'},
+  cancelLogoutText: {fontFamily: profileFonts.bold, fontSize: 12, color: profileColors.ink},
+  confirmLogoutButton: {flex: 1, minHeight: 46, borderRadius: 11, backgroundColor: profileColors.red, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7},
+  confirmLogoutText: {fontFamily: profileFonts.bold, fontSize: 12, color: 'white'},
 });

@@ -1,6 +1,6 @@
-import {fireEvent, render} from '@testing-library/react-native';
+import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import React from 'react';
-import {Alert, StyleSheet} from 'react-native';
+import {StyleSheet} from 'react-native';
 
 import {useAuth} from '../../auth/auth-provider';
 import {AccountSettingsScreen} from '../screens/AccountSettingsScreen';
@@ -21,18 +21,23 @@ jest.mock('../../auth/auth-provider', () => ({
   useAuth: jest.fn(),
 }));
 
+const mockReplace = jest.fn();
+jest.mock('expo-router', () => ({router: {replace: (...args: unknown[]) => mockReplace(...args)}}));
+
 const mockedUseAuth = useAuth as jest.Mock;
+const logout = jest.fn();
 
 describe('AccountSettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    logout.mockResolvedValue(undefined);
     mockedUseAuth.mockReturnValue({
       user: {
         full_name: 'Andi Pratama',
         email: 'andi@example.com',
         avatar_url: null,
       },
-      logout: jest.fn(),
+      logout,
     });
   });
 
@@ -53,16 +58,21 @@ describe('AccountSettingsScreen', () => {
   });
 
   it('menggunakan artwork header bersama dan meminta konfirmasi sebelum logout', () => {
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     const screen = render(<AccountSettingsScreen />);
 
     expect(screen.getByTestId('account-header-artwork').props.source).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Keluar dari akun'));
+    expect(screen.getByText('Keluar dari akun?')).toBeTruthy();
+    expect(screen.getByLabelText('Konfirmasi keluar akun')).toBeTruthy();
+  });
 
-    expect(alert).toHaveBeenCalledWith(
-      'Keluar dari akun?',
-      expect.any(String),
-      expect.arrayContaining([expect.objectContaining({text: 'Keluar', style: 'destructive'})]),
-    );
+  it('mengakhiri sesi dan kembali ke login setelah dikonfirmasi', async () => {
+    const screen = render(<AccountSettingsScreen />);
+
+    fireEvent.press(screen.getByLabelText('Keluar dari akun'));
+    fireEvent.press(screen.getByLabelText('Konfirmasi keluar akun'));
+
+    await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(public)/login'));
   });
 });
