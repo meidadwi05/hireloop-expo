@@ -15,6 +15,7 @@ import {jobsApi} from '../api/jobs.api';
 import {jobsKeys} from '../jobs.keys';
 import type {CandidateJobSource} from '../jobs.types';
 import {ApplyConfirmationModal} from './ApplyConfirmationModal';
+import {JobInformationSections} from './JobInformationSections';
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
 
 type JobDetailScreenProps = {
@@ -22,23 +23,6 @@ type JobDetailScreenProps = {
   id: number;
   autoOpenApply: boolean;
 };
-
-function DetailSection({title, items, fallback}: {title: string; items?: string[]; fallback?: string}) {
-  if (!items?.length && !fallback) return null;
-  return (
-    <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {items?.length
-        ? items.map((item, index) => (
-          <View key={`${item}-${index}`} style={styles.bulletRow}>
-            <View style={styles.bullet} />
-            <Text style={styles.sectionText}>{item}</Text>
-          </View>
-        ))
-        : <Text style={styles.sectionText}>{fallback}</Text>}
-    </View>
-  );
-}
 
 export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProps) {
   const insets = useSafeAreaInsets();
@@ -155,14 +139,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
                 </View>
               )}
 
-              <DetailSection title="Deskripsi Pekerjaan" fallback={job.description} />
-              <DetailSection title="Kualifikasi" items={job.requirements} fallback="Kualifikasi belum dicantumkan." />
-              <DetailSection title="Benefit" items={job.benefits} />
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Informasi Tambahan</Text>
-                <Text style={styles.sectionText}>Pendidikan: {job.education}</Text>
-                <Text style={[styles.sectionText, styles.extraLine]}>Pengalaman: {job.experience}</Text>
-              </View>
+              <JobInformationSections job={job} />
 
               <Pressable
                 accessibilityLabel={applyAccess.isTier2Banned ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
@@ -244,12 +221,6 @@ const styles = StyleSheet.create({
   feedbackText: {fontFamily: JOBS_FONTS.medium, fontSize: 11.5, lineHeight: 18, color: '#34506D'},
   profileLink: {alignSelf: 'flex-start', marginTop: 8},
   profileLinkText: {fontFamily: JOBS_FONTS.bold, fontSize: 11.5, color: JOBS_COLORS.blue},
-  sectionCard: {borderRadius: 16, backgroundColor: 'white', borderWidth: 1, borderColor: JOBS_COLORS.border, padding: 17},
-  sectionTitle: {fontFamily: JOBS_FONTS.bold, fontSize: 15, color: JOBS_COLORS.ink, marginBottom: 10},
-  sectionText: {flex: 1, fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 19, color: JOBS_COLORS.body},
-  bulletRow: {flexDirection: 'row', gap: 9, marginTop: 5},
-  bullet: {width: 6, height: 6, borderRadius: 3, backgroundColor: JOBS_COLORS.blue, marginTop: 7},
-  extraLine: {marginTop: 7},
   applyButton: {height: 52, borderRadius: 12, backgroundColor: JOBS_COLORS.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7},
   blockedApplyButton: {backgroundColor: '#D92D45'},
   applyText: {fontFamily: JOBS_FONTS.bold, fontSize: 13, color: 'white'},

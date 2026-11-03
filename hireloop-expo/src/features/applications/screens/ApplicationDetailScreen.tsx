@@ -19,6 +19,7 @@ import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {dashboardKeys} from '../../dashboard/dashboard.keys';
 import {jobsApi} from '../../jobs/api/jobs.api';
+import {JobInformationSections} from '../../jobs/components/JobInformationSections';
 import {jobsKeys} from '../../jobs/jobs.keys';
 import type {CandidateJobDetail, CandidateJobSource} from '../../jobs/jobs.types';
 import {useAuth} from '../../auth/auth-provider';
@@ -61,7 +62,9 @@ function fallbackJob(application: CandidateApplication): CandidateJobDetail {
     workType: 'Sistem kerja belum tersedia',
     salary: 'Gaji tidak disebutkan',
     description: '',
+    descriptionItems: [],
     requirements: [],
+    additionalQualifications: [],
     benefits: [],
     education: 'Tidak ditentukan',
     experience: 'Tidak ditentukan',
@@ -171,6 +174,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   const presentation = applicationStatePresentation(application.state, application.currentStageLabel);
   const heroCopy = statusHeroCopy(application);
   const processError = processQuery.isError ? toAppApiError(processQuery.error).message : '';
+  const jobError = jobQuery.isError ? toAppApiError(jobQuery.error).message : '';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -242,6 +246,16 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
               <Text style={styles.infoBannerText}>Penutupan lowongan tidak otomatis membatalkan lamaran. Status proses mengikuti data rekrutmen HireLoop.</Text>
             </View>
           </View>
+
+          {!!jobError && (
+            <View style={styles.partialError}>
+              <Ionicons name="information-circle-outline" size={19} color="#A96C00" />
+              <Text style={styles.partialErrorText}>Detail pekerjaan belum dapat dimuat: {jobError}</Text>
+              <Pressable accessibilityRole="button" onPress={() => void jobQuery.refetch()}><Text style={styles.retryText}>Coba lagi</Text></Pressable>
+            </View>
+          )}
+
+          <JobInformationSections job={job} />
 
           {!!feedback && (
             <View style={[styles.feedback, feedbackError && styles.feedbackError]}>

@@ -46,7 +46,9 @@ export type CandidateJobsPage = {
 
 export type CandidateJobDetail = CandidateJobCard & {
   description: string;
+  descriptionItems: string[];
   requirements: string[];
+  additionalQualifications: string[];
   benefits: string[];
   education: string;
   experience: string;

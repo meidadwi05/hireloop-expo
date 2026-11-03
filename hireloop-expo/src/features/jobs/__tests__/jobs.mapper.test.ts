@@ -90,4 +90,51 @@ describe('mapJobCard', () => {
 
     expect(result.benefits).toEqual(['Asuransi Kesehatan', 'Tunjangan Transportasi']);
   });
+
+  it('normalizes production detail sections like the candidate web', () => {
+    const result = mapJobDetail({
+      data: {
+        id: 18,
+        nama_lowongan: 'Operator Produksi',
+        deskripsi_pekerjaan: 'Mengoperasikan mesin\nMenjaga kebersihan area kerja',
+        kualifikasi: ['Teliti dan disiplin', 'Bersedia bekerja shift'],
+        gender: 'Semua',
+        usia_minimal: 20,
+        usia_maximal: 21,
+        pendidikan_minimal: 'SMA/SMK',
+        pengalaman: 0,
+        tanpa_pengalaman: true,
+        keahlian: ['Quality Control', 'Adaptability'],
+        benefit: [
+          {nama: 'Tunjangan Makan', keterangan: 'Setiap hari kerja'},
+          {nama: 'THR'},
+        ],
+      },
+    }, 'project-lowongan');
+
+    expect(result.descriptionItems).toEqual(['Mengoperasikan mesin', 'Menjaga kebersihan area kerja']);
+    expect(result.additionalQualifications).toEqual([
+      'Laki-laki / Perempuan',
+      'Usia 20 - 21 tahun',
+      'Pendidikan minimal SMA/SMK',
+      'Tanpa pengalaman',
+    ]);
+    expect(result.requirements).toEqual(['Teliti dan disiplin', 'Bersedia bekerja shift']);
+    expect(result.skills).toEqual(['Quality Control', 'Adaptability']);
+    expect(result.benefits).toEqual(['Tunjangan Makan - Setiap hari kerja', 'THR']);
+  });
+
+  it('deduplicates list values and safely handles malformed detail fields', () => {
+    const result = mapJobDetail({
+      id: 19,
+      description: 'Analisis data;Analisis data',
+      requirements: '[malformed',
+      benefits: null,
+    }, 'job-posting');
+
+    expect(result.descriptionItems).toEqual(['Analisis data']);
+    expect(result.requirements).toEqual(['[malformed']);
+    expect(result.additionalQualifications).toEqual([]);
+    expect(result.benefits).toEqual([]);
+  });
 });

@@ -19,6 +19,18 @@ function asNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function asOptionalNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function asBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  return ['1', 'true', 'yes', 'ya'].includes(String(value ?? '').trim().toLowerCase());
+}
+
 function asStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
@@ -124,7 +136,7 @@ export function mapJobCard(entry: unknown, index = 0): CandidateJobCard {
   const companyUser = asRecord(job.user);
   const source = normalizeSource(wrapper.source ?? job.source);
   const id = asNumber(job.id, index + 1);
-  const skills = asStringArray(job.skills ?? job.keahlian);
+  const skills = uniqueItems(asStringArray(job.skills ?? job.keahlian));
   const location = asText(job.location, job.lokasi_kerja, job.city) || 'Lokasi tidak ditentukan';
   const contractType = source === 'project-lowongan'
     ? humanize(job.jenis_kontrak, 'Kontrak tidak ditentukan')
@@ -212,16 +224,99 @@ function splitTextList(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function uniqueItems(items: string[]): string[] {
+  const seen = new Set<string>();
+  return items.filter(item => {
+    const key = item.trim().toLocaleLowerCase('id-ID');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function splitBenefitList(value: unknown): string[] {
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (!text) return [];
+    try {
+      return splitBenefitList(JSON.parse(text) as unknown);
+    } catch {
+      return uniqueItems(splitTextList(text));
+    }
+  }
+
+  if (!Array.isArray(value)) return [];
+
+  return uniqueItems(value.map(item => {
+    if (typeof item === 'string') return item.trim();
+    const record = asRecord(item);
+    const name = asText(record.nama, record.name, record.label);
+    const note = asText(record.keterangan, record.description, record.note);
+    return name && note ? `${name} - ${note}` : name;
+  }).filter(Boolean));
+}
+
+function formatGenderRequirement(value: unknown): string {
+  const gender = asText(value).toLowerCase();
+  if (!gender) return '';
+  if (['semua', 'all', 'laki-laki / perempuan', 'laki-laki/perempuan'].includes(gender)) return 'Laki-laki / Perempuan';
+  if (['laki-laki', 'laki laki', 'pria', 'male'].includes(gender)) return 'Diutamakan Laki-laki';
+  if (['perempuan', 'wanita', 'female'].includes(gender)) return 'Diutamakan Perempuan';
+  return asText(value);
+}
+
+function formatAgeRequirement(minValue: unknown, maxValue: unknown): string {
+  const min = asOptionalNumber(minValue);
+  const max = asOptionalNumber(maxValue);
+  if (min !== null && max !== null) return `Usia ${min} - ${max} tahun`;
+  if (min !== null) return `Usia minimal ${min} tahun`;
+  if (max !== null) return `Usia maksimal ${max} tahun`;
+  return '';
+}
+
+function formatEducationRequirement(value: unknown): string {
+  const education = asText(value);
+  if (!education) return '';
+  const labels: Record<string, string> = {
+    Tidak_Sekolah: 'Tidak Bersekolah',
+    PaketA: 'Paket A',
+    PaketB: 'Paket B',
+    PaketC: 'Paket C',
+  };
+  return `Pendidikan minimal ${labels[education] ?? humanize(education, education)}`;
+}
+
+function formatExperienceRequirement(value: unknown, noExperience: unknown): string {
+  if (asBoolean(noExperience)) return 'Tanpa pengalaman';
+  const experience = asOptionalNumber(value);
+  return experience === null ? '' : `Pengalaman minimal ${experience} tahun`;
+}
+
+function productionQualifications(job: Record<string, unknown>): string[] {
+  return uniqueItems([
+    formatGenderRequirement(job.gender),
+    formatAgeRequirement(job.usia_minimal, job.usia_maximal ?? job.usia_maksimal),
+    formatEducationRequirement(job.pendidikan_minimal),
+    formatExperienceRequirement(job.pengalaman, job.tanpa_pengalaman),
+  ].filter(Boolean));
+}
+
 export function mapJobDetail(payload: unknown, source: CandidateJobSource): CandidateJobDetail {
   const envelope = asRecord(payload);
   const rawJob = asRecord(envelope.data ?? payload);
   const card = mapJobCard({source, job: rawJob});
+  const descriptionItems = uniqueItems(splitTextList(rawJob.description ?? rawJob.deskripsi_pekerjaan));
+  const requirements = uniqueItems(splitTextList(rawJob.requirements ?? rawJob.kualifikasi));
+  const additionalQualifications = source === 'project-lowongan' ? productionQualifications(rawJob) : [];
+  const benefits = splitBenefitList(rawJob.benefits ?? rawJob.benefit);
 
   return {
     ...card,
-    description: asText(rawJob.description, rawJob.deskripsi_pekerjaan) || 'Deskripsi pekerjaan belum tersedia.',
-    requirements: splitTextList(rawJob.requirements ?? rawJob.kualifikasi),
-    benefits: splitTextList(rawJob.benefits ?? rawJob.benefit),
+    description: descriptionItems.join('\n') || asText(rawJob.description, rawJob.deskripsi_pekerjaan) || 'Deskripsi pekerjaan belum tersedia.',
+    descriptionItems,
+    requirements,
+    additionalQualifications,
+    benefits,
     education: humanize(rawJob.education_level ?? rawJob.pendidikan_minimal, 'Tidak ditentukan'),
     experience: typeof (rawJob.min_experience ?? rawJob.pengalaman) === 'number'
       ? `${String(rawJob.min_experience ?? rawJob.pengalaman)} tahun`
