@@ -3,7 +3,6 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {router} from 'expo-router';
 import React, {useMemo, useState} from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   ImageBackground,
@@ -28,7 +27,14 @@ import {useSavedJobs} from '../features/jobs/saved-jobs-provider';
 import type {JobCardModel} from '../features/jobs/jobs.types';
 import {CandidateEvaluationNotice} from './components/CandidateEvaluationNotice';
 import {
+  InterviewCardSkeleton,
+  RecentApplicationsSkeleton,
+  RecommendationSkeleton,
+  SummaryGridSkeleton,
+} from './components/DashboardSkeletons';
+import {
   getDashboardHeroLayout,
+  getDashboardResponsiveLayout,
   getDashboardSummaryGlyphSize,
   getDashboardSummaryIconRadius,
   getDashboardSummaryIconSize,
@@ -92,10 +98,10 @@ function resolveMediaUrl(value: string | null): string | null {
   return serverUrl ? `${serverUrl}/${value.replace(/^\//, '')}` : null;
 }
 
-function SectionHeader({title, onPress}: {title: string; onPress: () => void}) {
+function SectionHeader({compact = false, title, onPress}: {compact?: boolean; title: string; onPress: () => void}) {
   return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={[styles.sectionHeader, compact && styles.sectionHeaderCompact]}>
+      <Text numberOfLines={2} style={[styles.sectionTitle, compact && styles.sectionTitleCompact]}>{title}</Text>
       <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={styles.seeAllButton}>
         <Text style={styles.seeAll}>Lihat semua</Text>
         <Ionicons name="chevron-forward" size={15} color={C.brightBlue} />
@@ -109,6 +115,13 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
   const {width} = useWindowDimensions();
   const layout = getDashboardHeroLayout(width);
   const heroHeaderTop = insets.top + layout.headerTopPadding;
+  const greetingBlockHeight = layout.compact ? 80 : layout.wide ? 109 : 94;
+  const desiredGreetingTop = heroHeaderTop + layout.headerRowHeight + layout.headerGreetingGap;
+  const latestGreetingTop = layout.heroHeight - getDashboardSummaryOverlap(width) - 12 - greetingBlockHeight;
+  const greetingTop = Math.max(
+    heroHeaderTop + layout.headerRowHeight + 4,
+    Math.min(desiredGreetingTop, latestGreetingTop),
+  );
   const firstName = user.full_name?.trim().split(/\s+/)[0] || 'Kandidat';
   const avatarUrl = resolveMediaUrl(user.avatar_url);
   const initials = user.full_name
@@ -176,7 +189,7 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
           styles.heroCopy,
           {
             left: layout.horizontalPadding,
-            top: heroHeaderTop + layout.headerRowHeight + layout.headerGreetingGap,
+            top: greetingTop,
             width: layout.compact ? '62%' : layout.wide ? '55%' : '58%',
           },
         ]}
@@ -198,6 +211,7 @@ export function SummaryCard({applications, interviewsCount, savedCount, viewport
   const iconRadius = getDashboardSummaryIconRadius(viewportWidth);
   const iconGlyphSize = getDashboardSummaryGlyphSize(viewportWidth);
   const overlap = getDashboardSummaryOverlap(viewportWidth);
+  const responsive = getDashboardResponsiveLayout(viewportWidth);
   const summaryItems = [
     {label: 'Total Lamaran', value: applications.length, color: C.navy, icon: 'document-text' as const},
     {label: 'Dalam Seleksi', value: applications.filter(item => ['in-progress', 'transferred'].includes(item.state)).length, color: C.green, icon: 'people' as const},
@@ -206,14 +220,14 @@ export function SummaryCard({applications, interviewsCount, savedCount, viewport
   ];
 
   return (
-    <View testID="dashboard-summary-card" style={[styles.summaryGrid, {marginTop: -overlap}]}>
+    <View testID="dashboard-summary-card" style={[styles.summaryGrid, {gap: responsive.summaryGap, marginTop: -overlap}]}>
       {summaryItems.map((item, index) => (
         <View
           key={item.label}
           testID={`dashboard-summary-item-${index}`}
           accessible
           accessibilityLabel={`${item.value} ${item.label}`}
-          style={styles.summaryItem}
+          style={[styles.summaryItem, {gap: responsive.compact ? 8 : 10, minHeight: responsive.summaryItemMinHeight, paddingHorizontal: responsive.compact ? 10 : 12}]}
         >
           <View testID={`dashboard-summary-icon-shadow-${index}`} style={[styles.summaryIconShadow, {borderRadius: iconRadius, height: iconSize, shadowColor: item.color, width: iconSize}]}>
             <View testID={`dashboard-summary-icon-${index}`} style={[styles.summaryIcon, {backgroundColor: item.color, borderRadius: iconRadius}]}>
@@ -221,8 +235,8 @@ export function SummaryCard({applications, interviewsCount, savedCount, viewport
             </View>
           </View>
           <View style={styles.summaryCopy}>
-            <Text testID={`dashboard-summary-value-${index}`} style={styles.summaryValue}>{item.value}</Text>
-            <Text testID={`dashboard-summary-label-${index}`} numberOfLines={2} style={styles.summaryLabel}>{item.label}</Text>
+            <Text testID={`dashboard-summary-value-${index}`} style={[styles.summaryValue, responsive.compact && styles.summaryValueCompact]}>{item.value}</Text>
+            <Text testID={`dashboard-summary-label-${index}`} numberOfLines={2} style={[styles.summaryLabel, responsive.compact && styles.summaryLabelCompact]}>{item.label}</Text>
           </View>
         </View>
       ))}
@@ -230,9 +244,8 @@ export function SummaryCard({applications, interviewsCount, savedCount, viewport
   );
 }
 
-export function ProfileCompletionCard({completion, onOpenProfile}: {completion: number; onOpenProfile?: () => void}) {
-  const {width} = useWindowDimensions();
-  const compact = width < 360;
+export function ProfileCompletionCard({completion, containerWidth = 390, onOpenProfile}: {completion: number; containerWidth?: number; onOpenProfile?: () => void}) {
+  const compact = containerWidth < 360;
 
   if (completion >= 100) return null;
 
@@ -251,7 +264,7 @@ export function ProfileCompletionCard({completion, onOpenProfile}: {completion: 
         <Pressable
           accessibilityRole="button"
           onPress={onOpenProfile}
-          style={styles.profileButton}
+          style={[styles.profileButton, compact && styles.profileButtonCompact]}
         >
           <LinearGradient
             colors={['#0145C0', '#00205A']}
@@ -290,7 +303,7 @@ function getRelativeDayLabel(value: string) {
   return difference > 1 ? `${difference} hari lagi` : 'Terlewat';
 }
 
-function InterviewContent({interview}: {interview?: DashboardInterview}) {
+function InterviewContent({compact, dateWidth, interview}: {compact: boolean; dateWidth: number; interview?: DashboardInterview}) {
   if (!interview) {
     return (
       <View style={styles.emptyActivity}>
@@ -307,7 +320,7 @@ function InterviewContent({interview}: {interview?: DashboardInterview}) {
 
   return (
     <View style={styles.interviewContent}>
-      <View testID="interview-date-block" style={styles.dateBlock}>
+      <View testID="interview-date-block" style={[styles.dateBlock, {width: dateWidth}]}>
         <View testID="interview-date-primary" style={styles.datePrimary}>
           <Text style={styles.dateDay}>{day}</Text>
           <Text style={styles.dateMonth}>{month}</Text>
@@ -317,9 +330,9 @@ function InterviewContent({interview}: {interview?: DashboardInterview}) {
           <Text style={styles.dateTime}>{interview.time ? `${interview.time} WIB` : 'Waktu menyusul'}</Text>
         </View>
       </View>
-      <View style={styles.interviewDetail}>
+      <View style={[styles.interviewDetail, compact && styles.interviewDetailCompact]}>
         <View style={styles.activityTopline}>
-          <Text numberOfLines={1} style={styles.activityRole}>{interview.role_taxonomy_name}</Text>
+          <Text numberOfLines={1} style={[styles.activityRole, compact && styles.activityRoleCompact]}>{interview.role_taxonomy_name}</Text>
           <Ionicons name="chevron-forward" size={20} color={C.brightBlue} />
         </View>
         <Text numberOfLines={1} style={styles.activityCompany}>{interview.company_name ?? 'HireLoop Recruitment'}  <Ionicons name="checkmark-circle" size={13} color={C.brightBlue} /></Text>
@@ -328,18 +341,18 @@ function InterviewContent({interview}: {interview?: DashboardInterview}) {
           <Text numberOfLines={1} style={styles.activityModeText}>{interview.mode === 'online' ? 'Online · Zoom' : interview.location ?? 'Interview Offline'}</Text>
           {interview.mode === 'online' && <View style={styles.zoomBadge}><Text style={styles.zoomBadgeText}>zoom</Text></View>}
         </View>
-        <View style={styles.interviewButtons}>
+        <View style={[styles.interviewButtons, compact && styles.interviewButtonsCompact]}>
           <Pressable
             accessibilityRole="button"
             onPress={() => Alert.alert('Gabung Interview', interview.meeting_link ?? 'Tautan interview belum tersedia.')}
-            style={styles.joinButton}
+            style={[styles.joinButton, compact && styles.interviewButtonCompact]}
           >
             <Text style={styles.joinButtonText}>Gabung Interview</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={() => Alert.alert(interview.agenda, interview.location ?? 'Detail interview')}
-            style={styles.detailInterviewButton}
+            style={[styles.detailInterviewButton, compact && styles.interviewButtonCompact]}
           >
             <Text style={styles.detailInterviewText}>Detail</Text>
           </Pressable>
@@ -349,22 +362,24 @@ function InterviewContent({interview}: {interview?: DashboardInterview}) {
   );
 }
 
-export function NearestInterviewCard({interviews}: {interviews: DashboardInterview[]}) {
+export function NearestInterviewCard({containerWidth = 390, interviews}: {containerWidth?: number; interviews: DashboardInterview[]}) {
+  const responsive = getDashboardResponsiveLayout(containerWidth);
   return (
     <View>
-      <SectionHeader title="Interview Terdekat" onPress={() => Alert.alert('Interview', 'Buka seluruh jadwal interview.')} />
-      <View style={styles.interviewCard}>
-        <InterviewContent interview={interviews[0]} />
+      <SectionHeader compact={responsive.compact} title="Interview Terdekat" onPress={() => Alert.alert('Interview', 'Buka seluruh jadwal interview.')} />
+      <View style={[styles.interviewCard, responsive.compact && styles.interviewCardCompact]}>
+        <InterviewContent compact={responsive.compact} dateWidth={responsive.interviewDateWidth} interview={interviews[0]} />
       </View>
     </View>
   );
 }
 
-export function ShortcutGrid({onNavigate}: {onNavigate?: (route: DashboardRoute) => void} = {}) {
+export function ShortcutGrid({containerWidth = 390, onNavigate}: {containerWidth?: number; onNavigate?: (route: DashboardRoute) => void} = {}) {
+  const compact = containerWidth < 360;
   return (
     <View>
-      <Text style={styles.sectionTitle}>Pintasan</Text>
-      <View style={styles.shortcuts}>
+      <Text style={[styles.sectionTitle, compact && styles.sectionTitleCompact]}>Pintasan</Text>
+      <View style={[styles.shortcuts, compact && styles.shortcutsCompact]}>
         {shortcutItems.map(item => (
           <Pressable
             key={item.label}
@@ -373,7 +388,7 @@ export function ShortcutGrid({onNavigate}: {onNavigate?: (route: DashboardRoute)
             onPress={() => item.route
               ? onNavigate?.(item.route as DashboardRoute)
               : Alert.alert(item.label, `Halaman ${item.label} akan tersedia pada pembaruan berikutnya.`)}
-            style={({pressed}) => [styles.shortcut, pressed && styles.pressed]}
+            style={({pressed}) => [styles.shortcut, compact && styles.shortcutCompact, pressed && styles.pressed]}
           >
             <Ionicons name={item.icon} size={31} color={C.brightBlue} />
             <Text style={styles.shortcutLabel}>{item.label}</Text>
@@ -384,20 +399,20 @@ export function ShortcutGrid({onNavigate}: {onNavigate?: (route: DashboardRoute)
   );
 }
 
-export function RecentApplicationsCard({applications, onOpen, onOpenAll}: {
+export function RecentApplicationsCard({applications, containerWidth = 390, onOpen, onOpenAll}: {
   applications: CandidateApplication[];
+  containerWidth?: number;
   onOpen?: (application: CandidateApplication) => void;
   onOpenAll?: () => void;
 }) {
-  const {width} = useWindowDimensions();
-  const compact = width < 360;
+  const compact = containerWidth < 360;
   const recent = [...applications]
     .sort((left, right) => (Date.parse(right.updatedAt ?? right.submittedAt ?? '') || 0) - (Date.parse(left.updatedAt ?? left.submittedAt ?? '') || 0))
     .slice(0, 3);
 
   return (
     <View testID="dashboard-recent-applications">
-      <SectionHeader title="Lamaran Terbaru" onPress={() => onOpenAll?.()} />
+      <SectionHeader compact={compact} title="Lamaran Terbaru" onPress={() => onOpenAll?.()} />
       <View style={styles.recentApplicationsCard}>
         {!recent.length && (
           <View style={styles.recentEmpty}>
@@ -414,7 +429,7 @@ export function RecentApplicationsCard({applications, onOpen, onOpenAll}: {
               accessibilityRole="button"
               accessibilityLabel={`${application.title} di ${application.company}, ${presentation.label}`}
               onPress={() => onOpen?.(application)}
-              style={({pressed}) => [styles.recentApplicationRow, index < recent.length - 1 && styles.recentApplicationDivider, pressed && styles.pressed]}
+              style={({pressed}) => [styles.recentApplicationRow, compact && styles.recentApplicationRowCompact, index < recent.length - 1 && styles.recentApplicationDivider, pressed && styles.pressed]}
             >
               <View
                 accessibilityLabel={`Ikon perusahaan ${application.company}`}
@@ -429,11 +444,19 @@ export function RecentApplicationsCard({applications, onOpen, onOpenAll}: {
                   <Text numberOfLines={1} style={styles.recentCompanyName}>{application.company}</Text>
                 </View>
                 <Text style={styles.recentApplicationDate}>{formatApplicationDate(application.updatedAt ?? application.submittedAt, false)}</Text>
+                {compact ? (
+                  <View style={[styles.recentStatus, styles.recentStatusCompact, styles.recentStatusInline, {backgroundColor: presentation.background}]}>
+                    <View style={[styles.recentStatusDot, {backgroundColor: presentation.color}]} />
+                    <Text numberOfLines={1} style={[styles.recentStatusText, {color: presentation.color}]}>{presentation.label}</Text>
+                  </View>
+                ) : null}
               </View>
-              <View style={[styles.recentStatus, compact && styles.recentStatusCompact, {backgroundColor: presentation.background}]}>
-                <View style={[styles.recentStatusDot, {backgroundColor: presentation.color}]} />
-                <Text numberOfLines={1} style={[styles.recentStatusText, {color: presentation.color}]}>{presentation.label}</Text>
-              </View>
+              {!compact ? (
+                <View style={[styles.recentStatus, {backgroundColor: presentation.background}]}>
+                  <View style={[styles.recentStatusDot, {backgroundColor: presentation.color}]} />
+                  <Text numberOfLines={1} style={[styles.recentStatusText, {color: presentation.color}]}>{presentation.label}</Text>
+                </View>
+              ) : null}
               <Ionicons name="chevron-forward" size={19} color={C.brightBlue} />
             </Pressable>
           );
@@ -443,7 +466,8 @@ export function RecentApplicationsCard({applications, onOpen, onOpenAll}: {
   );
 }
 
-export function JobCard({job, width, saved, applyBlocked = false, onApply, onOpen, onShare, onToggleSaved}: {
+export function JobCard({compact = false, job, width, saved, applyBlocked = false, onApply, onOpen, onShare, onToggleSaved}: {
+  compact?: boolean;
   job: JobCardModel;
   width: number;
   saved: boolean;
@@ -463,7 +487,7 @@ export function JobCard({job, width, saved, applyBlocked = false, onApply, onOpe
       accessibilityRole="button"
       accessibilityLabel={`Lowongan ${job.title} di ${job.company}`}
       onPress={onOpen}
-      style={[styles.jobCard, {width}]}
+      style={[styles.jobCard, compact && styles.jobCardCompact, {width}]}
       testID="dashboard-job-card"
     >
       <View style={styles.jobHeader}>
@@ -554,7 +578,7 @@ export function JobCard({job, width, saved, applyBlocked = false, onApply, onOpe
       </View>
       <View style={styles.jobDivider} />
 
-      <View style={styles.jobButtons}>
+      <View style={[styles.jobButtons, compact && styles.jobButtonsCompact]}>
         <Pressable
           accessibilityLabel={applyBlocked ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
           accessibilityRole="button"
@@ -564,7 +588,7 @@ export function JobCard({job, width, saved, applyBlocked = false, onApply, onOpe
             if (applyUnavailable) return;
             onApply();
           }}
-          style={[styles.applyButton, applyBlocked && styles.blockedApplyButton, !job.active && styles.disabledApplyButton]}
+          style={[styles.applyButton, compact && styles.jobActionButtonCompact, applyBlocked && styles.blockedApplyButton, !job.active && styles.disabledApplyButton]}
           testID="dashboard-job-apply-button"
         >
           {applyBlocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
@@ -577,7 +601,7 @@ export function JobCard({job, width, saved, applyBlocked = false, onApply, onOpe
             onOpen();
           }}
           hitSlop={8}
-          style={styles.detailButton}
+          style={[styles.detailButton, compact && styles.jobActionButtonCompact]}
           testID="dashboard-job-detail-button"
         >
           <Text style={styles.detailButtonText}>Lihat Detail  {'\u203A'}</Text>
@@ -591,14 +615,28 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
   const {width: viewportWidth} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const width = measuredWidth ?? Math.min(viewportWidth, 720);
-  const {applications, candidate, interviews, jobs, unread, jobsLoading, refreshing, error, refresh} = useDashboardHome();
+  const responsive = getDashboardResponsiveLayout(width);
+  const {
+    applications,
+    applicationsLoading,
+    candidate,
+    interviews,
+    interviewsLoading,
+    jobs,
+    unread,
+    jobsLoading,
+    refreshing,
+    error,
+    refresh,
+  } = useDashboardHome();
   const {hydrated: savedHydrated, isSaved, savedCount, toggleSaved} = useSavedJobs();
-  const cardWidth = Math.min(Math.max(width * 0.84, 280), 370);
+  const cardWidth = responsive.jobCardWidth;
+  const summaryLoading = applicationsLoading || interviewsLoading || !savedHydrated;
   const applyBlocked = isCandidateTier2Banned(candidate ?? initialUser);
 
   const recommendationContent = useMemo(() => {
     if (jobsLoading) {
-      return <View style={styles.loadingJobs}><ActivityIndicator color={C.blue} /><Text style={styles.loadingText}>Memuat rekomendasi...</Text></View>;
+      return <RecommendationSkeleton cardWidth={cardWidth} compact={responsive.compact} />;
     }
 
     if (!jobs.length) {
@@ -622,6 +660,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
         {jobs.map(job => (
           <JobCard
             key={job.key}
+            compact={responsive.compact}
             job={job}
             width={cardWidth}
             saved={isSaved(job.key)}
@@ -634,7 +673,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
         ))}
       </ScrollView>
     );
-  }, [applyBlocked, cardWidth, isSaved, jobs, jobsLoading, toggleSaved]);
+  }, [applyBlocked, cardWidth, isSaved, jobs, jobsLoading, responsive.compact, toggleSaved]);
 
   return (
     <View
@@ -650,16 +689,22 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
         contentContainerStyle={styles.scrollContent}
       >
         <DashboardHero user={candidate ?? initialUser} unread={unread} onNavigate={onNavigate} />
-        <View style={styles.content}>
-          <SummaryCard
-            applications={applications}
-            interviewsCount={interviews.length}
-            savedCount={savedHydrated ? savedCount : 0}
-            viewportWidth={width}
-          />
+        <View style={[styles.content, {gap: responsive.sectionGap, paddingHorizontal: responsive.contentPadding}]}>
+          {summaryLoading ? (
+            <View style={{marginTop: -getDashboardSummaryOverlap(width)}}>
+              <SummaryGridSkeleton compact={responsive.compact} gap={responsive.summaryGap} minHeight={responsive.summaryItemMinHeight} />
+            </View>
+          ) : (
+            <SummaryCard
+              applications={applications}
+              interviewsCount={interviews.length}
+              savedCount={savedCount}
+              viewportWidth={width}
+            />
+          )}
 
           {!!error && (
-            <Pressable accessibilityRole="button" onPress={() => void refresh()} style={styles.errorBanner}>
+            <Pressable accessibilityRole="button" onPress={() => void refresh()} style={[styles.errorBanner, responsive.compact && styles.errorBannerCompact]}>
               <Ionicons name="cloud-offline-outline" size={20} color="#A35A00" />
               <Text style={styles.errorText}>{error}</Text>
               <Text style={styles.retryText}>Coba lagi</Text>
@@ -671,19 +716,28 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
             notice={candidate?.blacklist_info ?? initialUser.blacklist_info ?? null}
             onInitialOpenHandled={onEvaluationClose}
           />
-          <NearestInterviewCard interviews={interviews} />
-          <ProfileCompletionCard completion={staticProfileCompletion} onOpenProfile={() => onNavigate?.('/profile')} />
-          <ShortcutGrid onNavigate={onNavigate} />
-          <RecentApplicationsCard
-            applications={applications}
-            onOpen={application => router.push({pathname: '/(candidate)/applications/[source]/[id]', params: {source: application.source, id: String(application.referenceId)}} as never)}
-            onOpenAll={() => onNavigate?.('/(candidate)/(tabs)/career')}
-          />
+          {interviewsLoading
+            ? <InterviewCardSkeleton compact={responsive.compact} dateWidth={responsive.interviewDateWidth} />
+            : <NearestInterviewCard containerWidth={width} interviews={interviews} />}
+          <ProfileCompletionCard completion={staticProfileCompletion} containerWidth={width} onOpenProfile={() => onNavigate?.('/profile')} />
+          <ShortcutGrid containerWidth={width} onNavigate={onNavigate} />
+          {applicationsLoading ? (
+            <RecentApplicationsSkeleton compact={responsive.compact} />
+          ) : (
+            <RecentApplicationsCard
+              applications={applications}
+              containerWidth={width}
+              onOpen={application => router.push({pathname: '/(candidate)/applications/[source]/[id]', params: {source: application.source, id: String(application.referenceId)}} as never)}
+              onOpenAll={() => onNavigate?.('/(candidate)/(tabs)/career')}
+            />
+          )}
 
-          <View>
-            <SectionHeader title="Rekomendasi Pekerjaan" onPress={() => onNavigate?.('/(candidate)/(tabs)/jobs')} />
-            {recommendationContent}
-          </View>
+          {jobsLoading ? recommendationContent : (
+            <View>
+              <SectionHeader compact={responsive.compact} title="Rekomendasi Pekerjaan" onPress={() => onNavigate?.('/(candidate)/(tabs)/jobs')} />
+              {recommendationContent}
+            </View>
+          )}
 
         </View>
       </ScrollView>
@@ -729,18 +783,21 @@ const styles = StyleSheet.create({
   greetingSubtitleCompact: {fontSize: 12, lineHeight: 19, marginTop: 5},
   greetingSubtitleWide: {fontSize: 16, lineHeight: 26},
   content: {paddingHorizontal: 20, gap: 28},
-  summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 10},
-  summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 130, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
+  summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap'},
+  summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 0, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
   summaryIconShadow: {flexShrink: 0, shadowOffset: {width: 0, height: 3}, shadowOpacity: 0.22, shadowRadius: 5, elevation: 3},
   summaryIcon: {width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'},
   summaryCopy: {flex: 1, minWidth: 0},
   summaryValue: {fontFamily: F.bold, fontSize: 24, lineHeight: 29, color: C.ink},
+  summaryValueCompact: {fontSize: 21, lineHeight: 25},
   summaryLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#252A35'},
+  summaryLabelCompact: {fontSize: 9, lineHeight: 12},
   errorBanner: {flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FFF5E7', borderRadius: 13, padding: 13, marginTop: -8},
+  errorBannerCompact: {alignItems: 'flex-start', flexWrap: 'wrap'},
   errorText: {fontFamily: F.regular, fontSize: 11, lineHeight: 16, color: '#805219', flex: 1},
   retryText: {fontFamily: F.bold, fontSize: 10, color: C.blue},
   profileCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 20, minHeight: 210, flexDirection: 'row', overflow: 'hidden'},
-  profileCardCompact: {paddingHorizontal: 15},
+  profileCardCompact: {minHeight: 0, flexDirection: 'column', paddingHorizontal: 15},
   profileCopy: {flex: 1, zIndex: 2},
   profileTitle: {fontFamily: F.bold, fontSize: 20, color: C.ink},
   profileTitleCompact: {fontSize: 17},
@@ -751,11 +808,13 @@ const styles = StyleSheet.create({
   progressTrack: {height: 7, borderRadius: 5, backgroundColor: '#EEF0F4', marginTop: 4, width: '100%', overflow: 'hidden'},
   progressFill: {height: '100%', borderRadius: 5, backgroundColor: C.blue},
   profileButton: {height: 42, minWidth: 156, borderRadius: 10, alignSelf: 'flex-start', marginTop: 20, overflow: 'hidden'},
+  profileButtonCompact: {alignSelf: 'stretch', minWidth: 0},
   profileButtonGradient: {flex: 1, width: '100%', paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center'},
   profileButtonText: {fontFamily: F.semibold, fontSize: 11, color: 'white'},
   profileIllustration: {width: 132, height: 160, marginLeft: 10, alignSelf: 'center'},
-  profileIllustrationCompact: {width: 88, height: 132, marginLeft: 5},
+  profileIllustrationCompact: {width: '100%', height: 108, marginLeft: 0, marginTop: 14},
   interviewCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 14, marginTop: 13, overflow: 'hidden'},
+  interviewCardCompact: {padding: 10},
   interviewContent: {flexDirection: 'row', minHeight: 150},
   dateBlock: {width: 92, minHeight: 150, borderRadius: 12, backgroundColor: '#0643AA', overflow: 'hidden'},
   datePrimary: {flex: 1, width: '100%', backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingTop: 11, paddingBottom: 8},
@@ -765,14 +824,18 @@ const styles = StyleSheet.create({
   dateRelative: {fontFamily: F.medium, fontSize: 10.5, color: 'rgba(255,255,255,0.9)', marginTop: 7},
   dateTime: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#061A4D', textAlign: 'center'},
   interviewDetail: {flex: 1, minWidth: 0, paddingLeft: 14, paddingVertical: 3},
+  interviewDetailCompact: {paddingLeft: 10},
   activityTopline: {flexDirection: 'row', alignItems: 'center'},
   activityRole: {fontFamily: F.bold, fontSize: 16, color: C.ink, flex: 1},
+  activityRoleCompact: {fontSize: 14, lineHeight: 18},
   activityCompany: {fontFamily: F.regular, fontSize: 10.5, color: C.muted, marginTop: 3},
   activityMode: {flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10},
   activityModeText: {fontFamily: F.medium, fontSize: 10.5, color: '#454B57', flexShrink: 1},
   zoomBadge: {backgroundColor: '#2D68FF', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 2},
   zoomBadgeText: {fontFamily: F.bold, fontSize: 6.5, color: 'white'},
   interviewButtons: {flexDirection: 'row', gap: 8, marginTop: 'auto', paddingTop: 10},
+  interviewButtonsCompact: {flexDirection: 'column', gap: 6},
+  interviewButtonCompact: {flex: 0, width: '100%', minHeight: 38},
   joinButton: {flex: 1.5, minHeight: 37, borderRadius: 9, backgroundColor: '#0345AE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
   joinButtonText: {fontFamily: F.semibold, fontSize: 9.5, color: 'white'},
   detailInterviewButton: {flex: 1, minHeight: 37, borderRadius: 9, backgroundColor: '#EEF3FC', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
@@ -780,16 +843,21 @@ const styles = StyleSheet.create({
   emptyActivity: {minHeight: 130, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 25},
   emptyTitle: {fontFamily: F.semibold, fontSize: 13, color: C.ink, marginTop: 9, textAlign: 'center'},
   emptyText: {fontFamily: F.regular, fontSize: 10.5, lineHeight: 16, color: C.muted, marginTop: 4, textAlign: 'center'},
-  sectionHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  sectionTitle: {fontFamily: F.bold, fontSize: 19, color: C.ink},
+  sectionHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10},
+  sectionHeaderCompact: {alignItems: 'flex-start'},
+  sectionTitle: {flex: 1, minWidth: 0, fontFamily: F.bold, fontSize: 19, color: C.ink},
+  sectionTitleCompact: {fontSize: 16, lineHeight: 21},
   seeAllButton: {flexDirection: 'row', alignItems: 'center', gap: 2},
   seeAll: {fontFamily: F.semibold, fontSize: 10, color: C.blue},
   shortcuts: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, gap: 9},
+  shortcutsCompact: {flexWrap: 'wrap', justifyContent: 'flex-start', gap: 8},
   shortcut: {...shortcutShadow, flex: 1, minWidth: 0, minHeight: 98, borderRadius: 14, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 12},
+  shortcutCompact: {flexBasis: '47%', minHeight: 86},
   shortcutLabel: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#164DB7', marginTop: 8, textAlign: 'center'},
   recentApplicationsCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, marginTop: 14, paddingHorizontal: 16, overflow: 'hidden'},
   recentEmpty: {minHeight: 140, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24},
   recentApplicationRow: {minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12},
+  recentApplicationRowCompact: {alignItems: 'flex-start', gap: 7},
   recentApplicationDivider: {borderBottomWidth: 1, borderBottomColor: C.border},
   recentCompanyLogo: {width: 48, height: 48, borderRadius: 13, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   recentCompanyLogoCompact: {width: 42, height: 42, borderRadius: 12},
@@ -800,6 +868,7 @@ const styles = StyleSheet.create({
   recentApplicationDate: {fontFamily: F.regular, fontSize: 9, lineHeight: 13, color: '#8A919D', marginTop: 1},
   recentStatus: {maxWidth: 116, minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 16, paddingHorizontal: 10, flexShrink: 0},
   recentStatusCompact: {maxWidth: 86, gap: 4, paddingHorizontal: 7},
+  recentStatusInline: {alignSelf: 'flex-start', marginTop: 7},
   recentStatusScreening: {backgroundColor: '#EAF2FF'},
   recentStatusApplied: {backgroundColor: '#F0F2F5'},
   recentStatusDot: {width: 7, height: 7, borderRadius: 4},
@@ -814,6 +883,7 @@ const styles = StyleSheet.create({
   loadingText: {fontFamily: F.regular, fontSize: 11, color: C.muted},
   emptyJobs: {height: 185, backgroundColor: 'white', borderRadius: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 35, marginTop: 16},
   jobCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: '#EDF1F7', padding: 17, minHeight: 440},
+  jobCardCompact: {padding: 14, minHeight: 390},
   jobHeader: {flexDirection: 'row', alignItems: 'center', gap: 10},
   jobCategoryIcon: {width: 48, height: 48, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   jobTitleWrap: {flex: 1},
@@ -848,6 +918,8 @@ const styles = StyleSheet.create({
   timestampDot: {fontFamily: F.regular, color: '#CDD1D8'},
   jobDivider: {height: 1, backgroundColor: C.border, marginVertical: 14},
   jobButtons: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  jobButtonsCompact: {flexDirection: 'column', alignItems: 'stretch'},
+  jobActionButtonCompact: {flex: 0, width: '100%', minHeight: 42},
   applyButton: {flex: 1.65, height: 40, borderRadius: 10, backgroundColor: '#0345AE', paddingHorizontal: 12, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center'},
   blockedApplyButton: {backgroundColor: '#D92D45'},
   disabledApplyButton: {opacity: 0.5},

@@ -22,14 +22,14 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://hireloop.superapp-provenforceindonesia.com/api"
+        "EXPO_PUBLIC_API_URL": "https://app.hireloop.site/api"
       }
     },
     "production-apk": {
       "distribution": "internal",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://hireloop.superapp-provenforceindonesia.com/api"
+        "EXPO_PUBLIC_API_URL": "https://app.hireloop.site/api"
       },
       "android": {
         "buildType": "apk"

@@ -42,7 +42,7 @@ Perangkat dan komputer harus berada pada jaringan yang sama. Firewall Windows pe
 Build production memperoleh URL API dari profil `production` atau `production-apk` di `eas.json`:
 
 ```text
-https://hireloop.superapp-provenforceindonesia.com/api
+https://app.hireloop.site/api
 ```
 
 `.env.local` tidak dikirim ke EAS dan tidak boleh menjadi sumber konfigurasi build production.

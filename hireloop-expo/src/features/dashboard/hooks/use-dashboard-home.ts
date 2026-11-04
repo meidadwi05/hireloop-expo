@@ -37,7 +37,13 @@ export function useDashboardHome() {
     interviews: dashboard.data?.interviews ?? [],
     jobs: jobs.data ?? [],
     unread: unread.data ?? 0,
+    applicationsLoading: candidate.isLoading,
+    candidateLoading: candidate.isLoading,
+    dashboardLoading: dashboard.isLoading,
+    initialLoading: dashboard.isLoading || candidate.isLoading || jobs.isLoading || unread.isLoading,
+    interviewsLoading: dashboard.isLoading,
     jobsLoading: jobs.isLoading,
+    notificationsLoading: unread.isLoading,
     refreshing: dashboard.isRefetching || candidate.isRefetching || jobs.isRefetching || unread.isRefetching,
     error: failedCount === 4
       ? 'Dashboard belum dapat dimuat. Periksa koneksi Anda dan coba lagi.'

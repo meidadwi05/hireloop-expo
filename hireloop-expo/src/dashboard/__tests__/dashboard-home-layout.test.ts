@@ -4,6 +4,7 @@ import {
   getDashboardSummaryIconRadius,
   getDashboardSummaryIconSize,
   getDashboardSummaryOverlap,
+  getDashboardResponsiveLayout,
 } from '../dashboard.layout';
 
 describe('dashboard home responsive layout', () => {
@@ -85,5 +86,47 @@ describe('dashboard home responsive layout', () => {
     expect(getDashboardSummaryOverlap(430)).toBe(52);
     expect(getDashboardSummaryOverlap(720)).toBe(56);
     expect(getDashboardSummaryOverlap(1200)).toBe(56);
+  });
+
+  test('mengunci seluruh content dashboard di dalam lebar aman', () => {
+    expect(getDashboardResponsiveLayout(280)).toMatchObject({
+      compact: true,
+      contentPadding: 14,
+      contentWidth: 252,
+      interviewDateWidth: 76,
+      jobCardWidth: 248,
+      pageWidth: 280,
+      shortcutColumns: 2,
+      summaryGap: 8,
+      summaryItemMinHeight: 86,
+    });
+    expect(getDashboardResponsiveLayout(390)).toMatchObject({
+      compact: false,
+      contentPadding: 20,
+      contentWidth: 350,
+      interviewDateWidth: 92,
+      jobCardWidth: 322,
+      pageWidth: 390,
+      shortcutColumns: 4,
+    });
+    expect(getDashboardResponsiveLayout(720)).toMatchObject({
+      contentPadding: 24,
+      contentWidth: 672,
+      jobCardWidth: 370,
+      pageWidth: 720,
+      wide: true,
+    });
+  });
+
+  test('menormalkan viewport invalid dan membatasi layout tablet maksimum 720px', () => {
+    expect(getDashboardResponsiveLayout(Number.NaN)).toEqual(getDashboardResponsiveLayout(390));
+    expect(getDashboardResponsiveLayout(1_200)).toEqual(getDashboardResponsiveLayout(720));
+
+    for (const width of [280, 320, 359, 390, 430, 600, 720]) {
+      const layout = getDashboardResponsiveLayout(width);
+      expect(layout.contentWidth).toBeGreaterThan(0);
+      expect(layout.jobCardWidth).toBeLessThanOrEqual(layout.contentWidth);
+      expect(layout.contentPadding * 2 + layout.contentWidth).toBe(layout.pageWidth);
+    }
   });
 });

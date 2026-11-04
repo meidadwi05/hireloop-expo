@@ -21,6 +21,7 @@ export function useCandidateApplyAccess() {
     blacklistInfo: currentUser?.blacklist_info ?? null,
     isTier2Banned: isCandidateTier2Banned(currentUser),
     isError: candidate.isError,
+    isLoading: candidate.isLoading,
     isRefetching: candidate.isRefetching,
     refetch: candidate.refetch,
   };

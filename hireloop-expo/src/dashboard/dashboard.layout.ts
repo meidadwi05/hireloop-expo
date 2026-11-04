@@ -80,3 +80,29 @@ export function getDashboardSummaryOverlap(viewportWidth: number) {
 
   return Math.round(52 + ((pageWidth - 430) / 290) * 4);
 }
+
+export function getDashboardResponsiveLayout(viewportWidth: number) {
+  const safeWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 390;
+  const pageWidth = clamp(safeWidth, 280, 720);
+  const compact = pageWidth < 360;
+  const phone = pageWidth < 430;
+  const wide = pageWidth >= 600;
+  const contentPadding = compact ? 14 : wide ? 24 : 20;
+  const contentWidth = pageWidth - (contentPadding * 2);
+  const jobWidthRatio = wide ? 0.62 : 0.92;
+
+  return {
+    compact,
+    contentPadding,
+    contentWidth,
+    interviewDateWidth: compact ? 76 : 92,
+    jobCardWidth: Math.round(clamp(contentWidth * jobWidthRatio, 248, 370)),
+    pageWidth,
+    phone,
+    sectionGap: compact ? 22 : 28,
+    shortcutColumns: compact ? 2 : 4,
+    summaryGap: compact ? 8 : 10,
+    summaryItemMinHeight: compact ? 86 : 94,
+    wide,
+  } as const;
+}

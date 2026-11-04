@@ -99,7 +99,7 @@ if ($trackedSource.Count -eq 0) {
 $easConfigPath = Join-Path $appRoot 'eas.json'
 $easConfig = Get-Content -LiteralPath $easConfigPath -Raw | ConvertFrom-Json
 $productionApiUrl = $easConfig.build.'production-apk'.env.EXPO_PUBLIC_API_URL
-$expectedApiUrl = 'https://hireloop.superapp-provenforceindonesia.com/api'
+$expectedApiUrl = 'https://app.hireloop.site/api'
 
 if ($productionApiUrl -ne $expectedApiUrl) {
     throw "EXPO_PUBLIC_API_URL production tidak sesuai. Ditemukan: $productionApiUrl"

@@ -15,6 +15,26 @@ if (parsedApiUrl.protocol !== 'https:') {
   throw new Error('API production PWA wajib menggunakan HTTPS.');
 }
 
+const productionEnvironmentPath = path.join(root, '.env.production');
+try {
+  const productionEnvironment = await readFile(productionEnvironmentPath, 'utf8');
+  const environmentApiUrl = productionEnvironment
+    .split(/\r?\n/u)
+    .find((line) => line.startsWith('EXPO_PUBLIC_API_URL='))
+    ?.slice('EXPO_PUBLIC_API_URL='.length)
+    .trim();
+
+  if (!environmentApiUrl) {
+    throw new Error('EXPO_PUBLIC_API_URL tidak ditemukan di .env.production.');
+  }
+
+  if (environmentApiUrl !== productionApiUrl) {
+    throw new Error(`URL API production tidak sinkron. .env.production=${environmentApiUrl}, eas.json=${productionApiUrl}`);
+  }
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error;
+}
+
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const build = spawnSync(npmCommand, ['run', 'build:pwa'], {
   cwd: root,

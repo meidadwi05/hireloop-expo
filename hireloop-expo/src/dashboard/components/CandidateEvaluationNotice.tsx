@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 
 import type {CandidateBlacklistInfo} from '../../features/auth/auth.types';
@@ -55,6 +56,8 @@ export function CandidateEvaluationNotice({
   notice: CandidateBlacklistInfo | null | undefined;
   onInitialOpenHandled?: () => void;
 }) {
+  const {width: viewportWidth} = useWindowDimensions();
+  const compact = viewportWidth < 360;
   const [visible, setVisible] = useState(false);
   const [downloading, setDownloading] = useState(false);
   if (!notice || notice.status !== 'active') return null;
@@ -118,13 +121,13 @@ export function CandidateEvaluationNotice({
 
       <Modal animationType="fade" onRequestClose={closeModal} presentationStyle="overFullScreen" transparent visible={visible || initiallyVisible}>
         <Pressable accessibilityRole="button" accessibilityLabel="Tutup detail evaluasi" style={styles.backdrop} onPress={closeModal}>
-          <Pressable accessibilityViewIsModal style={styles.modalCard} onPress={event => event.stopPropagation()}>
+          <Pressable accessibilityViewIsModal style={[styles.modalCard, compact && styles.modalCardCompact]} onPress={event => event.stopPropagation()}>
             <Pressable accessibilityRole="button" accessibilityLabel="Tutup" hitSlop={10} onPress={closeModal} style={styles.closeButton}>
               <Ionicons name="close" size={27} color="#00195E" />
             </Pressable>
 
-            <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>{tierTwo ? 'Detail Blacklist' : 'Detail Catatan Evaluasi'}</Text>
+            <ScrollView contentContainerStyle={[styles.modalContent, compact && styles.modalContentCompact]} showsVerticalScrollIndicator={false}>
+              <Text style={[styles.modalTitle, compact && styles.modalTitleCompact]}>{tierTwo ? 'Detail Blacklist' : 'Detail Catatan Evaluasi'}</Text>
 
               <Text style={styles.fieldLabel}>Tingkat Sanksi</Text>
               <View style={[styles.sanctionBadge, tierTwo ? styles.blacklistBadge : styles.warningBadge]}>
@@ -153,7 +156,7 @@ export function CandidateEvaluationNotice({
               {notice.evidence_file_url && (
                 <View style={styles.evidenceSection}>
                   <Text style={styles.fieldLabel}>File Pendukung / Bukti Pelanggaran</Text>
-                  <View style={styles.evidenceCard}>
+                  <View style={[styles.evidenceCard, compact && styles.evidenceCardCompact]}>
                     <View style={styles.pdfIcon}><Text style={styles.pdfText}>PDF</Text></View>
                     <Text numberOfLines={2} style={styles.evidenceName}>{fileName}</Text>
                     <Pressable
@@ -161,7 +164,7 @@ export function CandidateEvaluationNotice({
                       accessibilityLabel={`Unduh ${fileName}`}
                       disabled={!fileUrl || downloading}
                       onPress={() => void downloadEvidence()}
-                      style={({pressed}) => [styles.downloadButton, (!fileUrl || downloading) && styles.downloadDisabled, pressed && styles.pressed]}
+                      style={({pressed}) => [styles.downloadButton, compact && styles.downloadButtonCompact, (!fileUrl || downloading) && styles.downloadDisabled, pressed && styles.pressed]}
                     >
                       {downloading ? <ActivityIndicator size="small" color="#146CFF" /> : <Ionicons name="download-outline" size={21} color="#146CFF" />}
                       <Text style={styles.downloadText}>{downloading ? 'Mengunduh...' : 'Download'}</Text>
@@ -202,9 +205,12 @@ const styles = StyleSheet.create({
   pressed: {opacity: 0.75},
   backdrop: {flex: 1, backgroundColor: 'rgba(0,18,55,0.64)', alignItems: 'center', justifyContent: 'center', padding: 16},
   modalCard: {width: '100%', maxWidth: 420, maxHeight: '86%', borderRadius: 24, backgroundColor: 'white', overflow: 'hidden'},
+  modalCardCompact: {borderRadius: 18},
   closeButton: {position: 'absolute', top: 13, right: 13, zIndex: 2, width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   modalContent: {padding: 22, paddingTop: 27},
+  modalContentCompact: {paddingHorizontal: 16, paddingBottom: 18},
   modalTitle: {fontFamily: F.bold, fontSize: 23, lineHeight: 31, color: '#00195E', paddingRight: 48, marginBottom: 20},
+  modalTitleCompact: {fontSize: 20, lineHeight: 27},
   fieldLabel: {fontFamily: F.bold, fontSize: 12.5, lineHeight: 18, color: '#10204D'},
   fieldValue: {fontFamily: F.regular, fontSize: 12, lineHeight: 19, color: '#29395D', marginTop: 6},
   sanctionBadge: {alignSelf: 'flex-start', minHeight: 42, borderRadius: 22, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 15, marginTop: 9},
@@ -215,10 +221,12 @@ const styles = StyleSheet.create({
   dateText: {fontFamily: F.medium, fontSize: 10.5, color: '#7B879A', marginTop: 6},
   evidenceSection: {paddingTop: 17},
   evidenceCard: {borderWidth: 1, borderColor: '#D9E2EF', borderRadius: 13, backgroundColor: '#F8FAFD', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 9},
+  evidenceCardCompact: {alignItems: 'stretch', flexDirection: 'column'},
   pdfIcon: {width: 42, height: 50, borderRadius: 8, backgroundColor: '#E92737', alignItems: 'center', justifyContent: 'center'},
   pdfText: {fontFamily: F.bold, fontSize: 11, color: 'white'},
   evidenceName: {flex: 1, minWidth: 0, fontFamily: F.semibold, fontSize: 10.5, lineHeight: 15, color: '#122044'},
   downloadButton: {minHeight: 42, borderWidth: 1.5, borderColor: '#146CFF', borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 10},
+  downloadButtonCompact: {alignSelf: 'stretch'},
   downloadDisabled: {opacity: 0.5},
   downloadText: {fontFamily: F.bold, fontSize: 9.5, color: '#146CFF'},
   impactBox: {borderRadius: 13, padding: 13, flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 20},

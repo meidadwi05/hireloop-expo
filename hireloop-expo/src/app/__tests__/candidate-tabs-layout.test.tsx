@@ -17,6 +17,10 @@ jest.mock('../../features/notifications/notifications.keys', () => ({
   notificationsKeys: {unreadCount: () => ['notifications', 'unread-count']},
 }));
 
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({top: 0, right: 0, bottom: 16, left: 0}),
+}));
+
 jest.mock('@expo/vector-icons/Ionicons', () => {
   const ReactModule = jest.requireActual<typeof import('react')>('react');
   const {Text} = jest.requireActual<typeof import('react-native')>('react-native');
