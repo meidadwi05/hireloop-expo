@@ -3,17 +3,12 @@ import {LinearGradient} from 'expo-linear-gradient';
 import React, {useState} from 'react';
 import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
-import type {CertificationDraft, ExperienceDraft, MasterOption, OnboardingAction, OnboardingDraft, RunOnboardingAction, SkillOption} from '../onboarding.types';
+import type {CertificationDraft, ExperienceDraft, OnboardingAction, OnboardingDraft, RunOnboardingAction, SkillOption} from '../onboarding.types';
 import {CertificationModal} from './CertificationModal';
 import {ExperienceModal} from './ExperienceModal';
 import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
 import {SkillMultiSelect} from './SkillMultiSelect';
-
-const availabilityOptions: MasterOption[] = [
-  {value: 'available', label: 'Tersedia segera'},
-  {value: 'actively_looking', label: 'Aktif mencari pekerjaan'},
-  {value: 'not_available', label: 'Belum tersedia'},
-];
+import {availabilityOptions} from '../onboarding.options';
 
 export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack, onFinish, runAction, onNotify}: {
   draft: OnboardingDraft;
@@ -69,14 +64,14 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
       ))}
       <View style={styles.compactCheckbox}><CheckboxField label="Belum memiliki pengalaman kerja" checked={draft.hasNoExperience} onChange={value => setField('hasNoExperience', value)} /></View>
 
-      <SkillMultiSelect options={skills} selected={draft.skills} onToggle={skill => dispatch({type: 'toggle-skill', skill})} />
+      <SkillMultiSelect options={skills} selected={draft.skills} onToggle={skill => dispatch({type: 'toggle-skill', skill})} onToggleCustom={name => dispatch({type: 'toggle-custom-skill', name})} />
       <TextField label="Pengalaman mesin / tools" value={draft.tools} onChangeText={value => setField('tools', value)} placeholder="Opsional, contoh: Mesin CNC, Forklift" />
 
-      <AddField label="Sertifikasi" placeholder={draft.certifications.length ? 'Tambah sertifikasi lainnya' : 'Opsional'} onPress={() => openCertification()} />
+      <AddField label="Dokumen & Sertifikasi" placeholder={draft.certifications.length ? 'Tambah berkas lainnya' : 'Opsional'} onPress={() => openCertification()} />
       {draft.certifications.map(item => (
         <View key={item.id} style={styles.itemCard}>
-          <View style={styles.itemIcon}><Ionicons name="ribbon" size={17} color="#0B66EE" /></View>
-          <View style={styles.itemCopy}><Text style={styles.itemTitle}>{item.name}</Text><Text style={styles.itemMeta}>{item.issuer}</Text><Text style={styles.itemMeta}>{item.originalName}</Text></View>
+          <View style={styles.itemIcon}><Ionicons name={item.type === 'document' ? 'document-text' : 'ribbon'} size={17} color="#0B66EE" /></View>
+          <View style={styles.itemCopy}><Text style={styles.itemTitle}>{item.name}</Text><Text style={styles.itemMeta}>{item.type === 'document' ? 'Dokumen' : item.issuer}</Text><Text style={styles.itemMeta}>{item.originalName}</Text></View>
           <View style={styles.itemActions}>
             <Pressable accessibilityLabel="Edit sertifikasi" onPress={() => openCertification(item)} style={styles.itemAction}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
             <Pressable accessibilityLabel="Hapus sertifikasi" onPress={() => confirmRemove('Hapus sertifikasi?', () => dispatch({type: 'remove-certification', id: item.id}))} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>

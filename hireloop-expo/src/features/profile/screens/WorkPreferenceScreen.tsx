@@ -23,7 +23,7 @@ const workTypeOptions: [WorkType, string][] = [
 ];
 const workSettingOptions: [WorkSetting, string][] = [['on_site', 'On-site'], ['remote', 'Remote'], ['hybrid', 'Hybrid']];
 const availabilityOptions: [WorkPeriodStatus, string][] = [
-  ['available', 'Siap Bekerja'], ['actively_looking', 'Aktif Mencari'], ['not_available', 'Belum Tersedia'], ['hired', 'Sudah Bekerja'],
+  ['available', 'Siap Bekerja'], ['actively_looking', 'Terbuka untuk Peluang'], ['not_available', 'Belum Tersedia'], ['hired', 'Sudah Bekerja'],
 ];
 
 type Role = {id: number; name: string};

@@ -15,8 +15,27 @@ export type CertificationUploadResult = {
   fileSize?: number;
 };
 
+export type ImageUploadInput = {uri: string; name: string; mimeType: string; file?: Blob};
+export type KtpExtractedData = {
+  nik?: string | null;
+  full_name?: string | null;
+  birth_place?: string | null;
+  birth_date?: string | null;
+  gender?: 'male' | 'female' | null;
+  marital_status?: 'single' | 'married' | 'other' | null;
+  full_address?: string | null;
+  address?: string | null;
+};
+export type KtpUploadResult = {path: string; url: string; extracted: KtpExtractedData};
+export type AvatarUploadResult = {path: string; url: string};
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
+}
+
+function appendUpload(body: FormData, field: string, input: ImageUploadInput) {
+  if (input.file) body.append(field, input.file, input.name);
+  else body.append(field, {uri: input.uri, name: input.name, type: input.mimeType} as unknown as Blob);
 }
 
 export const onboardingApi = {
@@ -65,5 +84,24 @@ export const onboardingApi = {
       mimeType: String(data.mime_type ?? input.mimeType),
       fileSize: Number(data.file_size ?? 0) || undefined,
     };
+  },
+
+  async uploadKtp(input: ImageUploadInput, previousPath?: string): Promise<KtpUploadResult> {
+    const body = new FormData();
+    appendUpload(body, 'image', input);
+    if (previousPath) body.append('previous_ktp_path', previousPath);
+    const response = await httpClient.post('/ocr/ktp', body, {headers: {'Content-Type': 'multipart/form-data'}});
+    const root = record(response.data);
+    const data = record(root.data ?? root);
+    return {path: String(data.ktp_path ?? ''), url: String(data.ktp_url ?? ''), extracted: record(data.extracted) as KtpExtractedData};
+  },
+
+  async uploadAvatar(input: ImageUploadInput): Promise<AvatarUploadResult> {
+    const body = new FormData();
+    appendUpload(body, 'avatar', input);
+    const response = await httpClient.post('/job-seeker/avatar', body, {headers: {'Content-Type': 'multipart/form-data'}});
+    const root = record(response.data);
+    const data = record(root.data ?? root);
+    return {path: String(data.avatar_path ?? ''), url: String(data.avatar_url ?? '')};
   },
 };

@@ -14,7 +14,7 @@ import {CheckboxField, TextField} from './FormControls';
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 function emptyCertification(): CertificationDraft {
-  return {id: `certification-${Date.now()}`, name: '', issuer: '', issuedDate: '', expiredDate: '', noExpiry: false, credentialId: ''};
+  return {id: `profile-file-${Date.now()}`, type: 'document', name: '', issuer: '', issuedDate: '', expiredDate: '', noExpiry: false, credentialId: ''};
 }
 
 export function CertificationModal({visible, initialValue, onCancel, onSave}: {
@@ -51,8 +51,12 @@ export function CertificationModal({visible, initialValue, onCancel, onSave}: {
   };
 
   const save = async () => {
-    if (!value.name.trim() || !value.issuer.trim() || !value.issuedDate) {
-      setError('Nama sertifikat, penerbit, dan tanggal terbit wajib diisi.');
+    if (!value.name.trim()) {
+      setError('Nama dokumen wajib diisi.');
+      return;
+    }
+    if (value.type === 'certification' && (!value.issuer.trim() || !value.issuedDate)) {
+      setError('Penerbit dan tanggal terbit sertifikat wajib diisi.');
       return;
     }
     if (!value.noExpiry && value.expiredDate && value.expiredDate < value.issuedDate) {
@@ -94,7 +98,7 @@ export function CertificationModal({visible, initialValue, onCancel, onSave}: {
               <View accessibilityRole="alert" accessibilityLiveRegion="assertive" accessibilityState={{busy: true}} style={styles.loadingContent}>
                 <View style={styles.loadingIcon}><ActivityIndicator size="large" color="#087BFF" /></View>
                 <Text style={styles.loadingTitle}>Mohon tunggu</Text>
-                <Text style={styles.loadingMessage}>Mengunggah dan menyimpan sertifikasi...</Text>
+                <Text style={styles.loadingMessage}>Mengunggah dan menyimpan berkas...</Text>
               </View>
             ) : uploadError ? (
               <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.loadingContent}>
@@ -106,16 +110,19 @@ export function CertificationModal({visible, initialValue, onCancel, onSave}: {
             ) : (
               <>
             <View style={styles.header}>
-              <View><Text style={styles.title}>{initialValue ? 'Edit Sertifikasi' : 'Tambah Sertifikasi'}</Text><Text style={styles.subtitle}>Tambahkan bukti sertifikasi Anda</Text></View>
+              <View><Text style={styles.title}>{initialValue ? 'Edit Berkas' : 'Tambah Berkas'}</Text><Text style={styles.subtitle}>Tambahkan dokumen atau sertifikasi pendukung</Text></View>
               <Pressable accessibilityLabel="Tutup modal sertifikasi" onPress={onCancel} hitSlop={10}><Ionicons name="close" size={25} /></Pressable>
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-              <TextField tone="light" label="Nama Sertifikat" required value={value.name} onChangeText={next => update('name', next)} placeholder="Contoh: Google Data Analytics" />
-              <TextField tone="light" label="Penerbit" required value={value.issuer} onChangeText={next => update('issuer', next)} placeholder="Nama lembaga penerbit" />
-              <DateField tone="light" label="Tanggal Terbit" required value={value.issuedDate} onChange={next => update('issuedDate', next)} maximumDate={new Date()} />
-              <DateField tone="light" label="Tanggal Kedaluwarsa" disabled={value.noExpiry} value={value.expiredDate} onChange={next => update('expiredDate', next)} minimumDate={isoToLocalDate(value.issuedDate) ?? undefined} />
-              <CheckboxField tone="light" label="Tidak memiliki tanggal kedaluwarsa" checked={value.noExpiry} onChange={next => { update('noExpiry', next); if (next) update('expiredDate', ''); }} />
-              <TextField tone="light" label="ID Kredensial" value={value.credentialId} onChangeText={next => update('credentialId', next)} placeholder="Opsional" />
+              <View style={styles.segmented}>{(['document', 'certification'] as const).map(type => <Pressable key={type} onPress={() => update('type', type)} style={[styles.segment, value.type === type && styles.segmentActive]}><Text style={[styles.segmentText, value.type === type && styles.segmentTextActive]}>{type === 'document' ? 'Dokumen' : 'Sertifikasi'}</Text></Pressable>)}</View>
+              <TextField tone="light" label={value.type === 'document' ? 'Nama Dokumen' : 'Nama Sertifikat'} required value={value.name} onChangeText={next => update('name', next)} placeholder={value.type === 'document' ? 'Contoh: CV terbaru' : 'Contoh: Google Data Analytics'} />
+              {value.type === 'certification' ? <>
+                <TextField tone="light" label="Penerbit" required value={value.issuer} onChangeText={next => update('issuer', next)} placeholder="Nama lembaga penerbit" />
+                <DateField tone="light" label="Tanggal Terbit" required value={value.issuedDate} onChange={next => update('issuedDate', next)} maximumDate={new Date()} />
+                <DateField tone="light" label="Tanggal Kedaluwarsa" disabled={value.noExpiry} value={value.expiredDate} onChange={next => update('expiredDate', next)} minimumDate={isoToLocalDate(value.issuedDate) ?? undefined} />
+                <CheckboxField tone="light" label="Tidak memiliki tanggal kedaluwarsa" checked={value.noExpiry} onChange={next => { update('noExpiry', next); if (next) update('expiredDate', ''); }} />
+                <TextField tone="light" label="ID Kredensial" value={value.credentialId} onChangeText={next => update('credentialId', next)} placeholder="Opsional" />
+              </> : null}
               <FormFieldPressable accessibilityRole="button" accessibilityLabel="Pilih dokumen sertifikat" containerStyle={styles.fileButton} onPress={pickFile}>
                 <Ionicons name="cloud-upload-outline" size={23} color="#087BFF" />
                 <View style={styles.fileCopy}><Text style={styles.fileTitle}>{file?.name ?? value.originalName ?? 'Pilih dokumen'}</Text><Text style={styles.fileHint}>PDF, JPG, atau PNG · maksimal 2 MB</Text></View>
@@ -152,6 +159,11 @@ const styles = StyleSheet.create({
   title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 21, color: '#111'},
   subtitle: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12, color: '#555', marginTop: 5},
   content: {padding: 18},
+  segmented: {flexDirection: 'row', borderRadius: 11, backgroundColor: '#EEF3FA', padding: 4, marginBottom: 18},
+  segment: {flex: 1, minHeight: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
+  segmentActive: {backgroundColor: '#087BFF'},
+  segmentText: {fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, color: '#64748B'},
+  segmentTextActive: {color: 'white'},
   fileButton: {minHeight: 72, borderRadius: 12, borderStyle: 'dashed', borderColor: '#80AEFF', flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14},
   fileCopy: {flex: 1},
   fileTitle: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#172036', fontSize: 13},

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQuery} from '@tanstack/react-query';
-import {Tabs} from 'expo-router';
+import {router, Tabs} from 'expo-router';
 import React from 'react';
 
 import {notificationsApi} from '../../../features/notifications/api/notifications.api';
@@ -25,7 +25,20 @@ export default function CandidateTabsLayout() {
     }}>
       <Tabs.Screen name="home" options={{title: 'Beranda', tabBarIcon: ({color, size}) => <Ionicons name="home" color={color} size={size} />}} />
       <Tabs.Screen name="jobs" options={{title: 'Lowongan', tabBarIcon: ({color, size}) => <Ionicons name="briefcase-outline" color={color} size={size} />}} />
-      <Tabs.Screen name="career" options={{title: 'Lamaran', tabBarIcon: ({color, size}) => <Ionicons name="document-text-outline" color={color} size={size} />}} />
+      <Tabs.Screen
+        name="career"
+        listeners={{
+          tabPress: event => {
+            event.preventDefault();
+            router.push('/(candidate)/jobs/saved' as never);
+          },
+        }}
+        options={{
+          title: 'Disimpan',
+          tabBarAccessibilityLabel: 'Buka Lowongan Tersimpan',
+          tabBarIcon: ({color, focused, size}) => <Ionicons name={focused ? 'bookmark' : 'bookmark-outline'} color={color} size={size} />,
+        }}
+      />
       <Tabs.Screen
         name="notifications"
         options={{

@@ -4,16 +4,16 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {JOBS_COLORS, JOBS_FONTS} from './jobs.ui';
 
-type JobsResultHeaderProps = {total: number; onSortPress: () => void};
+type JobsResultHeaderProps = {total: number; onSortPress?: () => void};
 
 export function JobsResultHeader({total, onSortPress}: JobsResultHeaderProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.total}>{total} lowongan ditemukan</Text>
-      <Pressable accessibilityRole="button" onPress={onSortPress} style={styles.sort}>
+      {onSortPress ? <Pressable accessibilityRole="button" onPress={onSortPress} style={styles.sort}>
         <Text style={styles.sortText}>Terbaru</Text>
         <Ionicons name="chevron-down" size={18} color={JOBS_COLORS.body} />
-      </Pressable>
+      </Pressable> : null}
     </View>
   );
 }

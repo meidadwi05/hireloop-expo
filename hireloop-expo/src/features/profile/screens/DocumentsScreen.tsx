@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
+import {File, Paths} from 'expo-file-system';
 import * as Linking from 'expo-linking';
+import * as Sharing from 'expo-sharing';
 import React, {useMemo, useState} from 'react';
 import {
   Alert,
@@ -77,6 +79,28 @@ async function openItem(item: ProfileFileItem) {
   await Linking.openURL(url);
 }
 
+async function downloadItem(item: ProfileFileItem) {
+  const url = resolveFileUrl(item);
+  if (!url) throw new Error('URL file tidak tersedia.');
+  const fileName = (item.originalName || `${item.name}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (Platform.OS === 'web') {
+    const blob = item.type === 'certification' ? await profileApi.getCertificationMedia(item.id, 0) : await fetch(url).then(response => {
+      if (!response.ok) throw new Error('File gagal diunduh.');
+      return response.blob();
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+    return;
+  }
+  const file = await File.downloadFileAsync(url, new File(Paths.cache, fileName), {idempotent: true});
+  if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, {dialogTitle: `Simpan ${item.name}`, mimeType: item.mimeType || undefined});
+  else await Linking.openURL(file.uri);
+}
+
 function FileCard({item, onMenu}: {item: ProfileFileItem; onMenu: () => void}) {
   const certification = item.type === 'certification';
   const description = certification
@@ -97,7 +121,7 @@ function FileCard({item, onMenu}: {item: ProfileFileItem; onMenu: () => void}) {
       {certification && item.originalName ? <View style={styles.mediaRow}><Ionicons name="document-outline" size={18} color="#7655E9" /><Text numberOfLines={1} style={styles.mediaName}>{item.originalName}</Text><Text style={styles.mediaSize}>{humanSize(item.size)}</Text></View> : null}
       <View style={styles.fileActions}>
         <Pressable onPress={() => void openItem(item).catch(error => Alert.alert('File tidak dapat dibuka', toAppApiError(error).message))} style={styles.outlineButton}><Ionicons name="eye-outline" size={18} color={profileColors.blue} /><Text style={styles.outlineText}>Lihat</Text></Pressable>
-        <Pressable onPress={() => void openItem(item).catch(error => Alert.alert('File tidak dapat diunduh', toAppApiError(error).message))} style={styles.downloadButton}><Ionicons name="download-outline" size={18} color="white" /><Text style={styles.downloadText}>Unduh</Text></Pressable>
+        <Pressable onPress={() => void downloadItem(item).catch(error => Alert.alert('File tidak dapat diunduh', toAppApiError(error).message))} style={styles.downloadButton}><Ionicons name="download-outline" size={18} color="white" /><Text style={styles.downloadText}>Unduh</Text></Pressable>
       </View>
     </ProfileCard>
   );

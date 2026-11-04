@@ -41,6 +41,16 @@ describe('dashboard sections', () => {
     expect(screen.getByText(/Online/)).toBeTruthy();
     expect(screen.getByText('Gabung Interview')).toBeTruthy();
     expect(screen.getByText('Detail')).toBeTruthy();
+    expect(screen.getByText('27')).toBeTruthy();
+    expect(screen.getByText('OKT')).toBeTruthy();
+    expect(screen.getByText('10:00 WIB')).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByTestId('interview-date-block').props.style)).toMatchObject({
+      borderRadius: 12,
+      overflow: 'hidden',
+      width: 92,
+    });
+    expect(StyleSheet.flatten(screen.getByTestId('interview-date-primary').props.style).backgroundColor).toBe('#0643AA');
+    expect(StyleSheet.flatten(screen.getByTestId('interview-date-footer').props.style).backgroundColor).toBe('#D9E8FF');
     expect(screen.queryByText('Progress Lamaran')).toBeNull();
     expect(screen.queryByText('Pengumuman')).toBeNull();
   });

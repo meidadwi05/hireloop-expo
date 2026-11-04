@@ -10,6 +10,7 @@ import {DateField} from './DateField';
 import {EducationModal} from './EducationModal';
 import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
 import {IdentityUploadCards} from './IdentityUploadCards';
+import type {KtpExtractedData} from '../api/onboarding.api';
 
 const genderOptions: MasterOption[] = [{value: 'male', label: 'Laki-laki'}, {value: 'female', label: 'Perempuan'}];
 const maritalOptions: MasterOption[] = [{value: 'single', label: 'Belum Menikah'}, {value: 'married', label: 'Menikah'}, {value: 'other', label: 'Lainnya'}];
@@ -27,7 +28,6 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
   const {width} = useWindowDimensions();
   const [educationOpen, setEducationOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<EducationDraft | null>(null);
-  const [nik, setNik] = useState('');
   const age = useMemo(() => calculateAge(draft.birthDate), [draft.birthDate]);
   const birthDateLimits = useMemo(() => {
     const today = new Date();
@@ -37,6 +37,16 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
     };
   }, []);
   const setField = <K extends keyof OnboardingDraft>(field: K, value: OnboardingDraft[K]) => dispatch({type: 'set-field', field, value});
+  const applyOcr = (extracted: KtpExtractedData) => {
+    if (extracted.nik) setField('nik', extracted.nik.replace(/\D/g, '').slice(0, 16));
+    if (extracted.full_name) setField('fullName', extracted.full_name);
+    if (extracted.birth_place) setField('birthPlace', extracted.birth_place);
+    if (extracted.birth_date) setField('birthDate', extracted.birth_date);
+    if (extracted.gender) setField('gender', extracted.gender);
+    if (extracted.marital_status) setField('maritalStatus', extracted.marital_status);
+    const addressLine = extracted.full_address || extracted.address;
+    if (addressLine) dispatch({type: 'set-address', target: 'identityAddress', address: {...draft.identityAddress, addressLine}});
+  };
 
   const openEducation = (item: EducationDraft | null = null) => {
     setEditingEducation(item);
@@ -57,14 +67,27 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
 
   return (
     <View testID="personal-data-step" style={styles.stepContent}>
-      <IdentityUploadCards />
+      <IdentityUploadCards
+        avatarUrl={draft.avatarUrl}
+        ktpPath={draft.ktpPath}
+        ktpUrl={draft.ktpUrl}
+        onAvatarUploaded={result => {
+          setField('avatarPath', result.path);
+          setField('avatarUrl', result.url);
+        }}
+        onKtpUploaded={result => {
+          setField('ktpPath', result.path);
+          setField('ktpUrl', result.url);
+          applyOcr(result.extracted);
+        }}
+      />
       <View testID="personal-information-card" style={[styles.card, width < 390 && styles.cardNarrow]}>
         <View style={styles.sectionTitle}><Ionicons name="person-outline" size={25} color="#2F7FFF" /><Text style={styles.sectionTitleText}>Informasi Pribadi</Text></View>
         <TextField
           label="NIK"
           required
-          value={nik}
-          onChangeText={value => setNik(value.replace(/\D/g, '').slice(0, 16))}
+          value={draft.nik}
+          onChangeText={value => setField('nik', value.replace(/\D/g, '').slice(0, 16))}
           keyboardType="number-pad"
           maxLength={16}
           placeholder="Contoh: 3275010101900001"

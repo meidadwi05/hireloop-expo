@@ -18,13 +18,14 @@ function normalizeOptions(input: unknown): MasterOption[] {
   }).filter(option => option.value && option.label);
 }
 
-export function AddressFields({label, value, onChange, disabled, error, afterAddressLine}: {
+export function AddressFields({label, value, onChange, disabled, error, afterAddressLine, tone = 'dark'}: {
   label: string;
   value: AddressDetail;
   onChange: (value: AddressDetail) => void;
   disabled?: boolean;
   error?: string;
   afterAddressLine?: React.ReactNode;
+  tone?: 'dark' | 'light';
 }) {
   const provinces = useQuery({queryKey: onboardingKeys.regions('province'), queryFn: async () => normalizeOptions(await masterDataApi.provinces()), staleTime: 60 * 60 * 1000});
   const regencies = useQuery({queryKey: onboardingKeys.regions('regency', value.provinceCode), queryFn: async () => normalizeOptions(await masterDataApi.regencies(value.provinceCode)), enabled: Boolean(value.provinceCode), staleTime: 60 * 60 * 1000});
@@ -36,13 +37,13 @@ export function AddressFields({label, value, onChange, disabled, error, afterAdd
 
   return (
     <View>
-      <TextField groupStyle={afterAddressLine ? styles.addressLineWithSlot : undefined} label={label} required multiline disabled={disabled} value={value.addressLine} onChangeText={addressLine => onChange({...value, addressLine})} placeholder={`Alamat sesuai ${label.replace('Alamat ', '')}`} error={error} />
+      <TextField tone={tone} groupStyle={afterAddressLine ? styles.addressLineWithSlot : undefined} label={label} required multiline disabled={disabled} value={value.addressLine} onChangeText={addressLine => onChange({...value, addressLine})} placeholder={`Alamat sesuai ${label.replace('Alamat ', '')}`} error={error} />
       {afterAddressLine}
-      <SelectField label="Provinsi" required searchable disabled={disabled || provinces.isLoading} value={value.provinceCode} options={provinces.data ?? []} onChange={next => setOption('provinceCode', 'provinceName', provinces.data ?? [], next, {regencyCode: '', regencyName: '', districtCode: '', districtName: '', villageCode: '', villageName: '', postalCode: ''})} placeholder={provinces.isLoading ? 'Memuat provinsi...' : 'Pilih provinsi'} />
-      <SelectField label="Kota / Kabupaten" required searchable disabled={disabled || !value.provinceCode || regencies.isLoading} value={value.regencyCode} options={regencies.data ?? []} onChange={next => setOption('regencyCode', 'regencyName', regencies.data ?? [], next, {districtCode: '', districtName: '', villageCode: '', villageName: '', postalCode: ''})} placeholder="Pilih kota / kabupaten" />
-      <SelectField label="Kecamatan" required searchable disabled={disabled || !value.regencyCode || districts.isLoading} value={value.districtCode} options={districts.data ?? []} onChange={next => setOption('districtCode', 'districtName', districts.data ?? [], next, {villageCode: '', villageName: '', postalCode: ''})} placeholder="Pilih kecamatan" />
-      <SelectField label="Kelurahan / Desa" required searchable disabled={disabled || !value.districtCode || villages.isLoading} value={value.villageCode} options={villages.data ?? []} onChange={next => setOption('villageCode', 'villageName', villages.data ?? [], next, {})} placeholder="Pilih kelurahan / desa" />
-      <TextField label="Kode Pos" disabled={disabled} value={value.postalCode} onChangeText={postalCode => onChange({...value, postalCode})} placeholder="Kode pos" keyboardType="number-pad" />
+      <SelectField tone={tone} label="Provinsi" required searchable disabled={disabled || provinces.isLoading} value={value.provinceCode} options={provinces.data ?? []} onChange={next => setOption('provinceCode', 'provinceName', provinces.data ?? [], next, {regencyCode: '', regencyName: '', districtCode: '', districtName: '', villageCode: '', villageName: '', postalCode: ''})} placeholder={provinces.isLoading ? 'Memuat provinsi...' : 'Pilih provinsi'} />
+      <SelectField tone={tone} label="Kota / Kabupaten" required searchable disabled={disabled || !value.provinceCode || regencies.isLoading} value={value.regencyCode} options={regencies.data ?? []} onChange={next => setOption('regencyCode', 'regencyName', regencies.data ?? [], next, {districtCode: '', districtName: '', villageCode: '', villageName: '', postalCode: ''})} placeholder="Pilih kota / kabupaten" />
+      <SelectField tone={tone} label="Kecamatan" required searchable disabled={disabled || !value.regencyCode || districts.isLoading} value={value.districtCode} options={districts.data ?? []} onChange={next => setOption('districtCode', 'districtName', districts.data ?? [], next, {villageCode: '', villageName: '', postalCode: ''})} placeholder="Pilih kecamatan" />
+      <SelectField tone={tone} label="Kelurahan / Desa" required searchable disabled={disabled || !value.districtCode || villages.isLoading} value={value.villageCode} options={villages.data ?? []} onChange={next => setOption('villageCode', 'villageName', villages.data ?? [], next, {})} placeholder="Pilih kelurahan / desa" />
+      <TextField tone={tone} label="Kode Pos" disabled={disabled} value={value.postalCode} onChangeText={postalCode => onChange({...value, postalCode})} placeholder="Kode pos" keyboardType="number-pad" />
     </View>
   );
 }

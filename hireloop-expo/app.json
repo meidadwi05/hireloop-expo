@@ -32,7 +32,15 @@
       "expo-splash-screen",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "HireLoop memerlukan akses galeri untuk mengunggah KTP dan foto profil.",
+          "cameraPermission": "HireLoop memerlukan akses kamera untuk mengambil foto KTP dan foto profil.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

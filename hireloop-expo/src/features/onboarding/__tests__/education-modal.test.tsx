@@ -26,7 +26,7 @@ describe('modal pendidikan onboarding', () => {
 
     fireEvent.press(screen.getByLabelText('Tingkat Pendidikan'));
     expect(screen.getByTestId('inline-options-Tingkat Pendidikan')).toBeTruthy();
-    fireEvent.press(screen.getByText('S1'));
+    fireEvent.press(screen.getByText('Sarjana (S1)'));
 
     fireEvent.press(screen.getByLabelText('Jurusan'));
     expect(screen.getByTestId('inline-options-Jurusan')).toBeTruthy();

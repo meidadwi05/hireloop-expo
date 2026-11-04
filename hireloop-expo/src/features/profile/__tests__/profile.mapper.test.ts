@@ -62,6 +62,22 @@ describe('profile mapper', () => {
     expect(files[1]).toMatchObject({type: 'certification', issuer: 'BNSP', originalName: 'k3.pdf'});
   });
 
+  it('normalizes legacy work preference values', () => {
+    const profile = mapCandidateProfile({data: {job_seeker: {
+      job_type_expected: 'onsite',
+      work_type: 'contract',
+      work_period_status: 'Siap Bekerja',
+      preferred_work_types: ['part_time', 'Magang'],
+      preferred_work_settings: ['onsite', 'remote'],
+    }}});
+
+    expect(profile.jobTypeExpected).toBe('on_site');
+    expect(profile.workType).toBe('kontrak');
+    expect(profile.workPeriodStatus).toBe('available');
+    expect(profile.preferredWorkTypes).toEqual(['paruh_waktu', 'internship']);
+    expect(profile.preferredWorkSettings).toEqual(['on_site', 'remote']);
+  });
+
   it('calculates completion deterministically', () => {
     const profile = mapCandidateProfile({data: {user: {email: 'zaki@example.com'}, job_seeker: {full_name: 'Zaki'}}});
     expect(calculateProfileCompletion(profile)).toBe(20);

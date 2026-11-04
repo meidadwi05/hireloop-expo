@@ -22,12 +22,26 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));
 
+jest.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: jest.fn(),
+  launchCameraAsync: jest.fn(),
+  launchImageLibraryAsync: jest.fn(),
+}));
+
+jest.mock('../api/onboarding.api', () => ({
+  onboardingApi: {
+    uploadKtp: jest.fn(),
+    uploadAvatar: jest.fn(),
+  },
+}));
+
 describe('card upload identitas onboarding', () => {
   it('menampilkan card KTP dan foto profil sebelum informasi pribadi', () => {
+    const dispatch = jest.fn();
     const screen = render(
       <PersonalDataStep
         draft={createEmptyOnboardingDraft('Andi Permana')}
-        dispatch={jest.fn()}
+        dispatch={dispatch}
         majorOptions={[]}
         onNext={jest.fn()}
         runAction={jest.fn()}
@@ -46,10 +60,11 @@ describe('card upload identitas onboarding', () => {
   });
 
   it('menampilkan NIK wajib sebagai field lokal 16 digit', () => {
+    const dispatch = jest.fn();
     const screen = render(
       <PersonalDataStep
         draft={createEmptyOnboardingDraft('Andi Permana')}
-        dispatch={jest.fn()}
+        dispatch={dispatch}
         majorOptions={[]}
         onNext={jest.fn()}
         runAction={jest.fn()}
@@ -59,7 +74,7 @@ describe('card upload identitas onboarding', () => {
     const nikInput = screen.getByLabelText('NIK');
     fireEvent.changeText(nikInput, '3275-0101-0190-0001-extra');
 
-    expect(nikInput.props.value).toBe('3275010101900001');
+    expect(dispatch).toHaveBeenCalledWith({type: 'set-field', field: 'nik', value: '3275010101900001'});
   });
 
   it('mengurangi radius card dan menempatkan checkbox di slot alamat domisili', () => {

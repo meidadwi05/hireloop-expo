@@ -10,23 +10,45 @@ describe('dashboard home responsive layout', () => {
   test('mengikuti rasio asset hero pada ukuran ponsel dan lebar referensi', () => {
     expect(getDashboardHeroLayout(320)).toMatchObject({
       compact: true,
+      headerGreetingGap: 24,
+      headerRowHeight: 44,
+      headerTopPadding: 18,
       heroHeight: 223,
       horizontalPadding: 18,
-      logoWidth: 120,
+      logoHeight: 36,
+      logoWidth: 132,
     });
     expect(getDashboardHeroLayout(390)).toMatchObject({
       compact: false,
+      headerGreetingGap: 32,
+      headerRowHeight: 44,
+      headerTopPadding: 22,
       heroHeight: 271,
       horizontalPadding: 28,
-      logoWidth: 120,
+      logoHeight: 38,
+      logoWidth: 140,
     });
     expect(getDashboardHeroLayout(640)).toMatchObject({
       compact: false,
+      headerGreetingGap: 36,
+      headerRowHeight: 58,
+      headerTopPadding: 24,
       heroHeight: 445,
       horizontalPadding: 36,
-      logoWidth: 186,
+      logoHeight: 58,
+      logoWidth: 210,
       wide: true,
     });
+  });
+
+  test('memperbesar logo memakai rasio asset asli tanpa melewati batas responsif', () => {
+    for (const width of [320, 390, 430, 640, 720]) {
+      const layout = getDashboardHeroLayout(width);
+      expect(layout.logoWidth).toBeGreaterThanOrEqual(132);
+      expect(layout.logoWidth).toBeLessThanOrEqual(210);
+      expect(layout.logoHeight).toBe(Math.round(layout.logoWidth * (274 / 1000)));
+      expect(layout.headerRowHeight).toBeGreaterThanOrEqual(44);
+    }
   });
 
   test('membatasi hero pada lebar dashboard maksimum 720px', () => {

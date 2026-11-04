@@ -1,6 +1,7 @@
 import {z} from 'zod';
 
 import type {OnboardingDraft} from './onboarding.types';
+import {isNoFormalEducation} from './onboarding.options';
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -45,6 +46,7 @@ export const educationSchema = z.object({
   endDate: optionalIsoDate,
   ongoing: z.boolean(),
 }).superRefine((education, context) => {
+  if (isNoFormalEducation(education.educationLevel)) return;
   if (!education.ongoing && education.startDate && education.endDate && education.endDate < education.startDate) {
     context.addIssue({code: 'custom', path: ['endDate'], message: 'Tanggal selesai harus setelah tanggal mulai'});
   }
@@ -58,8 +60,8 @@ export const experienceSchema = z.object({
   startDate: z.string().refine(isValidIsoDate, 'Tanggal mulai tidak valid'),
   endDate: z.string(),
   current: z.boolean(),
-  workSystem: z.string().trim().min(1, 'Sistem kerja wajib dipilih'),
-  employmentStatus: z.string().trim().min(1, 'Status pekerjaan wajib dipilih'),
+  workSystem: z.enum(['on_site', 'remote', 'hybrid'], {message: 'Sistem kerja wajib dipilih'}),
+  employmentStatus: z.enum(['full_time', 'paruh_waktu', 'kontrak', 'freelance', 'internship', 'outsourcing', 'kasual'], {message: 'Status pekerjaan wajib dipilih'}),
   location: z.string(),
   description: z.string(),
 }).superRefine((experience, context) => {
@@ -72,6 +74,9 @@ export const experienceSchema = z.object({
 });
 
 export const personalStepSchema = z.object({
+  nik: z.string().regex(/^\d{16}$/, 'NIK harus tepat 16 digit angka'),
+  ktpPath: z.string().min(1, 'Foto KTP wajib diunggah dan diverifikasi'),
+  avatarPath: z.string().min(1, 'Foto profil wajib diunggah'),
   fullName: z.string().trim().min(3, 'Nama lengkap minimal 3 karakter'),
   gender: z.enum(['male', 'female'], {message: 'Jenis kelamin wajib dipilih'}),
   birthPlace: z.string().trim().min(1, 'Tempat lahir wajib diisi'),
@@ -101,9 +106,10 @@ export const workStepSchema = z.object({
   tools: z.string().trim(),
   certifications: z.array(z.object({
     id: z.string(),
+    type: z.enum(['document', 'certification']),
     name: z.string().trim().min(1),
-    issuer: z.string().trim().min(1),
-    issuedDate: z.string().refine(isValidIsoDate, 'Tanggal terbit wajib diisi'),
+    issuer: z.string().trim(),
+    issuedDate: optionalIsoDate,
     expiredDate: optionalIsoDate,
     noExpiry: z.boolean(),
     credentialId: z.string(),
@@ -112,6 +118,8 @@ export const workStepSchema = z.object({
     mimeType: z.string().optional(),
     fileSize: z.number().optional(),
   }).superRefine((certification, context) => {
+    if (certification.type === 'certification' && !certification.issuer) context.addIssue({code: 'custom', path: ['issuer'], message: 'Penerbit wajib diisi'});
+    if (certification.type === 'certification' && !isValidIsoDate(certification.issuedDate)) context.addIssue({code: 'custom', path: ['issuedDate'], message: 'Tanggal terbit wajib diisi'});
     if (!certification.noExpiry && certification.expiredDate && certification.expiredDate < certification.issuedDate) {
       context.addIssue({code: 'custom', path: ['expiredDate'], message: 'Tanggal kedaluwarsa harus setelah tanggal terbit'});
     }

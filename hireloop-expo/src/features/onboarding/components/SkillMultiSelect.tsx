@@ -8,10 +8,11 @@ import {FormTextInput} from '../../../components/forms/FormTextInput';
 import type {SelectedSkill, SkillOption} from '../onboarding.types';
 import {FieldLabel} from './FormControls';
 
-export function SkillMultiSelect({options, selected, onToggle, error}: {
+export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, error}: {
   options: SkillOption[];
   selected: SelectedSkill[];
   onToggle: (skill: SkillOption) => void;
+  onToggleCustom: (name: string) => void;
   error?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -32,7 +33,7 @@ export function SkillMultiSelect({options, selected, onToggle, error}: {
           {selected.length ? selected.map(skill => (
             <View key={`${skill.skillId}-${skill.name}`} style={styles.chip}>
               <Text style={styles.chipText}>{skill.name}</Text>
-              <Pressable accessibilityLabel={`Hapus ${skill.name}`} onPress={() => onToggle({id: skill.skillId ?? 0, name: skill.name})} hitSlop={8}><Ionicons name="close" size={14} color="#4C8CFF" /></Pressable>
+              <Pressable accessibilityLabel={`Hapus ${skill.name}`} onPress={() => skill.skillId === null ? onToggleCustom(skill.name) : onToggle({id: skill.skillId, name: skill.name})} hitSlop={8}><Ionicons name="close" size={14} color="#4C8CFF" /></Pressable>
             </View>
           )) : <Text style={styles.placeholder}>Cari keahlian</Text>}
         </View>
@@ -56,7 +57,13 @@ export function SkillMultiSelect({options, selected, onToggle, error}: {
               data={filtered}
               keyExtractor={item => String(item.id)}
               keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={<Text style={styles.empty}>Keahlian tidak ditemukan</Text>}
+              ListHeaderComponent={query.trim() && !options.some(option => option.name.toLowerCase() === query.trim().toLowerCase()) ? (
+                <Pressable accessibilityRole="button" onPress={() => { onToggleCustom(query); setQuery(''); }} style={styles.customOption}>
+                  <Ionicons name="add-circle-outline" size={21} color="#087BFF" />
+                  <View style={styles.customCopy}><Text style={styles.customTitle}>Tambahkan keahlian sendiri</Text><Text numberOfLines={1} style={styles.customName}>{query.trim()}</Text></View>
+                </Pressable>
+              ) : null}
+              ListEmptyComponent={<Text style={styles.empty}>Tidak ada skill master yang cocok. Anda tetap dapat menambahkan skill sendiri.</Text>}
               renderItem={({item}) => {
                 const checked = selected.some(skill => skill.skillId === item.id);
                 return <Pressable accessibilityRole="checkbox" accessibilityState={{checked}} onPress={() => onToggle(item)} style={styles.option}><Text style={styles.optionText}>{item.name}</Text>{checked ? <Ionicons name="checkmark-circle" size={22} color="#087BFF" /> : null}</Pressable>;
@@ -87,6 +94,10 @@ const styles = StyleSheet.create({
   search: {height: 42, paddingVertical: 0, color: '#111827', fontFamily: 'PlusJakartaSans_400Regular'},
   option: {minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   optionText: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, flex: 1},
+  customOption: {minHeight: 58, borderRadius: 12, backgroundColor: '#EEF5FF', paddingHorizontal: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10},
+  customCopy: {flex: 1, minWidth: 0},
+  customTitle: {fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12, color: '#087BFF'},
+  customName: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 11, color: '#4B5563', marginTop: 2},
   empty: {fontFamily: 'PlusJakartaSans_400Regular', color: '#6B7280', textAlign: 'center', padding: 30},
   done: {height: 48, borderRadius: 11, backgroundColor: '#087BFF', alignItems: 'center', justifyContent: 'center', marginTop: 14},
   doneText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white'},

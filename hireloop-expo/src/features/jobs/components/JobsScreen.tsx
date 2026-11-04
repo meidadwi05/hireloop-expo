@@ -22,7 +22,6 @@ import {JobsCategoryTabs} from './JobsCategoryTabs';
 import {JobsEmptyState} from './JobsEmptyState';
 import {JobsHeader} from './JobsHeader';
 import {JobsListSkeleton} from './JobsListSkeleton';
-import {JobsLocationFilter} from './JobsLocationFilter';
 import {JobsResultHeader} from './JobsResultHeader';
 import {JOBS_COLORS} from './jobs.ui';
 
@@ -47,13 +46,6 @@ export function JobsScreen() {
     } as never);
   }, [applyAccess.isTier2Banned]);
 
-  const showUnsupported = useCallback(() => {
-    Alert.alert(
-      'Segera tersedia',
-      'Backend saat ini belum menyediakan filter lokasi dan filter lanjutan untuk daftar gabungan lowongan.',
-    );
-  }, []);
-
   const reset = useCallback(() => {
     jobs.setSearch('');
     setPriority('all');
@@ -71,21 +63,9 @@ export function JobsScreen() {
         onChangeSearch={jobs.setSearch}
         onOpenSaved={() => router.push('/(candidate)/jobs/saved' as never)}
       />
-      <View style={[styles.locationControls, {paddingHorizontal: pagePadding}]}>
-        <JobsLocationFilter
-          controlHeight={iconLayout.controlHeight}
-          controlIconSize={iconLayout.controlIconSize}
-          chevronIconSize={iconLayout.chevronIconSize}
-          iconSlotSize={iconLayout.iconSlotSize}
-          onUnavailablePress={showUnsupported}
-        />
-      </View>
       <View style={[styles.controls, {paddingHorizontal: pagePadding}]}>
         <JobsCategoryTabs value={priority} onChange={setPriority} />
-        <JobsResultHeader
-          total={jobs.total}
-          onSortPress={() => Alert.alert('Urutan lowongan', 'Daftar memakai urutan terbaru dari server HireLoop.')}
-        />
+        <JobsResultHeader total={jobs.total} />
       </View>
     </>
   );
@@ -144,7 +124,6 @@ export function JobsScreen() {
 const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   content: {paddingBottom: 22},
-  locationControls: {zIndex: 1, marginTop: 14},
   controls: {gap: 18, paddingTop: 18, marginBottom: 18},
   separator: {height: 16},
   footerLoader: {paddingVertical: 24},

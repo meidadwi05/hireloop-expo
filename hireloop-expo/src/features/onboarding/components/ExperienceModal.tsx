@@ -4,17 +4,10 @@ import {KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {experienceSchema} from '../onboarding.schemas';
-import type {ExperienceDraft, MasterOption} from '../onboarding.types';
+import {employmentStatusOptions, normalizeEmploymentStatus, normalizeWorkSystem, workSystemOptions} from '../onboarding.options';
+import type {ExperienceDraft} from '../onboarding.types';
 import {DateField, isoToLocalDate} from './DateField';
 import {CheckboxField, SelectField, TextField} from './FormControls';
-
-const workSystems: MasterOption[] = [
-  {value: 'onsite', label: 'On-site'}, {value: 'hybrid', label: 'Hybrid'}, {value: 'remote', label: 'Remote'},
-];
-const employmentStatuses: MasterOption[] = [
-  {value: 'full_time', label: 'Penuh Waktu'}, {value: 'part_time', label: 'Paruh Waktu'}, {value: 'contract', label: 'Kontrak'},
-  {value: 'internship', label: 'Magang'}, {value: 'freelance', label: 'Freelance'},
-];
 
 function emptyExperience(): ExperienceDraft {
   return {id: `experience-${Date.now()}`, experienceListId: null, position: '', companyName: '', startDate: '', endDate: '', current: false, workSystem: '', employmentStatus: '', location: '', description: ''};
@@ -26,7 +19,11 @@ export function ExperienceModal({visible, initialValue, onCancel, onSave}: {
   onCancel: () => void;
   onSave: (experience: ExperienceDraft) => void;
 }) {
-  const [value, setValue] = useState<ExperienceDraft>(() => initialValue ? {...initialValue} : emptyExperience());
+  const [value, setValue] = useState<ExperienceDraft>(() => initialValue ? {
+    ...initialValue,
+    workSystem: normalizeWorkSystem(initialValue.workSystem),
+    employmentStatus: normalizeEmploymentStatus(initialValue.employmentStatus),
+  } : emptyExperience());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const update = <K extends keyof ExperienceDraft>(field: K, next: ExperienceDraft[K]) => {
     setValue(current => ({...current, [field]: next}));
@@ -55,8 +52,8 @@ export function ExperienceModal({visible, initialValue, onCancel, onSave}: {
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
               <TextField tone="light" label="Nama Perusahaan" required value={value.companyName} onChangeText={next => update('companyName', next)} placeholder="Contoh: PT Inovasi Digital" error={errors.companyName} />
               <TextField tone="light" label="Posisi / Jabatan" required value={value.position} onChangeText={next => update('position', next)} placeholder="Contoh: UI/UX Designer" error={errors.position} />
-              <SelectField tone="light" label="Tipe Pekerjaan" required value={value.employmentStatus} onChange={next => update('employmentStatus', next)} options={employmentStatuses} placeholder="Pilih tipe pekerjaan" error={errors.employmentStatus} />
-              <SelectField tone="light" label="Sistem Kerja" required value={value.workSystem} onChange={next => update('workSystem', next)} options={workSystems} placeholder="Pilih sistem kerja" error={errors.workSystem} />
+              <SelectField tone="light" label="Tipe Pekerjaan" required value={value.employmentStatus} onChange={next => update('employmentStatus', normalizeEmploymentStatus(next))} options={employmentStatusOptions} placeholder="Pilih tipe pekerjaan" error={errors.employmentStatus} />
+              <SelectField tone="light" label="Sistem Kerja" required value={value.workSystem} onChange={next => update('workSystem', normalizeWorkSystem(next))} options={workSystemOptions} placeholder="Pilih sistem kerja" error={errors.workSystem} />
               <TextField tone="light" label="Lokasi Kerja" value={value.location} onChangeText={next => update('location', next)} placeholder="Contoh: Jakarta" />
               <DateField tone="light" label="Mulai Bekerja" required value={value.startDate} onChange={next => update('startDate', next)} maximumDate={new Date()} error={errors.startDate} />
               <DateField tone="light" label="Selesai Bekerja" required={!value.current} disabled={value.current} value={value.endDate} onChange={next => update('endDate', next)} minimumDate={isoToLocalDate(value.startDate) ?? undefined} maximumDate={new Date()} error={errors.endDate} />

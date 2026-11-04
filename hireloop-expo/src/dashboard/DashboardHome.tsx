@@ -108,6 +108,7 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const layout = getDashboardHeroLayout(width);
+  const heroHeaderTop = insets.top + layout.headerTopPadding;
   const firstName = user.full_name?.trim().split(/\s+/)[0] || 'Kandidat';
   const avatarUrl = resolveMediaUrl(user.avatar_url);
   const initials = user.full_name
@@ -127,13 +128,13 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
       testID="dashboard-hero"
     >
       <View
-        testID="dashboard-hero-copy"
+        testID="dashboard-hero-header"
         style={[
-          styles.heroCopy,
+          styles.heroHeader,
           {
             left: layout.horizontalPadding,
-            top: Math.max(insets.top + 12, layout.contentTop),
-            width: layout.compact ? '62%' : layout.wide ? '55%' : '58%',
+            right: layout.horizontalPadding,
+            top: heroHeaderTop,
           },
         ]}
       >
@@ -142,73 +143,77 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
           resizeMode="contain"
           style={{width: layout.logoWidth, height: layout.logoHeight}}
           accessibilityLabel="HireLoop"
+          testID="dashboard-hireloop-logo"
         />
-        <Text style={[styles.greetingTitle, layout.compact && styles.greetingTitleCompact, layout.wide && styles.greetingTitleWide]}>Hi, {firstName}</Text>
-        <Text style={[styles.greetingSubtitle, layout.compact && styles.greetingSubtitleCompact, layout.wide && styles.greetingSubtitleWide]}>Temukan peluang terbaik{`\n`}untuk karirmu hari ini</Text>
+        <View testID="dashboard-hero-actions" style={styles.heroActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${unread} notifikasi belum dibaca`}
+            onPress={() => onNavigate?.('/(candidate)/(tabs)/notifications')}
+            style={styles.notificationButton}
+          >
+            <Ionicons name="notifications" size={25} color="white" />
+            {unread > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable accessibilityLabel="Buka Profil Saya" accessibilityRole="button" onPress={() => onNavigate?.('/profile')} style={styles.avatarButton}>
+            {avatarUrl ? (
+              <Image source={{uri: avatarUrl}} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
       </View>
       <View
+        testID="dashboard-hero-copy"
         style={[
-          styles.heroActions,
-          {right: layout.horizontalPadding, top: insets.top + 12},
+          styles.heroCopy,
+          {
+            left: layout.horizontalPadding,
+            top: heroHeaderTop + layout.headerRowHeight + layout.headerGreetingGap,
+            width: layout.compact ? '62%' : layout.wide ? '55%' : '58%',
+          },
         ]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${unread} notifikasi belum dibaca`}
-          onPress={() => onNavigate?.('/(candidate)/(tabs)/notifications')}
-          style={styles.notificationButton}
-        >
-          <Ionicons name="notifications" size={25} color="white" />
-          {unread > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>{unread > 99 ? '99+' : unread}</Text>
-            </View>
-          )}
-        </Pressable>
-        <Pressable accessibilityLabel="Buka Profil Saya" accessibilityRole="button" onPress={() => onNavigate?.('/profile')} style={styles.avatarButton}>
-          {avatarUrl ? (
-            <Image source={{uri: avatarUrl}} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-          )}
-        </Pressable>
+        <Text style={[styles.greetingTitle, layout.compact && styles.greetingTitleCompact, layout.wide && styles.greetingTitleWide]}>Hi, {firstName}</Text>
+        <Text style={[styles.greetingSubtitle, layout.compact && styles.greetingSubtitleCompact, layout.wide && styles.greetingSubtitleWide]}>Temukan peluang terbaik{`\n`}untuk karirmu hari ini</Text>
       </View>
     </ImageBackground>
   );
 }
 
-export function SummaryCard({applications, interviewsCount, savedCount, viewportWidth, onNavigate}: {
+export function SummaryCard({applications, interviewsCount, savedCount, viewportWidth}: {
   applications: CandidateApplication[];
   interviewsCount: number;
   savedCount: number;
   viewportWidth: number;
-  onNavigate?: (route: DashboardRoute) => void;
 }) {
   const iconSize = getDashboardSummaryIconSize(viewportWidth);
   const iconRadius = getDashboardSummaryIconRadius(viewportWidth);
   const iconGlyphSize = getDashboardSummaryGlyphSize(viewportWidth);
   const overlap = getDashboardSummaryOverlap(viewportWidth);
   const summaryItems = [
-    {label: 'Total Lamaran', value: applications.length, color: C.navy, icon: 'document-text' as const, route: '/(candidate)/(tabs)/career' as const},
-    {label: 'Dalam Seleksi', value: applications.filter(item => ['in-progress', 'transferred'].includes(item.state)).length, color: C.green, icon: 'people' as const, route: '/(candidate)/(tabs)/career' as const},
-    {label: 'Interview Mendatang', value: interviewsCount, color: C.purple, icon: 'calendar' as const, disabled: true},
-    {label: 'Lowongan Disimpan', value: savedCount, color: C.orange, icon: 'bookmark' as const, route: '/(candidate)/jobs/saved' as const},
+    {label: 'Total Lamaran', value: applications.length, color: C.navy, icon: 'document-text' as const},
+    {label: 'Dalam Seleksi', value: applications.filter(item => ['in-progress', 'transferred'].includes(item.state)).length, color: C.green, icon: 'people' as const},
+    {label: 'Interview Mendatang', value: interviewsCount, color: C.purple, icon: 'calendar' as const},
+    {label: 'Lowongan Disimpan', value: savedCount, color: C.orange, icon: 'bookmark' as const},
   ];
 
   return (
     <View testID="dashboard-summary-card" style={[styles.summaryGrid, {marginTop: -overlap}]}>
       {summaryItems.map((item, index) => (
-        <Pressable
+        <View
           key={item.label}
           testID={`dashboard-summary-item-${index}`}
-          accessibilityRole="button"
+          accessible
           accessibilityLabel={`${item.value} ${item.label}`}
-          accessibilityState={{disabled: item.disabled}}
-          disabled={item.disabled}
-          onPress={() => item.route && onNavigate?.(item.route)}
-          style={({pressed}) => [styles.summaryItem, item.disabled && styles.summaryDisabled, pressed && styles.pressed]}
+          style={styles.summaryItem}
         >
           <View testID={`dashboard-summary-icon-shadow-${index}`} style={[styles.summaryIconShadow, {borderRadius: iconRadius, height: iconSize, shadowColor: item.color, width: iconSize}]}>
             <View testID={`dashboard-summary-icon-${index}`} style={[styles.summaryIcon, {backgroundColor: item.color, borderRadius: iconRadius}]}>
@@ -219,8 +224,7 @@ export function SummaryCard({applications, interviewsCount, savedCount, viewport
             <Text testID={`dashboard-summary-value-${index}`} style={styles.summaryValue}>{item.value}</Text>
             <Text testID={`dashboard-summary-label-${index}`} numberOfLines={2} style={styles.summaryLabel}>{item.label}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={item.disabled ? '#A6B0C1' : C.brightBlue} />
-        </Pressable>
+        </View>
       ))}
     </View>
   );
@@ -303,11 +307,15 @@ function InterviewContent({interview}: {interview?: DashboardInterview}) {
 
   return (
     <View style={styles.interviewContent}>
-      <View style={styles.dateBlock}>
-        <Text style={styles.dateDay}>{day}</Text>
-        <Text style={styles.dateMonth}>{month}</Text>
-        <Text style={styles.dateRelative}>{getRelativeDayLabel(interview.date)}</Text>
-        <Text style={styles.dateTime}>{interview.time ? `${interview.time} WIB` : 'Waktu menyusul'}</Text>
+      <View testID="interview-date-block" style={styles.dateBlock}>
+        <View testID="interview-date-primary" style={styles.datePrimary}>
+          <Text style={styles.dateDay}>{day}</Text>
+          <Text style={styles.dateMonth}>{month}</Text>
+          <Text style={styles.dateRelative}>{getRelativeDayLabel(interview.date)}</Text>
+        </View>
+        <View testID="interview-date-footer" style={styles.dateFooter}>
+          <Text style={styles.dateTime}>{interview.time ? `${interview.time} WIB` : 'Waktu menyusul'}</Text>
+        </View>
       </View>
       <View style={styles.interviewDetail}>
         <View style={styles.activityTopline}>
@@ -648,7 +656,6 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
             interviewsCount={interviews.length}
             savedCount={savedHydrated ? savedCount : 0}
             viewportWidth={width}
-            onNavigate={onNavigate}
           />
 
           {!!error && (
@@ -705,17 +712,18 @@ const styles = StyleSheet.create({
   scrollContent: {paddingBottom: 24},
   hero: {width: '100%', overflow: 'hidden'},
   heroImage: {backgroundColor: C.navy},
+  heroHeader: {position: 'absolute', minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 2},
   heroCopy: {position: 'absolute', alignItems: 'flex-start'},
-  heroActions: {position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 12},
-  notificationButton: {width: 40, height: 40, alignItems: 'center', justifyContent: 'center'},
+  heroActions: {minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12},
+  notificationButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   notificationBadge: {position: 'absolute', top: 0, right: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: 'white'},
   notificationBadgeText: {fontFamily: F.bold, fontSize: 10, color: 'white'},
   avatarButton: {width: 44, height: 44, borderRadius: 22},
   avatar: {width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: 'white'},
   avatarFallback: {width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: 'white', backgroundColor: '#E7F0FF', alignItems: 'center', justifyContent: 'center'},
   avatarText: {fontFamily: F.bold, fontSize: 15, color: C.blue},
-  greetingTitle: {fontFamily: F.bold, fontSize: 36, lineHeight: 43, color: 'white', letterSpacing: -1.2, marginTop: 28, textAlign: 'left'},
-  greetingTitleCompact: {fontSize: 30, lineHeight: 37, marginTop: 20},
+  greetingTitle: {fontFamily: F.bold, fontSize: 36, lineHeight: 43, color: 'white', letterSpacing: -1.2, textAlign: 'left'},
+  greetingTitleCompact: {fontSize: 30, lineHeight: 37},
   greetingTitleWide: {fontSize: 42, lineHeight: 50},
   greetingSubtitle: {fontFamily: F.regular, fontSize: 14, lineHeight: 22, color: 'rgba(255,255,255,0.92)', marginTop: 7},
   greetingSubtitleCompact: {fontSize: 12, lineHeight: 19, marginTop: 5},
@@ -723,7 +731,6 @@ const styles = StyleSheet.create({
   content: {paddingHorizontal: 20, gap: 28},
   summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   summaryItem: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 130, minHeight: 94, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 14},
-  summaryDisabled: {opacity: 0.58},
   summaryIconShadow: {flexShrink: 0, shadowOffset: {width: 0, height: 3}, shadowOpacity: 0.22, shadowRadius: 5, elevation: 3},
   summaryIcon: {width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'},
   summaryCopy: {flex: 1, minWidth: 0},
@@ -750,11 +757,13 @@ const styles = StyleSheet.create({
   profileIllustrationCompact: {width: 88, height: 132, marginLeft: 5},
   interviewCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 14, marginTop: 13, overflow: 'hidden'},
   interviewContent: {flexDirection: 'row', minHeight: 150},
-  dateBlock: {width: 92, borderRadius: 12, backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingVertical: 11},
+  dateBlock: {width: 92, minHeight: 150, borderRadius: 12, backgroundColor: '#0643AA', overflow: 'hidden'},
+  datePrimary: {flex: 1, width: '100%', backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingTop: 11, paddingBottom: 8},
+  dateFooter: {width: '100%', minHeight: 34, backgroundColor: '#D9E8FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 7},
   dateDay: {fontFamily: F.bold, fontSize: 31, lineHeight: 34, color: 'white'},
   dateMonth: {fontFamily: F.regular, fontSize: 17, color: 'white'},
   dateRelative: {fontFamily: F.medium, fontSize: 10.5, color: 'rgba(255,255,255,0.9)', marginTop: 7},
-  dateTime: {fontFamily: F.medium, fontSize: 9, color: 'white', marginTop: 3},
+  dateTime: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#061A4D', textAlign: 'center'},
   interviewDetail: {flex: 1, minWidth: 0, paddingLeft: 14, paddingVertical: 3},
   activityTopline: {flexDirection: 'row', alignItems: 'center'},
   activityRole: {fontFamily: F.bold, fontSize: 16, color: C.ink, flex: 1},

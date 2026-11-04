@@ -19,6 +19,9 @@ function completeDraft(): OnboardingDraft {
   };
   return {
     ...createEmptyOnboardingDraft('Azka Pratama'),
+    nik: '3275010101900001',
+    ktpPath: 'ktp/example.jpg',
+    avatarPath: 'avatars/example.jpg',
     gender: 'male',
     birthPlace: 'Jakarta',
     birthDate: '1993-05-10',
@@ -31,7 +34,7 @@ function completeDraft(): OnboardingDraft {
     hasNoExperience: true,
     skills: [{skillId: 12, customName: null, name: 'Kanban'}],
     tools: 'Mesin CNC',
-    certifications: [{id: 'certification-1', name: 'Data Analytics', issuer: 'Google', issuedDate: '2025-01-01', expiredDate: '', noExpiry: true, credentialId: 'CERT-1', remotePath: '/uploads/cert-1.pdf'}],
+    certifications: [{id: 'certification-1', type: 'certification', name: 'Data Analytics', issuer: 'Google', issuedDate: '2025-01-01', expiredDate: '', noExpiry: true, credentialId: 'CERT-1', remotePath: '/uploads/cert-1.pdf'}],
     availability: 'available',
     acceptedTerms: true,
     acceptedMatching: true,
@@ -100,5 +103,14 @@ describe('onboarding domain', () => {
     expect(draft.birthDate).toBe('1993-05-10');
     expect(draft.hasNoExperience).toBe(true);
     expect(draft.educations[0]).toMatchObject({majorId: 17, majorName: 'Manajemen'});
+  });
+
+  test('memulihkan nilai pengalaman legacy yang tertukar oleh response lama', () => {
+    const draft = mapCurrentOnboarding({data: {job_seeker: {pengalaman_kerja: [{
+      posisi: 'Designer', nama_perusahaan: 'HireLoop', tanggal_mulai: '2025-01-01',
+      sistem_kerja: 'contract', status_pekerjaan: 'onsite',
+    }]}}});
+
+    expect(draft.experiences[0]).toMatchObject({workSystem: 'on_site', employmentStatus: 'kontrak'});
   });
 });

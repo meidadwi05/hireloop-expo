@@ -1,4 +1,4 @@
-import {fireEvent, render} from '@testing-library/react-native';
+import {render} from '@testing-library/react-native';
 import React from 'react';
 import {StyleSheet} from 'react-native';
 
@@ -50,7 +50,7 @@ describe('dashboard summary card', () => {
     expect(screen.getByTestId('dashboard-summary-card')).toBeTruthy();
     expect(screen.getByLabelText('2 Total Lamaran')).toBeTruthy();
     expect(screen.getByLabelText('1 Dalam Seleksi')).toBeTruthy();
-    expect(screen.getByLabelText('2 Interview Mendatang')).toBeDisabled();
+    expect(screen.getByLabelText('2 Interview Mendatang')).toBeTruthy();
     expect(screen.getByLabelText('7 Lowongan Disimpan')).toBeTruthy();
     expect(screen.queryByText('Lihat semua')).toBeNull();
 
@@ -77,16 +77,13 @@ describe('dashboard summary card', () => {
     expect(StyleSheet.flatten(screen.getByTestId('dashboard-summary-label-0').props.style).textAlign).toBeUndefined();
   });
 
-  it('membuka halaman lamaran dan lowongan tersimpan, sementara interview tetap nonaktif', () => {
-    const onNavigate = jest.fn();
-    const screen = render(<SummaryCard {...props} onNavigate={onNavigate} />);
+  it('menjadikan seluruh indikator sebagai statistik non-interaktif', () => {
+    const screen = render(<SummaryCard {...props} />);
 
-    fireEvent.press(screen.getByLabelText('2 Total Lamaran'));
-    fireEvent.press(screen.getByLabelText('7 Lowongan Disimpan'));
-    fireEvent.press(screen.getByLabelText('2 Interview Mendatang'));
-
-    expect(onNavigate).toHaveBeenNthCalledWith(1, '/(candidate)/(tabs)/career');
-    expect(onNavigate).toHaveBeenNthCalledWith(2, '/(candidate)/jobs/saved');
-    expect(onNavigate).toHaveBeenCalledTimes(2);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByTestId('dashboard-summary-item-0').props.onPress).toBeUndefined();
+    expect(screen.getByTestId('dashboard-summary-item-1').props.onPress).toBeUndefined();
+    expect(screen.getByTestId('dashboard-summary-item-2').props.onPress).toBeUndefined();
+    expect(screen.getByTestId('dashboard-summary-item-3').props.onPress).toBeUndefined();
   });
 });

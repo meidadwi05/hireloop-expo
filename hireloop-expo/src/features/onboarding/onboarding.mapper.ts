@@ -6,6 +6,7 @@ import type {
   SkillOption,
 } from './onboarding.types';
 import {createEmptyOnboardingDraft, emptyAddress} from './onboarding.types';
+import {normalizeAvailability, normalizeEmploymentStatus, normalizeWorkSystem} from './onboarding.options';
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
@@ -76,9 +77,16 @@ export function mapCurrentOnboarding(input: unknown, fallbackName = ''): Onboard
   const experiences = Array.isArray(seeker.pengalaman_kerja)
     ? seeker.pengalaman_kerja
     : Array.isArray(seeker.work_experiences) ? seeker.work_experiences : [];
+  const skills = Array.isArray(seeker.skills) ? seeker.skills : [];
+  const certifications = Array.isArray(seeker.certifications) ? seeker.certifications : [];
 
   return {
     ...draft,
+    nik: asText(seeker.nik, seeker.nik_ktp),
+    ktpPath: asText(seeker.ktp_path),
+    ktpUrl: asText(seeker.ktp_url),
+    avatarPath: asText(seeker.avatar_path),
+    avatarUrl: asText(seeker.avatar_url, user.avatar_url, user.google_avatar),
     fullName: asText(user.full_name, seeker.full_name, fallbackName),
     gender: ['male', 'female'].includes(asText(seeker.gender)) ? asText(seeker.gender) as OnboardingDraft['gender'] : '',
     birthPlace: asText(seeker.birth_place),
@@ -105,6 +113,10 @@ export function mapCurrentOnboarding(input: unknown, fallbackName = ''): Onboard
     }),
     experiences: experiences.map((item, index) => {
       const record = asRecord(item);
+      const rawWorkSystem = asText(record.sistem_kerja, record.work_system);
+      const rawEmploymentStatus = asText(record.status_pekerjaan, record.employment_status);
+      const directWorkSystem = normalizeWorkSystem(rawWorkSystem);
+      const directEmploymentStatus = normalizeEmploymentStatus(rawEmploymentStatus);
       return {
         id: asText(record.id, `experience-${index}`),
         experienceListId: Number.isFinite(Number(record.experience_list_id)) ? Number(record.experience_list_id) : null,
@@ -113,23 +125,48 @@ export function mapCurrentOnboarding(input: unknown, fallbackName = ''): Onboard
         startDate: asText(record.tanggal_mulai, record.start_date).split('T')[0],
         endDate: asText(record.tanggal_berakhir, record.end_date).split('T')[0],
         current: asBoolean(record.masih_bekerja ?? record.current),
-        workSystem: asText(record.sistem_kerja, record.work_system),
-        employmentStatus: asText(record.status_pekerjaan, record.employment_status),
+        workSystem: directWorkSystem || normalizeWorkSystem(rawEmploymentStatus),
+        employmentStatus: directEmploymentStatus || normalizeEmploymentStatus(rawWorkSystem),
         location: asText(record.location, record.lokasi),
         description: asText(record.deskripsi, record.description),
       };
     }),
     hasNoExperience: asBoolean(seeker.no_pengalaman_kerja),
+    skills: skills.map(item => {
+      const record = asRecord(item);
+      const skill = asRecord(record.skill);
+      const customName = asText(record.custom_name);
+      const skillId = Number(record.skill_id ?? skill.id ?? record.id);
+      const name = asText(record.name, record.skill_name, skill.name, customName);
+      return {skillId: Number.isFinite(skillId) && !customName ? skillId : null, customName: customName || null, name};
+    }).filter(item => item.name),
     tools: asText(seeker.pengalaman_mesin),
-    availability: ['available', 'actively_looking', 'not_available'].includes(asText(seeker.availability))
-      ? asText(seeker.availability) as AvailabilityStatus : '',
+    certifications: certifications.map((item, index) => {
+      const record = asRecord(item);
+      const media = Array.isArray(record.media) ? asRecord(record.media[0]) : {};
+      return {
+        id: asText(record.id, `certification-${index}`),
+        type: 'certification' as const,
+        name: asText(record.name),
+        issuer: asText(record.issuer),
+        issuedDate: asText(record.issued_date).split('T')[0],
+        expiredDate: asText(record.expired_date).split('T')[0],
+        noExpiry: asBoolean(record.no_expiry),
+        credentialId: asText(record.credential_id),
+        remotePath: asText(media.path, record.path),
+        originalName: asText(media.original_name, record.original_name),
+        mimeType: asText(media.mime_type, record.mime_type),
+        fileSize: Number(media.size ?? record.file_size) || undefined,
+      };
+    }),
+    availability: normalizeAvailability(seeker.availability ?? seeker.work_period_status),
   };
 }
 
 export function toOnboardingPayload(draft: OnboardingDraft): OnboardingPayload {
   const domicile = draft.domicileSameAsIdentity ? draft.identityAddress : draft.domicileAddress;
   const profileFiles = draft.certifications.filter(item => item.remotePath).map(item => ({
-    type: 'certification',
+    type: item.type,
     name: item.name,
     issuer: item.issuer,
     issued_date: item.issuedDate,
@@ -143,6 +180,9 @@ export function toOnboardingPayload(draft: OnboardingDraft): OnboardingPayload {
   }));
 
   return {
+    nik: draft.nik,
+    ktp_path: draft.ktpPath || null,
+    avatar_path: draft.avatarPath || null,
     full_name: draft.fullName.trim(),
     gender: draft.gender as Exclude<typeof draft.gender, ''>,
     birth_place: draft.birthPlace.trim(),

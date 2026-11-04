@@ -1,6 +1,8 @@
 export type Gender = '' | 'male' | 'female';
 export type MaritalStatus = '' | 'single' | 'married' | 'other';
 export type AvailabilityStatus = '' | 'available' | 'actively_looking' | 'not_available';
+export type WorkSystem = 'on_site' | 'remote' | 'hybrid';
+export type EmploymentStatus = 'full_time' | 'paruh_waktu' | 'kontrak' | 'freelance' | 'internship' | 'outsourcing' | 'kasual';
 
 export type AddressDetail = {
   addressLine: string;
@@ -34,14 +36,15 @@ export type ExperienceDraft = {
   startDate: string;
   endDate: string;
   current: boolean;
-  workSystem: string;
-  employmentStatus: string;
+  workSystem: WorkSystem | '';
+  employmentStatus: EmploymentStatus | '';
   location: string;
   description: string;
 };
 
 export type CertificationDraft = {
   id: string;
+  type: 'document' | 'certification';
   name: string;
   issuer: string;
   issuedDate: string;
@@ -72,6 +75,11 @@ export type MasterOption = {
 };
 
 export type OnboardingDraft = {
+  nik: string;
+  ktpPath: string;
+  ktpUrl: string;
+  avatarPath: string;
+  avatarUrl: string;
   fullName: string;
   gender: Gender;
   birthPlace: string;
@@ -123,9 +131,13 @@ export type OnboardingAction =
   | {type: 'set-certification'; certification: CertificationDraft}
   | {type: 'remove-certification'; id: string}
   | {type: 'toggle-skill'; skill: SkillOption}
+  | {type: 'toggle-custom-skill'; name: string}
   | {type: 'submitting'; value: boolean};
 
 export type OnboardingPayload = {
+  nik: string;
+  ktp_path: string | null;
+  avatar_path: string | null;
   full_name: string;
   gender: Exclude<Gender, ''>;
   birth_place: string;
@@ -167,6 +179,11 @@ export function emptyAddress(): AddressDetail {
 
 export function createEmptyOnboardingDraft(fullName = ''): OnboardingDraft {
   return {
+    nik: '',
+    ktpPath: '',
+    ktpUrl: '',
+    avatarPath: '',
+    avatarUrl: '',
     fullName,
     gender: '',
     birthPlace: '',

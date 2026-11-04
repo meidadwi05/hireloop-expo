@@ -8,6 +8,7 @@ import type {
   WorkSetting,
   WorkType,
 } from './profile.types';
+import {normalizeAvailability, normalizeEmploymentStatus, normalizeWorkSystem} from '../onboarding/onboarding.options';
 
 export function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
@@ -69,8 +70,6 @@ function education(value: unknown): ProfileEducation {
   };
 }
 
-const workTypes: WorkType[] = ['full_time', 'paruh_waktu', 'kontrak', 'freelance', 'internship', 'outsourcing', 'kasual'];
-const workSettings: WorkSetting[] = ['on_site', 'remote', 'hybrid'];
 const workStatuses: WorkPeriodStatus[] = ['available', 'actively_looking', 'not_available', 'hired'];
 
 function enumValue<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -101,18 +100,18 @@ export function mapCandidateProfile(payload: unknown): CandidateProfile {
     selfDescription: text(seeker.self_description),
     experienceYears: number(seeker.experience_years),
     avatarUrl: text(seeker.avatar_url) || null,
-    workPeriodStatus: enumValue(seeker.work_period_status, workStatuses, 'available'),
-    jobTypeExpected: enumValue(seeker.job_type_expected, workSettings, 'on_site'),
-    workType: enumValue(seeker.work_type, workTypes, 'full_time'),
+    workPeriodStatus: normalizeAvailability(seeker.work_period_status) || enumValue(seeker.work_period_status, workStatuses, 'available'),
+    jobTypeExpected: normalizeWorkSystem(seeker.job_type_expected) || 'on_site',
+    workType: normalizeEmploymentStatus(seeker.work_type) || 'full_time',
     expectedSalary: seeker.expected_salary === null || seeker.expected_salary === undefined
       ? null
       : number(seeker.expected_salary),
     preferredWorkTypes: array(seeker.preferred_work_types)
-      .map(item => enumValue(item, workTypes, '' as WorkType))
-      .filter(Boolean),
+      .map(item => normalizeEmploymentStatus(item) as WorkType | '')
+      .filter((item): item is WorkType => Boolean(item)),
     preferredWorkSettings: array(seeker.preferred_work_settings)
-      .map(item => enumValue(item, workSettings, '' as WorkSetting))
-      .filter(Boolean),
+      .map(item => normalizeWorkSystem(item) as WorkSetting | '')
+      .filter((item): item is WorkSetting => Boolean(item)),
     willingToWorkShifts: boolean(seeker.willing_to_work_shifts),
     willingToRelocate: boolean(seeker.willing_to_relocate),
     jobPreferences: array(seeker.job_preferences).map(item => {

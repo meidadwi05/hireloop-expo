@@ -15,14 +15,18 @@ export function getDashboardHeroLayout(viewportWidth: number) {
     220,
     501,
   ));
-  const logoWidth = Math.round(clamp(pageWidth * 0.29, 120, 190));
+  const logoWidth = Math.round(clamp(pageWidth * 0.36, 132, 210));
+  const logoHeight = Math.round(logoWidth * (274 / 1000));
 
   return {
     compact,
     contentTop: Math.round(clamp(heroHeight * 0.29, 64, 145)),
+    headerGreetingGap: compact ? 24 : wide ? 36 : 32,
+    headerRowHeight: Math.max(44, logoHeight),
+    headerTopPadding: compact ? 18 : wide ? 24 : 22,
     heroHeight,
     horizontalPadding: compact ? 18 : pageWidth < 600 ? 28 : 36,
-    logoHeight: Math.round(logoWidth * (281 / 1000)),
+    logoHeight,
     logoWidth,
     wide,
   };
