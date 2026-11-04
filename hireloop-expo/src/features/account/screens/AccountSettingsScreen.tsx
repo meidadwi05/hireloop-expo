@@ -93,7 +93,7 @@ export function AccountSettingsScreen() {
         testID="account-header"
         topInset={insets.top}
         variant="account"
-        style={[styles.header, {paddingTop: insets.top + 8}]}
+        contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
       >
         <View>
           <Text style={styles.headerTitle}>Akun</Text>
@@ -220,7 +220,7 @@ const cardShadow = {
 
 const styles = StyleSheet.create({
   screen: {flex: 1, width: '100%', maxWidth: 440, alignSelf: 'center', backgroundColor: profileColors.background},
-  header: {paddingHorizontal: 22, paddingBottom: 12, justifyContent: 'center'},
+  headerContent: {paddingHorizontal: 22, paddingBottom: 12},
   headerTitle: {fontFamily: profileFonts.bold, fontSize: 25, lineHeight: 31, color: 'white'},
   headerSubtitle: {fontFamily: profileFonts.regular, fontSize: 12, lineHeight: 18, color: '#DDEAFF', marginTop: 1},
   content: {paddingHorizontal: 18, paddingTop: 14, gap: 18},

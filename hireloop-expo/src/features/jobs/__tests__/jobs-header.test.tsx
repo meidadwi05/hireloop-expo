@@ -31,16 +31,18 @@ describe('JobsHeader', () => {
 
     const header = screen.getByTestId('jobs-header-background');
     const artwork = screen.getByTestId('jobs-header-artwork');
+    const content = screen.getByTestId('jobs-header-content');
     const headerStyle = StyleSheet.flatten(header.props.style);
     const artworkStyle = StyleSheet.flatten(artwork.props.style);
+    const contentStyle = StyleSheet.flatten(content.props.style);
 
     expect(artwork.props.resizeMode).toBe('contain');
     expect(headerStyle.backgroundColor).toBe('#00419E');
     expect(headerStyle.height).toBe(157);
-    expect(headerStyle.paddingHorizontal).toBe(20);
+    expect(contentStyle.paddingHorizontal).toBe(20);
     expect(artworkStyle.top).toBe(0);
-    expect(artworkStyle.right).toBe(0);
-    expect(artworkStyle.width).toBeLessThanOrEqual(390);
+    expect(artworkStyle.left).toBe(0);
+    expect(artworkStyle.width).toBe(390);
     expect(artworkStyle.height).toBeLessThanOrEqual(157);
   });
 });

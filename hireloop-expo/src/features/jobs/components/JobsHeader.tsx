@@ -25,10 +25,11 @@ export function JobsHeader({containerWidth, horizontalPadding, search, onChangeS
     <BrandedHeaderBackground
       artworkTestID="jobs-header-artwork"
       containerWidth={containerWidth}
+      contentTestID="jobs-header-content"
       topInset={insets.top}
       variant="jobs-list"
-      style={[
-        styles.background,
+      contentStyle={[
+        styles.content,
         {paddingHorizontal: horizontalPadding, paddingTop: insets.top + 8},
       ]}
       testID="jobs-header-background"
@@ -75,7 +76,7 @@ export function JobsHeader({containerWidth, horizontalPadding, search, onChangeS
 }
 
 const styles = StyleSheet.create({
-  background: {paddingBottom: 10, gap: 10},
+  content: {paddingBottom: 10, gap: 10},
   titleRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 11},
   iconButton: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   copy: {flex: 1, minWidth: 0},

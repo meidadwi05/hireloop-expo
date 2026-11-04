@@ -68,7 +68,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
           containerWidth={containerWidth}
           topInset={insets.top}
           variant="compact-detail"
-          style={[styles.header, {paddingTop: insets.top + 8}]}
+          contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
         >
           <Pressable accessibilityLabel="Kembali ke daftar lowongan" accessibilityRole="button" onPress={() => goBackOrReplace('/(candidate)/(tabs)/jobs')} style={styles.backButton}>
             <Ionicons name="arrow-back" size={26} color="white" />
@@ -186,7 +186,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
 const styles = StyleSheet.create({
   safeArea: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   scrollContent: {paddingBottom: 24},
-  header: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
+  headerContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},
   headerTitle: {flex: 1, fontFamily: JOBS_FONTS.bold, fontSize: 21, color: 'white', textAlign: 'center'},
   headerSpacer: {width: 42},

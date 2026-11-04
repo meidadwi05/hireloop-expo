@@ -18,8 +18,8 @@ describe('getBrandedHeaderLayout', () => {
     const artwork = layout.artworkStyle;
 
     expect(artwork.top).toBe(0);
-    expect(artwork.right).toBe(0);
-    expect(artwork.width).toBeLessThanOrEqual(width);
+    expect(artwork.left).toBe(0);
+    expect(artwork.width).toBe(width);
     expect(artwork.height).toBeLessThanOrEqual(layout.height);
     expect((artwork.width as number) / (artwork.height as number)).toBeCloseTo(BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
   });
@@ -28,8 +28,21 @@ describe('getBrandedHeaderLayout', () => {
     const withoutInset = getBrandedHeaderLayout('compact-detail', 390, 0);
     const withInset = getBrandedHeaderLayout('compact-detail', 390, 44);
 
-    expect(withInset.height - withoutInset.height).toBe(44);
+    expect(withInset.artworkStyle.width).toBe(withoutInset.artworkStyle.width);
+    expect(withInset.artworkStyle.height).toBe(withoutInset.artworkStyle.height);
     expect(withInset.artworkStyle.top).toBe(withoutInset.artworkStyle.top);
-    expect(withInset.artworkStyle.right).toBe(withoutInset.artworkStyle.right);
+    expect(withInset.artworkStyle.left).toBe(withoutInset.artworkStyle.left);
+    expect(withInset.height).toBeGreaterThanOrEqual(withoutInset.height);
+  });
+
+  it.each([320, 360, 390, 412, 440, 720])('keeps the complete artwork visible at %ipx', width => {
+    const layout = getBrandedHeaderLayout('application-list', width, 24);
+    const artwork = layout.artworkStyle;
+
+    expect(artwork.left).toBe(0);
+    expect(artwork.top).toBe(0);
+    expect(artwork.width).toBe(width);
+    expect(artwork.height).toBeCloseTo(width / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
+    expect((artwork.top as number) + (artwork.height as number)).toBeLessThanOrEqual(layout.height);
   });
 });

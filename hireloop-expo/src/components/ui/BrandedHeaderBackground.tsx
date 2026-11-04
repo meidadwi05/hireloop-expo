@@ -16,48 +16,42 @@ export type BrandedHeaderVariant = 'account' | 'application-list' | 'compact-det
 
 type BrandedHeaderPreset = {
   backgroundColor: string;
-  bodyHeight: number;
+  minimumContentHeight: number;
   artworkTop: number;
-  artworkRight: number;
 };
 
 const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
   account: {
     backgroundColor: '#003E9A',
-    bodyHeight: 88,
+    minimumContentHeight: 88,
     artworkTop: 0,
-    artworkRight: 0,
   },
   'application-list': {
     backgroundColor: '#003E9A',
-    bodyHeight: 88,
+    minimumContentHeight: 88,
     artworkTop: 0,
-    artworkRight: 0,
   },
   'compact-detail': {
     backgroundColor: '#003E9A',
-    bodyHeight: 72,
+    minimumContentHeight: 72,
     artworkTop: 0,
-    artworkRight: 0,
   },
   'jobs-list': {
     backgroundColor: '#00419E',
-    bodyHeight: 133,
+    minimumContentHeight: 133,
     artworkTop: 0,
-    artworkRight: 0,
   },
   notifications: {
     backgroundColor: '#003E9A',
-    bodyHeight: 112,
+    minimumContentHeight: 112,
     artworkTop: 0,
-    artworkRight: 0,
   },
 };
 
 export type BrandedHeaderLayout = {
   height: number;
   backgroundColor: string;
-  artworkStyle: Pick<ImageStyle, 'height' | 'right' | 'top' | 'width'>;
+  artworkStyle: Pick<ImageStyle, 'height' | 'left' | 'top' | 'width'>;
 };
 
 export function getBrandedHeaderLayout(
@@ -68,14 +62,10 @@ export function getBrandedHeaderLayout(
   const preset = PRESETS[variant];
   const safeWidth = Math.max(1, containerWidth);
   const safeInset = Math.max(0, topInset);
-  const height = safeInset + preset.bodyHeight;
-  const availableWidth = Math.max(1, safeWidth - preset.artworkRight);
-  const availableHeight = Math.max(1, height - preset.artworkTop);
-  const limitedByWidth = availableWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO <= availableHeight;
-  const artworkWidth = limitedByWidth
-    ? availableWidth
-    : availableHeight * BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
+  const artworkWidth = safeWidth;
   const artworkHeight = artworkWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
+  const minimumContentHeight = safeInset + preset.minimumContentHeight;
+  const height = Math.max(minimumContentHeight, preset.artworkTop + artworkHeight);
 
   return {
     height,
@@ -84,7 +74,7 @@ export function getBrandedHeaderLayout(
       width: artworkWidth,
       height: artworkHeight,
       top: preset.artworkTop,
-      right: preset.artworkRight,
+      left: 0,
     },
   };
 }
@@ -92,6 +82,8 @@ export function getBrandedHeaderLayout(
 type BrandedHeaderBackgroundProps = PropsWithChildren<{
   artworkTestID?: string;
   containerWidth: number;
+  contentStyle?: StyleProp<ViewStyle>;
+  contentTestID?: string;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   topInset: number;
@@ -102,6 +94,8 @@ export function BrandedHeaderBackground({
   artworkTestID,
   children,
   containerWidth,
+  contentStyle,
+  contentTestID,
   style,
   testID,
   topInset,
@@ -128,7 +122,9 @@ export function BrandedHeaderBackground({
           testID={artworkTestID}
         />
       </View>
-      {children}
+      <View style={[styles.content, contentStyle]} testID={contentTestID}>
+        {children}
+      </View>
     </View>
   );
 }
@@ -136,4 +132,5 @@ export function BrandedHeaderBackground({
 const styles = StyleSheet.create({
   container: {position: 'relative', overflow: 'hidden'},
   artwork: {position: 'absolute', opacity: 1},
+  content: {position: 'relative', zIndex: 1, width: '100%'},
 });

@@ -37,7 +37,13 @@ export function SavedJobsScreen() {
         data={hydrated ? savedJobs : []}
         keyExtractor={item => item.key}
         ListHeaderComponent={(
-          <BrandedHeaderBackground containerWidth={containerWidth} topInset={insets.top} variant="application-list" style={[styles.header, {paddingTop: insets.top + 8}]}>
+          <BrandedHeaderBackground
+            containerWidth={containerWidth}
+            topInset={insets.top}
+            variant="application-list"
+            style={styles.header}
+            contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
+          >
             <Pressable accessibilityLabel="Kembali ke Lowongan" accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="arrow-back" size={26} color="white" />
             </Pressable>
@@ -84,7 +90,8 @@ export function SavedJobsScreen() {
 const styles = StyleSheet.create({
   screen: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   content: {flexGrow: 1},
-  header: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 18},
+  header: {marginBottom: 18},
+  headerContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
   backButton: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},
   headerCopy: {flex: 1, minWidth: 0},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 22, lineHeight: 29, color: 'white'},

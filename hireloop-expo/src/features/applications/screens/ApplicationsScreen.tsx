@@ -198,7 +198,7 @@ export function ApplicationsScreen() {
         containerWidth={containerWidth}
         topInset={insets.top}
         variant="application-list"
-        style={[styles.hero, {paddingTop: insets.top + 8}]}
+        contentStyle={[styles.heroContent, {paddingTop: insets.top + 8}]}
       >
         <Pressable
           accessibilityRole="button"
@@ -350,12 +350,12 @@ export function ApplicationsScreen() {
 const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
   content: {backgroundColor: APPLICATION_COLORS.background},
-  hero: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
+  heroContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: 4},
   heroCopy: {flex: 1, minWidth: 0},
   heroTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},
   heroSubtitle: {fontFamily: APPLICATION_FONTS.regular, fontSize: 13, lineHeight: 19, color: '#DDEAFF', marginTop: 2},
-  controlsSheet: {marginTop: -18, borderTopLeftRadius: 18, borderTopRightRadius: 18, backgroundColor: 'white', paddingTop: 17, paddingBottom: 18},
+  controlsSheet: {borderTopLeftRadius: 18, borderTopRightRadius: 18, backgroundColor: 'white', paddingTop: 17, paddingBottom: 18},
   tabs: {height: 53, flexDirection: 'row', gap: 7, borderRadius: 17, backgroundColor: '#F4F7FB', padding: 3},
   tab: {flex: 1, minWidth: 0, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3},
   tabActive: {backgroundColor: APPLICATION_COLORS.blue},

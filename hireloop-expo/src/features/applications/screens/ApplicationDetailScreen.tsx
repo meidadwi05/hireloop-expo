@@ -184,7 +184,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
           containerWidth={containerWidth}
           topInset={insets.top}
           variant="compact-detail"
-          style={[styles.header, {paddingTop: insets.top + 8}]}
+          contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
         >
           <Pressable accessibilityRole="button" accessibilityLabel="Kembali ke Lamaran Saya" onPress={() => goBackOrReplace('/(candidate)/(tabs)/career')} style={styles.backButton}>
             <Ionicons name="arrow-back" size={26} color="white" />
@@ -294,7 +294,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 const styles = StyleSheet.create({
   safeArea: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
   scrollContent: {backgroundColor: APPLICATION_COLORS.background},
-  header: {paddingHorizontal: 14, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
+  headerContent: {paddingHorizontal: 14, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   headerTitle: {flex: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 22, color: 'white', textAlign: 'center'},
   headerSpacer: {width: 44},
