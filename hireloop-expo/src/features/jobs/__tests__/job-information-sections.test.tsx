@@ -36,6 +36,9 @@ function detail(overrides: Partial<CandidateJobDetail> = {}): CandidateJobDetail
     benefits: ['THR'],
     education: 'SMA/SMK',
     experience: 'Tanpa pengalaman',
+    documentRequirements: [],
+    familyDeclarationRequired: false,
+    policies: [],
     ...overrides,
   };
 }

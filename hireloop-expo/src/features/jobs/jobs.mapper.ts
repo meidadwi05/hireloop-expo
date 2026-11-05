@@ -62,6 +62,17 @@ function asStringArray(value: unknown): string[] {
   return [];
 }
 
+function asObjectArray(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.map(asRecord).filter(item => Object.keys(item).length > 0);
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(asRecord).filter(item => Object.keys(item).length > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
 function humanize(value: unknown, fallback: string): string {
   const text = asText(value);
   if (!text) return fallback;
@@ -309,6 +320,27 @@ export function mapJobDetail(payload: unknown, source: CandidateJobSource): Cand
   const requirements = uniqueItems(splitTextList(rawJob.requirements ?? rawJob.kualifikasi));
   const additionalQualifications = source === 'project-lowongan' ? productionQualifications(rawJob) : [];
   const benefits = splitBenefitList(rawJob.benefits ?? rawJob.benefit);
+  const documentRequirements = [
+    ...asObjectArray(rawJob.persyaratan_dokumen).map(item => ({
+      label: asText(item.dokumen, item.label, item.nama) || 'Dokumen',
+      group: 'dokumen' as const,
+      required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
+    })),
+    ...asObjectArray(rawJob.sertifikasi_list).map(item => ({
+      label: asText(item.sertifikasi, item.label, item.nama) || 'Sertifikasi',
+      group: 'sertifikasi' as const,
+      required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
+    })),
+  ];
+  const policies = asObjectArray(rawJob.kebijakan_lainnya).map(item => ({
+    name: asText(item.nama, item.label, item.name) || 'Pernyataan',
+    required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
+  }));
+  const familyDeclarationRequired = asText(rawJob.cek_hubungan_keluarga).toLowerCase() !== 'tidak' && [
+    rawJob.deteksi_hubungan_ayah_ibu,
+    rawJob.deteksi_hubungan_saudara,
+    rawJob.deteksi_hubungan_suami_istri,
+  ].some(asBoolean);
 
   return {
     ...card,
@@ -321,5 +353,8 @@ export function mapJobDetail(payload: unknown, source: CandidateJobSource): Cand
     experience: typeof (rawJob.min_experience ?? rawJob.pengalaman) === 'number'
       ? `${String(rawJob.min_experience ?? rawJob.pengalaman)} tahun`
       : humanize(rawJob.min_experience ?? rawJob.pengalaman, 'Tidak ditentukan'),
+    documentRequirements,
+    familyDeclarationRequired,
+    policies,
   };
 }

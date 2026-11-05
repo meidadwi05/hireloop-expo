@@ -63,13 +63,11 @@ export function AccountSettingsScreen() {
   const {width} = useWindowDimensions();
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutConfirmationVisible, setLogoutConfirmationVisible] = useState(false);
+  const [deleteConfirmationVisible, setDeleteConfirmationVisible] = useState(false);
   const containerWidth = Math.min(width, 440);
   const fullName = user?.full_name?.trim() || 'Kandidat HireLoop';
   const email = user?.email || 'Email belum tersedia';
-
-  const showComingSoon = (title: string) => {
-    Alert.alert(title, 'Fitur ini akan tersedia pada pembaruan berikutnya.');
-  };
+  const hasActiveContract = Boolean(user?.has_active_contract || user?.active_contract);
 
   const performLogout = async () => {
     if (logoutPending) return;
@@ -126,7 +124,7 @@ export function AccountSettingsScreen() {
               icon="lock-closed-outline"
               label="Ubah Kata Sandi"
               subtitle="Perbarui keamanan akun"
-              onPress={() => showComingSoon('Ubah Kata Sandi')}
+              onPress={() => router.push('/(candidate)/account/change-password' as never)}
               last
             />
           </View>
@@ -138,16 +136,30 @@ export function AccountSettingsScreen() {
             <SettingsRow
               icon="shield-checkmark-outline"
               label="Kebijakan Privasi"
-              onPress={() => showComingSoon('Kebijakan Privasi')}
+              onPress={() => router.push('/(candidate)/account/privacy-policy' as never)}
             />
             <SettingsRow
               icon="document-text-outline"
               label="Syarat & Ketentuan"
-              onPress={() => showComingSoon('Syarat & Ketentuan')}
+              onPress={() => router.push('/(candidate)/account/terms-and-conditions' as never)}
               last
             />
           </View>
         </View>
+
+        <Pressable
+          accessibilityLabel="Hapus Akun"
+          accessibilityRole="button"
+          onPress={() => setDeleteConfirmationVisible(true)}
+          style={({pressed}) => [styles.deleteAccountCard, pressed && styles.rowPressed]}
+        >
+          <View style={styles.deleteIconSlot}><Ionicons name="trash-outline" size={24} color={profileColors.red} /></View>
+          <View style={styles.rowCopy}>
+            <Text style={styles.deleteAccountLabel}>Hapus Akun</Text>
+            <Text style={styles.rowSubtitle}>Hapus akun dan data secara permanen</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={profileColors.red} />
+        </Pressable>
 
         <Pressable
           accessibilityLabel="Keluar dari akun"
@@ -166,6 +178,56 @@ export function AccountSettingsScreen() {
 
         <Text style={styles.footer}>HireLoop</Text>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setDeleteConfirmationVisible(false)}
+        presentationStyle="overFullScreen"
+        transparent
+        visible={deleteConfirmationVisible}
+      >
+        <View accessibilityViewIsModal style={styles.deleteModalBackdrop}>
+          <View style={styles.deleteModal}>
+            <Pressable
+              accessibilityLabel="Tutup konfirmasi hapus akun"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setDeleteConfirmationVisible(false)}
+              style={styles.deleteModalClose}
+            >
+              <Ionicons name="close" size={28} color={profileColors.navy} />
+            </Pressable>
+            <View style={styles.deleteModalIcon}>
+              <Ionicons name="trash-outline" size={44} color={profileColors.red} />
+            </View>
+            <Text style={styles.deleteModalTitle}>Hapus Akun?</Text>
+            <Text style={styles.deleteModalDescription}>{hasActiveContract ? 'Akun belum dapat dihapus karena Anda masih memiliki kontrak kerja aktif.' : 'Setelah akun dihapus, seluruh data akan hilang secara permanen dan tidak dapat dipulihkan.'}</Text>
+            <Text style={styles.deleteModalHint}>{hasActiveContract ? 'Selesaikan kontrak aktif terlebih dahulu sebelum melanjutkan penghapusan akun.' : 'Untuk melanjutkan, lakukan konfirmasi keamanan akun Anda pada tahap berikutnya.'}</Text>
+            <View style={[styles.deleteModalActions, containerWidth < 340 && styles.deleteModalActionsCompact]}>
+              <Pressable
+                accessibilityLabel="Batal hapus akun"
+                accessibilityRole="button"
+                onPress={() => setDeleteConfirmationVisible(false)}
+                style={({pressed}) => [styles.deleteCancelButton, pressed && styles.rowPressed]}
+              >
+                <Text style={styles.deleteCancelText}>Batal</Text>
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Lanjutkan hapus akun"
+                accessibilityRole="button"
+                disabled={hasActiveContract}
+                onPress={() => {
+                  setDeleteConfirmationVisible(false);
+                  router.push('/(candidate)/account/delete-account' as never);
+                }}
+                style={({pressed}) => [styles.deleteContinueButton, hasActiveContract && styles.deleteContinueDisabled, pressed && !hasActiveContract && styles.rowPressed]}
+              >
+                <Text style={styles.deleteContinueText}>Lanjutkan</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="fade"
@@ -241,10 +303,27 @@ const styles = StyleSheet.create({
   rowLabel: {fontFamily: profileFonts.semibold, fontSize: 12.5, lineHeight: 18, color: profileColors.ink},
   rowSubtitle: {fontFamily: profileFonts.regular, fontSize: 10, lineHeight: 15, color: profileColors.muted, marginTop: 2},
   rowPressed: {opacity: 0.7},
-  logoutButton: {...cardShadow, minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#F1D5D8', backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9},
+  deleteAccountCard: {...cardShadow, minHeight: 68, borderRadius: 14, borderWidth: 1, borderColor: '#F1D5D8', backgroundColor: 'white', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 11},
+  deleteIconSlot: {width: 34, height: 34, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  deleteAccountLabel: {fontFamily: profileFonts.semibold, fontSize: 12.5, lineHeight: 18, color: profileColors.red},
+  logoutButton: {...cardShadow, minWidth: 190, maxWidth: '65%', minHeight: 54, alignSelf: 'center', paddingHorizontal: 24, borderRadius: 15, borderWidth: 1, borderColor: '#F1D5D8', backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9},
   logoutDisabled: {opacity: 0.6},
   logoutText: {fontFamily: profileFonts.semibold, fontSize: 12.5, color: profileColors.red},
   footer: {fontFamily: profileFonts.medium, fontSize: 10, color: '#8B95A7', textAlign: 'center', marginTop: -4},
+  deleteModalBackdrop: {flex: 1, backgroundColor: 'rgba(0,16,48,0.68)', alignItems: 'center', justifyContent: 'center', padding: 20},
+  deleteModal: {...cardShadow, width: '100%', maxWidth: 390, borderRadius: 24, backgroundColor: 'white', alignItems: 'center', paddingHorizontal: 24, paddingTop: 66, paddingBottom: 24},
+  deleteModalClose: {position: 'absolute', right: 12, top: 12, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', zIndex: 1},
+  deleteModalIcon: {width: 94, height: 94, borderRadius: 47, backgroundColor: '#FEE4E2', alignItems: 'center', justifyContent: 'center'},
+  deleteModalTitle: {fontFamily: profileFonts.bold, fontSize: 26, lineHeight: 34, color: profileColors.navy, textAlign: 'center', marginTop: 20},
+  deleteModalDescription: {fontFamily: profileFonts.regular, fontSize: 14, lineHeight: 22, color: '#344054', textAlign: 'center', marginTop: 12},
+  deleteModalHint: {fontFamily: profileFonts.regular, fontSize: 12, lineHeight: 19, color: '#6676A8', textAlign: 'center', marginTop: 12},
+  deleteModalActions: {width: '100%', flexDirection: 'row', gap: 12, marginTop: 26},
+  deleteModalActionsCompact: {flexDirection: 'column'},
+  deleteCancelButton: {flex: 1, minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: '#AAB4C8', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
+  deleteCancelText: {fontFamily: profileFonts.bold, fontSize: 13, color: profileColors.navy},
+  deleteContinueButton: {flex: 1, minHeight: 52, borderRadius: 12, backgroundColor: '#F5222D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
+  deleteContinueDisabled: {opacity: 0.45},
+  deleteContinueText: {fontFamily: profileFonts.bold, fontSize: 13, color: 'white'},
   modalBackdrop: {flex: 1, backgroundColor: 'rgba(0,18,55,0.58)', alignItems: 'center', justifyContent: 'center', padding: 20},
   logoutModal: {...cardShadow, width: '100%', maxWidth: 380, borderRadius: 20, backgroundColor: 'white', alignItems: 'center', paddingHorizontal: 22, paddingVertical: 24},
   logoutModalIcon: {width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFF0F2', alignItems: 'center', justifyContent: 'center'},

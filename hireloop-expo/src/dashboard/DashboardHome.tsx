@@ -88,8 +88,6 @@ const shortcutItems = [
 ];
 
 const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
-const staticProfileCompletion = 75;
-
 function resolveMediaUrl(value: string | null): string | null {
   if (!value) return null;
   if (/^https?:\/\//i.test(value)) return value;
@@ -624,6 +622,8 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
     interviewsLoading,
     jobs,
     unread,
+    profileCompletion,
+    profileLoading,
     jobsLoading,
     refreshing,
     error,
@@ -719,7 +719,9 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
           {interviewsLoading
             ? <InterviewCardSkeleton compact={responsive.compact} dateWidth={responsive.interviewDateWidth} />
             : <NearestInterviewCard containerWidth={width} interviews={interviews} />}
-          <ProfileCompletionCard completion={staticProfileCompletion} containerWidth={width} onOpenProfile={() => onNavigate?.('/profile')} />
+          {profileLoading
+            ? <View style={[styles.profileCompletionLoading, {height: responsive.compact ? 170 : 190}]} />
+            : <ProfileCompletionCard completion={profileCompletion} containerWidth={width} onOpenProfile={() => onNavigate?.('/profile')} />}
           <ShortcutGrid containerWidth={width} onNavigate={onNavigate} />
           {applicationsLoading ? (
             <RecentApplicationsSkeleton compact={responsive.compact} />
@@ -762,6 +764,7 @@ const shortcutShadow = {
 };
 
 const styles = StyleSheet.create({
+  profileCompletionLoading: {borderRadius: 20, backgroundColor: '#E8EDF5'},
   screen: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: C.background},
   scrollContent: {paddingBottom: 24},
   hero: {width: '100%', overflow: 'hidden'},

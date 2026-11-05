@@ -5,6 +5,8 @@ import React, {useMemo, useState} from 'react';
 import {
   Alert,
   Image,
+  ImageBackground,
+  Linking,
   Modal,
   Pressable,
   StyleSheet,
@@ -16,7 +18,7 @@ import {
 import {toAppApiError} from '../../../core/api/api-error';
 import {profileApi} from '../api/profile.api';
 import {calculateProfileCompletion, formatAddress} from '../profile.mapper';
-import {useProfile, useProfileMutation} from '../hooks/use-profile';
+import {useProfile, useProfileFiles, useProfileMutation} from '../hooks/use-profile';
 import {
   PrimaryButton,
   ProfileCard,
@@ -29,8 +31,8 @@ import {
 
 const menuItems = [
   {label: 'Data Diri', subtitle: 'Identitas, kontak & pendidikan', icon: 'id-card-outline' as const, route: '/(candidate)/profile/personal-data'},
-  {label: 'Pengalaman', subtitle: 'Pengalaman kerja kandidat', icon: 'briefcase-outline' as const},
-  {label: 'Keahlian', subtitle: 'Keahlian, tools & bahasa', icon: 'construct-outline' as const},
+  {label: 'Pengalaman', subtitle: 'Pengalaman kerja kandidat', icon: 'briefcase-outline' as const, route: '/(candidate)/profile/experience'},
+  {label: 'Keahlian', subtitle: 'Keahlian, tools & bahasa', icon: 'construct-outline' as const, route: '/(candidate)/profile/skills'},
   {label: 'Preferensi Kerja', subtitle: 'Posisi, lokasi & gaji', icon: 'options-outline' as const, route: '/(candidate)/profile/work-preferences'},
   {label: 'Dokumen & Sertifikat', subtitle: 'CV dan sertifikasi', icon: 'document-text-outline' as const, route: '/(candidate)/profile/documents'},
   {label: 'Pengaturan Akun', subtitle: 'Kelola akun Anda', icon: 'settings-outline' as const, route: '/(candidate)/(tabs)/account'},
@@ -42,10 +44,12 @@ function initials(name: string) {
 
 export function ProfileScreen() {
   const profile = useProfile();
+  const profileFiles = useProfileFiles();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [about, setAbout] = useState('');
   const updateDescription = useProfileMutation(profileApi.updateDescription);
   const uploadAvatar = useProfileMutation(profileApi.uploadAvatar);
+  const uploadCover = useProfileMutation(profileApi.uploadCover);
   const data = profile.data;
   const completion = useMemo(() => data ? calculateProfileCompletion(data) : 0, [data]);
 
@@ -68,6 +72,45 @@ export function ProfileScreen() {
       Alert.alert('Berhasil', 'Foto profil berhasil diperbarui.');
     } catch (error) {
       Alert.alert('Gagal memperbarui foto', toAppApiError(error).message);
+    }
+  };
+
+  const chooseCover = async () => {
+    const result = await DocumentPicker.getDocumentAsync({type: ['image/jpeg', 'image/png'], copyToCacheDirectory: true});
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if ((asset.size ?? 0) > 4 * 1024 * 1024) {
+      Alert.alert('File terlalu besar', 'Foto sampul maksimal 4 MB.');
+      return;
+    }
+    try {
+      await uploadCover.mutateAsync({uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'image/jpeg', size: asset.size, file: asset.file});
+      Alert.alert('Berhasil', 'Foto sampul berhasil diperbarui.');
+    } catch (error) {
+      Alert.alert('Gagal memperbarui sampul', toAppApiError(error).message);
+    }
+  };
+
+  const openCv = async () => {
+    const cv = (profileFiles.data ?? []).find(item => item.type === 'document' && /(^|\s)(cv|resume)(\s|$)/i.test(`${item.name} ${item.originalName}`));
+    if (!cv) {
+      Alert.alert('CV belum tersedia', 'Tambahkan dokumen CV terlebih dahulu melalui menu Dokumen & Sertifikat.', [
+        {text: 'Batal', style: 'cancel'},
+        {text: 'Tambah CV', onPress: () => router.push('/(candidate)/profile/documents' as never)},
+      ]);
+      return;
+    }
+    const rawUrl = cv.url || cv.path;
+    const server = process.env.EXPO_PUBLIC_API_URL?.replace(/\/api\/?$/, '');
+    const url = /^https?:\/\//i.test(rawUrl) ? rawUrl : server ? `${server}/storage/${rawUrl.replace(/^\/?storage\//, '')}` : '';
+    if (!url) {
+      Alert.alert('CV tidak dapat dibuka', 'URL CV tidak tersedia dari server.');
+      return;
+    }
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('CV tidak dapat dibuka', toAppApiError(error).message);
     }
   };
 
@@ -97,6 +140,17 @@ export function ProfileScreen() {
         />
       ) : (
         <ProfilePage refreshControl={undefined}>
+          <ImageBackground
+            source={data.coverUrl ? {uri: data.coverUrl} : require('../../../assets/up_background.png')}
+            resizeMode="cover"
+            style={styles.cover}
+            imageStyle={styles.coverImage}
+          >
+            <Pressable accessibilityLabel="Ubah foto sampul" onPress={() => void chooseCover()} style={styles.coverButton}>
+              <Ionicons name="camera-outline" size={17} color="white" />
+              <Text style={styles.coverButtonText}>{uploadCover.isPending ? 'Mengunggah...' : 'Ubah Sampul'}</Text>
+            </Pressable>
+          </ImageBackground>
           <ProfileCard style={styles.summaryCard}>
             <View style={styles.avatarWrap}>
               {data.avatarUrl ? (
@@ -120,7 +174,7 @@ export function ProfileScreen() {
             <View style={styles.completionHeader}><Text style={styles.cardTitle}>Kelengkapan Profil</Text><Text style={styles.completionValue}>{completion}%</Text></View>
             <View style={styles.progressTrack}><View style={[styles.progressFill, {width: `${completion}%`}]} /></View>
             <Text style={styles.helper}>Lengkapi profil Anda untuk kesempatan kerja yang lebih besar.</Text>
-            <PrimaryButton label="Unduh CV" icon="download-outline" onPress={() => Alert.alert('Unduh CV', 'CV dapat diunduh setelah resume kandidat tersedia.')} />
+            <PrimaryButton label="Lihat / Unduh CV" icon="download-outline" onPress={() => void openCv()} />
           </ProfileCard>
 
           <ProfileCard>
@@ -175,6 +229,10 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   screen: {flex: 1, backgroundColor: profileColors.background},
+  cover: {height: 138, borderRadius: 18, overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'flex-end', padding: 12, backgroundColor: profileColors.navy},
+  coverImage: {borderRadius: 18},
+  coverButton: {minHeight: 38, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(0,20,55,0.78)'},
+  coverButtonText: {fontFamily: profileFonts.semibold, fontSize: 10.5, color: 'white'},
   summaryCard: {flexDirection: 'row', alignItems: 'center', gap: 16},
   avatarWrap: {width: 108, height: 108, flexShrink: 0},
   avatar: {width: 104, height: 104, borderRadius: 52, backgroundColor: '#E8EEF6'},

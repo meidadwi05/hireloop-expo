@@ -1,0 +1,3 @@
+import React from 'react';
+import {ChangePasswordScreen} from '../../../features/account/screens/ChangePasswordScreen';
+export default function ChangePasswordRoute() { return <ChangePasswordScreen />; }

@@ -3,6 +3,11 @@ import type {
   ProfileAddress,
   ProfileEducation,
   ProfileFileItem,
+  ProfileExperience,
+  ProfileLanguage,
+  ProfileResume,
+  ProfileSkill,
+  ProfileSkillTool,
   UploadedProfileFile,
   WorkPeriodStatus,
   WorkSetting,
@@ -70,6 +75,64 @@ function education(value: unknown): ProfileEducation {
   };
 }
 
+function experience(value: unknown): ProfileExperience {
+  const raw = asRecord(value);
+  return {
+    id: number(raw.id),
+    experienceListId: raw.experience_list_id === null || raw.experience_list_id === undefined ? null : number(raw.experience_list_id),
+    position: text(raw.position, raw.posisi),
+    companyName: text(raw.company_name),
+    startDate: text(raw.start_date),
+    endDate: optionalDate(raw.end_date),
+    isCurrent: boolean(raw.is_current),
+    description: text(raw.description),
+    workSetting: normalizeWorkSystem(raw.job_type_expected) || 'on_site',
+    workType: normalizeEmploymentStatus(raw.work_type) || 'full_time',
+  };
+}
+
+function skill(value: unknown): ProfileSkill | null {
+  const raw = asRecord(value);
+  const name = text(raw.name, raw.custom_name, asRecord(raw.skill).name);
+  if (!name) return null;
+  const skillId = raw.skill_id === null || raw.skill_id === undefined ? null : number(raw.skill_id);
+  return {
+    entryId: number(raw.pivot_id, number(raw.entry_id, number(raw.id))),
+    skillId,
+    name,
+    source: text(raw.source) === 'custom' || skillId === null ? 'custom' : 'dataset',
+  };
+}
+
+function skillTool(value: unknown): ProfileSkillTool | null {
+  const raw = asRecord(value);
+  const name = text(raw.tool_name, raw.name, value);
+  if (!name) return null;
+  return {id: number(raw.id), name};
+}
+
+function language(value: unknown): ProfileLanguage | null {
+  const raw = asRecord(value);
+  const name = text(raw.name, value);
+  if (!name) return null;
+  return {id: number(raw.id), name};
+}
+
+function resume(value: unknown): ProfileResume | null {
+  const raw = asRecord(value);
+  const path = text(raw.file_path, raw.path);
+  const url = text(raw.url, raw.file_url) || null;
+  if (!path && !url) return null;
+  return {
+    id: number(raw.id),
+    name: text(raw.file_name, raw.original_name) || 'CV Kandidat.pdf',
+    path,
+    url,
+    mimeType: text(raw.mime_type) || 'application/pdf',
+    size: number(raw.size, number(raw.file_size)),
+  };
+}
+
 const workStatuses: WorkPeriodStatus[] = ['available', 'actively_looking', 'not_available', 'hired'];
 
 function enumValue<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -85,6 +148,9 @@ export function mapCandidateProfile(payload: unknown): CandidateProfile {
   const data = asRecord(root.data ?? root);
   const user = asRecord(data.user);
   const seeker = asRecord(data.job_seeker ?? data);
+  const skillItems = array(seeker.skills ?? data.skills).map(skill).filter((item): item is ProfileSkill => item !== null);
+  const languageItems = array(seeker.languages ?? data.languages).map(language).filter((item): item is ProfileLanguage => item !== null);
+  const rawCompletion = data.completion ?? seeker.completion;
 
   return {
     userId: number(user.id),
@@ -100,6 +166,8 @@ export function mapCandidateProfile(payload: unknown): CandidateProfile {
     selfDescription: text(seeker.self_description),
     experienceYears: number(seeker.experience_years),
     avatarUrl: text(seeker.avatar_url) || null,
+    coverUrl: text(seeker.cover_url) || null,
+    completion: rawCompletion === null || rawCompletion === undefined || rawCompletion === '' ? null : Math.max(0, Math.min(100, number(rawCompletion))),
     workPeriodStatus: normalizeAvailability(seeker.work_period_status) || enumValue(seeker.work_period_status, workStatuses, 'available'),
     jobTypeExpected: normalizeWorkSystem(seeker.job_type_expected) || 'on_site',
     workType: normalizeEmploymentStatus(seeker.work_type) || 'full_time',
@@ -123,8 +191,13 @@ export function mapCandidateProfile(payload: unknown): CandidateProfile {
     domicileAddress: address(seeker.domicile_address_detail),
     sameAsKtp: boolean(seeker.same_as_ktp),
     educations: array(seeker.educations).map(education),
-    skills: stringArray(seeker.skills),
-    languages: stringArray(seeker.languages),
+    experiences: array(seeker.experiences ?? data.experiences).map(experience).filter(item => item.id > 0),
+    skillItems,
+    skillTools: array(seeker.machine_tool_items ?? seeker.skill_tools).map(skillTool).filter((item): item is ProfileSkillTool => item !== null),
+    languageItems,
+    resumes: array(seeker.resumes ?? data.resumes).map(resume).filter((item): item is ProfileResume => item !== null),
+    skills: skillItems.map(item => item.name),
+    languages: languageItems.map(item => item.name),
   };
 }
 
@@ -193,6 +266,7 @@ export function formatAddress(value: ProfileAddress | null): string {
 }
 
 export function calculateProfileCompletion(profile: CandidateProfile): number {
+  if (profile.completion !== null) return Math.round(profile.completion);
   const checks = [
     profile.fullName,
     profile.email,

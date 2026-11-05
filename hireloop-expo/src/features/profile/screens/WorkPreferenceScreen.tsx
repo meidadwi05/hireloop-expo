@@ -9,6 +9,7 @@ import {profileApi} from '../api/profile.api';
 import {asRecord} from '../profile.mapper';
 import type {WorkPeriodStatus, WorkSetting, WorkType} from '../profile.types';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
+import {formatRupiahInput, parseRupiahInput, sanitizeRupiahInput} from '../work-preference.utils';
 import {
   PrimaryButton,
   ProfileHeader,
@@ -86,11 +87,12 @@ export function WorkPreferenceScreen() {
     setRelocate(current.willingToRelocate);
   };
 
+  const selectedRoleIds = useMemo(() => new Set(selectedRoles.map(role => role.id)), [selectedRoles]);
   const availableRoles = useMemo(() => {
     const query = roleSearch.trim().toLowerCase();
     if (!query) return [];
-    return (rolesQuery.data ?? []).filter(role => role.name.toLowerCase().includes(query) && !selectedRoles.some(item => item.id === role.id)).slice(0, 6);
-  }, [roleSearch, rolesQuery.data, selectedRoles]);
+    return (rolesQuery.data ?? []).filter(role => role.name.toLowerCase().includes(query) && !selectedRoleIds.has(role.id)).slice(0, 6);
+  }, [roleSearch, rolesQuery.data, selectedRoleIds]);
 
   const toggle = <T extends string>(list: T[], value: T, maximum: number, setList: (next: T[]) => void) => {
     if (list.includes(value)) {
@@ -118,7 +120,7 @@ export function WorkPreferenceScreen() {
         job_type_expected: workSettings[0],
         work_type: workTypes[0],
         work_period_status: availability,
-        expected_salary: salary ? Number(salary) : null,
+        expected_salary: parseRupiahInput(salary),
         preferred_work_types: workTypes,
         preferred_work_settings: workSettings,
         willing_to_work_shifts: shift,
@@ -144,7 +146,7 @@ export function WorkPreferenceScreen() {
           <View style={styles.sectionTitleRow}><Ionicons name="briefcase-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Posisi yang diminati</Text></View>
           <View style={styles.chipWrap}>{selectedRoles.map(role => <View key={role.id} style={styles.selectedChip}><Text style={styles.selectedChipText}>{role.name}</Text><Pressable onPress={() => setSelectedRoles(items => items.filter(item => item.id !== role.id))}><Ionicons name="close" size={16} color={profileColors.blue} /></Pressable></View>)}</View>
           <TextInput placeholder="Cari posisi" placeholderTextColor="#98A2B3" value={roleSearch} onChangeText={setRoleSearch} style={styles.input} />
-          {availableRoles.length > 0 ? <View style={styles.suggestionBox}>{availableRoles.map(role => <Pressable key={role.id} onPress={() => { if (selectedRoles.length >= 10) return Alert.alert('Batas posisi', 'Maksimal 10 posisi.'); setSelectedRoles(items => [...items, role]); setRoleSearch(''); }} style={styles.suggestion}><Text style={styles.suggestionText}>{role.name}</Text><Ionicons name="add" size={18} color={profileColors.blue} /></Pressable>)}</View> : null}
+          {availableRoles.length > 0 ? <View style={styles.suggestionBox}>{availableRoles.map(role => <Pressable key={role.id} onPress={() => { if (selectedRoles.length >= 10) return Alert.alert('Batas posisi', 'Maksimal 10 posisi.'); setSelectedRoles(items => items.some(item => item.id === role.id) ? items : [...items, role]); setRoleSearch(''); }} style={styles.suggestion}><Text style={styles.suggestionText}>{role.name}</Text><Ionicons name="add" size={18} color={profileColors.blue} /></Pressable>)}</View> : null}
         </View>
 
         <View style={styles.sectionBlock}>
@@ -155,7 +157,7 @@ export function WorkPreferenceScreen() {
 
         <View style={styles.sectionBlock}>
           <View style={styles.sectionTitleRow}><Ionicons name="cash-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Ekspektasi gaji</Text></View>
-          <TextInput keyboardType="number-pad" placeholder="Contoh: 8000000" placeholderTextColor="#98A2B3" value={salary} onChangeText={value => setSalary(value.replace(/\D/g, ''))} style={styles.input} />
+          <TextInput accessibilityLabel="Ekspektasi gaji" keyboardType="number-pad" placeholder="Contoh: Rp 8.000.000" placeholderTextColor="#98A2B3" value={formatRupiahInput(salary)} onChangeText={value => setSalary(sanitizeRupiahInput(value))} style={styles.input} />
         </View>
 
         <View style={styles.sectionBlock}>

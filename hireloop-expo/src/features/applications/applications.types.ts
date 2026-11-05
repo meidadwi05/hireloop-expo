@@ -76,3 +76,21 @@ export type CancelApplicationInput = {
   applicationId: number;
   storageKind: ApplicationStorageKind;
 };
+
+export type RequirementUpload = {
+  label: string;
+  group: 'dokumen' | 'sertifikasi';
+  required: boolean;
+  uri?: string;
+  name?: string;
+  mimeType?: string;
+  file?: Blob;
+};
+
+export type CompleteRequirementsInput = {
+  applicationId: number;
+  documents: RequirementUpload[];
+  familyDeclaration?: unknown;
+  statements?: unknown;
+  agreed: true;
+};

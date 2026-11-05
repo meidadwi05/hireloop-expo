@@ -65,6 +65,9 @@ const model: ApplicationCardModel = {
     benefits: [],
     education: 'SMA',
     experience: '1 tahun',
+    documentRequirements: [],
+    familyDeclarationRequired: false,
+    policies: [],
   },
 };
 

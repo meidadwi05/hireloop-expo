@@ -27,6 +27,37 @@ export type ProfileRolePreference = {
   name: string;
 };
 
+export type ProfileExperience = {
+  id: number;
+  experienceListId: number | null;
+  position: string;
+  companyName: string;
+  startDate: string;
+  endDate: string | null;
+  isCurrent: boolean;
+  description: string;
+  workSetting: WorkSetting;
+  workType: WorkType;
+};
+
+export type ProfileSkill = {
+  entryId: number;
+  skillId: number | null;
+  name: string;
+  source: 'dataset' | 'custom';
+};
+
+export type ProfileSkillTool = {id: number; name: string};
+export type ProfileLanguage = {id: number; name: string};
+export type ProfileResume = {
+  id: number;
+  name: string;
+  path: string;
+  url: string | null;
+  mimeType: string;
+  size: number;
+};
+
 export type CandidateProfile = {
   userId: number;
   jobSeekerId: number;
@@ -41,6 +72,8 @@ export type CandidateProfile = {
   selfDescription: string;
   experienceYears: number;
   avatarUrl: string | null;
+  coverUrl: string | null;
+  completion: number | null;
   workPeriodStatus: WorkPeriodStatus;
   jobTypeExpected: WorkSetting;
   workType: WorkType;
@@ -55,6 +88,11 @@ export type CandidateProfile = {
   domicileAddress: ProfileAddress | null;
   sameAsKtp: boolean;
   educations: ProfileEducation[];
+  experiences: ProfileExperience[];
+  skillItems: ProfileSkill[];
+  skillTools: ProfileSkillTool[];
+  languageItems: ProfileLanguage[];
+  resumes: ProfileResume[];
   skills: string[];
   languages: string[];
 };
@@ -147,4 +185,18 @@ export type EducationInput = {
   start_date: string | null;
   end_date: string | null;
   additional_info: string | null;
+};
+
+export type ExperienceInput = {
+  experience_list_id: number | null;
+  position: string;
+  posisi: string;
+  company_name: string;
+  start_date: string;
+  end_date: string | null;
+  is_current: boolean;
+  description: string | null;
+  job_type_expected: WorkSetting;
+  work_type: WorkType;
+  skill_ids: number[];
 };

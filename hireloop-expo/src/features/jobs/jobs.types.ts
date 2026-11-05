@@ -52,6 +52,9 @@ export type CandidateJobDetail = CandidateJobCard & {
   benefits: string[];
   education: string;
   experience: string;
+  documentRequirements: {label: string; group: 'dokumen' | 'sertifikasi'; required: boolean}[];
+  familyDeclarationRequired: boolean;
+  policies: {name: string; required: boolean}[];
 };
 
 export type ApplyCandidateJobPayload = {

@@ -16,6 +16,16 @@ const candidateBlacklistInfoSchema = z.object({
   supervisor_notes: z.string().nullable().default(null),
 });
 
+const activeContractSchema = z.object({
+  id: z.coerce.number().int(),
+  position_name: z.string().nullable().default(null),
+  project_name: z.string().nullable().default(null),
+  start_date: z.string().nullable().default(null),
+  end_date: z.string().nullable().default(null),
+  status: z.string().nullable().default(null),
+  cycle_number: z.coerce.number().nullable().default(null),
+});
+
 export const candidateUserSchema = z.object({
   id: z.number(),
   full_name: z.string(),
@@ -29,6 +39,8 @@ export const candidateUserSchema = z.object({
   role: z.string().nullable(),
   roles: z.array(z.string()),
   job_applications: z.array(z.record(z.string(), z.unknown())).default([]),
+  has_active_contract: z.boolean().optional().default(false),
+  active_contract: activeContractSchema.nullable().optional().default(null),
   is_blacklisted: z.boolean().optional().default(false),
   is_banned: z.boolean().optional().default(false),
   blacklist_tier: z.enum(['tier_1', 'tier_2']).nullable().optional().default(null),

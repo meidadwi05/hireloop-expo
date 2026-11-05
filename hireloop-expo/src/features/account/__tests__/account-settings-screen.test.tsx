@@ -22,7 +22,8 @@ jest.mock('../../auth/auth-provider', () => ({
 }));
 
 const mockReplace = jest.fn();
-jest.mock('expo-router', () => ({router: {replace: (...args: unknown[]) => mockReplace(...args)}}));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({router: {replace: (...args: unknown[]) => mockReplace(...args), push: (...args: unknown[]) => mockPush(...args)}}));
 
 const mockedUseAuth = useAuth as jest.Mock;
 const logout = jest.fn();
@@ -64,6 +65,29 @@ describe('AccountSettingsScreen', () => {
     fireEvent.press(screen.getByLabelText('Keluar dari akun'));
     expect(screen.getByText('Keluar dari akun?')).toBeTruthy();
     expect(screen.getByLabelText('Konfirmasi keluar akun')).toBeTruthy();
+  });
+
+  it('membuka route akun dan legal yang berbeda', () => {
+    const screen = render(<AccountSettingsScreen />);
+
+    fireEvent.press(screen.getByLabelText('Ubah Kata Sandi'));
+    expect(mockPush).toHaveBeenLastCalledWith('/(candidate)/account/change-password');
+    fireEvent.press(screen.getByLabelText('Kebijakan Privasi'));
+    expect(mockPush).toHaveBeenLastCalledWith('/(candidate)/account/privacy-policy');
+    fireEvent.press(screen.getByLabelText('Syarat & Ketentuan'));
+    expect(mockPush).toHaveBeenLastCalledWith('/(candidate)/account/terms-and-conditions');
+  });
+
+  it('menampilkan modal konfirmasi sebelum membuka flow hapus akun', () => {
+    const screen = render(<AccountSettingsScreen />);
+
+    fireEvent.press(screen.getByLabelText('Hapus Akun'));
+    expect(screen.getByText('Hapus Akun?')).toBeTruthy();
+    expect(screen.getByLabelText('Batal hapus akun')).toBeTruthy();
+    expect(screen.getByLabelText('Lanjutkan hapus akun')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Lanjutkan hapus akun'));
+    expect(mockPush).toHaveBeenLastCalledWith('/(candidate)/account/delete-account');
   });
 
   it('mengakhiri sesi dan kembali ke login setelah dikonfirmasi', async () => {

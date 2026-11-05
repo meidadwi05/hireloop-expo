@@ -7,6 +7,8 @@ import {jobsApi} from '../../jobs/api/jobs.api';
 import {jobsKeys} from '../../jobs/jobs.keys';
 import {notificationsApi} from '../../notifications/api/notifications.api';
 import {notificationsKeys} from '../../notifications/notifications.keys';
+import {useProfile} from '../../profile/hooks/use-profile';
+import {calculateProfileCompletion} from '../../profile/profile.mapper';
 import {dashboardApi} from '../api/dashboard.api';
 import {dashboardKeys} from '../dashboard.keys';
 
@@ -18,12 +20,13 @@ export function useDashboardHome() {
     queryFn: () => jobsApi.list({priority: 'all', page: 1, per_page: 8}),
   });
   const unread = useQuery({queryKey: notificationsKeys.unreadCount(), queryFn: notificationsApi.unreadCount});
+  const profile = useProfile();
 
   const refresh = async () => {
-    await Promise.all([dashboard.refetch(), candidate.refetch(), jobs.refetch(), unread.refetch()]);
+    await Promise.all([dashboard.refetch(), candidate.refetch(), jobs.refetch(), unread.refetch(), profile.refetch()]);
   };
 
-  const failedCount = [dashboard.isError, candidate.isError, jobs.isError, unread.isError].filter(Boolean).length;
+  const failedCount = [dashboard.isError, candidate.isError, jobs.isError, unread.isError, profile.isError].filter(Boolean).length;
   const applications = mapApplications(
     (candidate.candidate?.job_applications ?? [])
       .map(item => rawApplicationSchema.safeParse(item))
@@ -37,15 +40,17 @@ export function useDashboardHome() {
     interviews: dashboard.data?.interviews ?? [],
     jobs: jobs.data ?? [],
     unread: unread.data ?? 0,
+    profileCompletion: profile.data ? calculateProfileCompletion(profile.data) : 0,
     applicationsLoading: candidate.isLoading,
     candidateLoading: candidate.isLoading,
     dashboardLoading: dashboard.isLoading,
-    initialLoading: dashboard.isLoading || candidate.isLoading || jobs.isLoading || unread.isLoading,
+    initialLoading: dashboard.isLoading || candidate.isLoading || jobs.isLoading || unread.isLoading || profile.isLoading,
     interviewsLoading: dashboard.isLoading,
     jobsLoading: jobs.isLoading,
     notificationsLoading: unread.isLoading,
-    refreshing: dashboard.isRefetching || candidate.isRefetching || jobs.isRefetching || unread.isRefetching,
-    error: failedCount === 4
+    profileLoading: profile.isLoading,
+    refreshing: dashboard.isRefetching || candidate.isRefetching || jobs.isRefetching || unread.isRefetching || profile.isRefetching,
+    error: failedCount === 5
       ? 'Dashboard belum dapat dimuat. Periksa koneksi Anda dan coba lagi.'
       : failedCount > 0
         ? 'Sebagian data belum dapat dimuat. Tarik ke bawah untuk mencoba lagi.'

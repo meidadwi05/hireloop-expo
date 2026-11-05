@@ -62,6 +62,9 @@ function fallbackJob(application: CandidateApplication): CandidateJobDetail {
     benefits: [],
     education: 'Tidak ditentukan',
     experience: 'Tidak ditentukan',
+    documentRequirements: [],
+    familyDeclarationRequired: false,
+    policies: [],
   };
 }
 
@@ -75,6 +78,9 @@ function savedJobDetail(job: ReturnType<typeof useSavedJobs>['savedJobs'][number
     benefits: [],
     education: 'Tidak ditentukan',
     experience: 'Tidak ditentukan',
+    documentRequirements: [],
+    familyDeclarationRequired: false,
+    policies: [],
   };
 }
 

@@ -30,6 +30,7 @@ import type {CandidateApplication} from '../applications.types';
 import {useApplications} from '../hooks/use-applications';
 import {ApplicationVerticalTimeline} from '../components/ApplicationTimeline';
 import {CancelApplicationModal} from '../components/CancelApplicationModal';
+import {CompleteRequirementsModal} from '../components/CompleteRequirementsModal';
 import {
   APPLICATION_COLORS,
   APPLICATION_FONTS,
@@ -68,6 +69,9 @@ function fallbackJob(application: CandidateApplication): CandidateJobDetail {
     benefits: [],
     education: 'Tidak ditentukan',
     experience: 'Tidak ditentukan',
+    documentRequirements: [],
+    familyDeclarationRequired: false,
+    policies: [],
   };
 }
 
@@ -101,6 +105,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   const {refreshUser} = useAuth();
   const applicationsQuery = useApplications();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [feedbackError, setFeedbackError] = useState(false);
 
@@ -146,6 +151,23 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
       setFeedback(toAppApiError(error).message);
       setFeedbackError(true);
     },
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: applicationsApi.completeRequirements,
+    onSuccess: async () => {
+      setRequirementsOpen(false);
+      setFeedback('Persyaratan berhasil dikirim. Lamaran Anda sekarang aktif.');
+      setFeedbackError(false);
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
+        queryClient.invalidateQueries({queryKey: applicationsKeys.process(baseApplication?.applicationId ?? 0)}),
+        queryClient.invalidateQueries({queryKey: dashboardKeys.home()}),
+        queryClient.invalidateQueries({queryKey: jobsKeys.detail(source, id)}),
+        refreshUser(),
+      ]);
+    },
+    onError: error => { setFeedback(toAppApiError(error).message); setFeedbackError(true); },
   });
 
   if (applicationsQuery.isPending && !application) {
@@ -263,6 +285,13 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
             </View>
           )}
 
+          {application.state === 'temporary' && application.storageKind === 'applicant-data' ? (
+            <Pressable accessibilityRole="button" onPress={() => setRequirementsOpen(true)} style={styles.requirementsButton}>
+              <Ionicons name="document-attach-outline" size={20} color="white" />
+              <Text style={styles.requirementsButtonText}>Lengkapi Persyaratan</Text>
+            </Pressable>
+          ) : null}
+
           {canCancelApplication(application) && (
             <Pressable accessibilityRole="button" disabled={cancelMutation.isPending} onPress={() => setCancelOpen(true)} style={styles.cancelButton}>
               <Text style={styles.cancelButtonText}>Batalkan Lamaran</Text>
@@ -287,6 +316,15 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
         onClose={() => setCancelOpen(false)}
         onConfirm={() => cancelMutation.mutate({applicationId: application.applicationId, storageKind: application.storageKind})}
       />
+      {requirementsOpen ? <CompleteRequirementsModal
+        visible={requirementsOpen}
+        applicationId={application.applicationId}
+        job={job}
+        loading={completeMutation.isPending}
+        error={completeMutation.isError ? toAppApiError(completeMutation.error).message : undefined}
+        onClose={() => setRequirementsOpen(false)}
+        onSubmit={input => completeMutation.mutate(input)}
+      /> : null}
     </SafeAreaView>
   );
 }
@@ -332,6 +370,8 @@ const styles = StyleSheet.create({
   feedbackErrorText: {color: '#B51E34'},
   cancelButton: {height: 50, borderRadius: 12, borderWidth: 1.5, borderColor: APPLICATION_COLORS.red, alignItems: 'center', justifyContent: 'center'},
   cancelButtonText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 12, color: APPLICATION_COLORS.red},
+  requirementsButton: {height: 54, borderRadius: 12, backgroundColor: '#C57E00', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
+  requirementsButtonText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 12.5, color: 'white'},
   primaryButton: {height: 54, borderRadius: 12, backgroundColor: APPLICATION_COLORS.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
   primaryButtonText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 13, color: 'white'},
   fullState: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background, alignItems: 'center', justifyContent: 'center', padding: 28},

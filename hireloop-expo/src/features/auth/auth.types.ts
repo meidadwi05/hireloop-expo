@@ -27,6 +27,16 @@ export type CandidateUser = {
   role: string | null;
   roles: string[];
   job_applications: Record<string, unknown>[];
+  has_active_contract?: boolean;
+  active_contract?: {
+    id: number;
+    position_name: string | null;
+    project_name: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    status: string | null;
+    cycle_number: number | null;
+  } | null;
   is_blacklisted?: boolean;
   is_banned?: boolean;
   blacklist_tier?: 'tier_1' | 'tier_2' | null;

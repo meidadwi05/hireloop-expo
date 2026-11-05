@@ -5,6 +5,7 @@ import * as Linking from 'expo-linking';
 import * as Sharing from 'expo-sharing';
 import React, {useMemo, useState} from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Modal,
@@ -18,6 +19,7 @@ import {
 } from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {DateField} from '../../onboarding/components/DateField';
 import {profileApi} from '../api/profile.api';
 import type {ProfileFileItem, UploadInput, UploadedProfileFile} from '../profile.types';
 import {useProfileFiles, useProfileMutation} from '../hooks/use-profile';
@@ -32,6 +34,7 @@ import {
 } from '../components/profile-ui';
 
 type Filter = 'all' | 'document' | 'certification';
+type FileAction = 'view' | 'download';
 type Draft = {
   type: 'document' | 'certification';
   name: string;
@@ -56,8 +59,8 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}).format(date);
 }
 
-function resolveFileUrl(item: ProfileFileItem) {
-  const direct = item.url || item.path;
+function resolveFileUrl(item: ProfileFileItem, mediaIndex = 0) {
+  const direct = item.media[mediaIndex]?.path || item.url || item.path;
   if (!direct) return null;
   if (/^https?:\/\//i.test(direct)) return direct;
   const server = process.env.EXPO_PUBLIC_API_URL?.replace(/\/api\/?$/, '');
@@ -66,50 +69,133 @@ function resolveFileUrl(item: ProfileFileItem) {
   return `${server}${normalized}`;
 }
 
-async function openItem(item: ProfileFileItem) {
-  if (item.type === 'certification' && Platform.OS === 'web') {
-    const blob = await profileApi.getCertificationMedia(item.id, 0);
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank', 'noopener,noreferrer');
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
-    return;
-  }
-  const url = resolveFileUrl(item);
-  if (!url) throw new Error('URL file tidak tersedia.');
-  await Linking.openURL(url);
+function selectedFileName(item: ProfileFileItem, mediaIndex = 0) {
+  const media = item.media[mediaIndex];
+  return (media?.originalName || item.originalName || `${item.name}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
-async function downloadItem(item: ProfileFileItem) {
-  const url = resolveFileUrl(item);
+function selectedMimeType(item: ProfileFileItem, mediaIndex = 0) {
+  return item.media[mediaIndex]?.mimeType || item.mimeType || 'application/octet-stream';
+}
+
+function bytesToBlob(bytes: ArrayBuffer, mimeType: string) {
+  return new Blob([bytes], {type: mimeType});
+}
+
+async function prepareNativeFile(item: ProfileFileItem, mediaIndex = 0) {
+  const fileName = selectedFileName(item, mediaIndex);
+  const destination = new File(Paths.cache, fileName);
+  if (item.type === 'certification') {
+    const bytes = await profileApi.getCertificationMedia(item.id, mediaIndex);
+    if (destination.exists) destination.delete();
+    destination.create();
+    destination.write(new Uint8Array(bytes));
+    return destination;
+  }
+  const url = resolveFileUrl(item, mediaIndex);
   if (!url) throw new Error('URL file tidak tersedia.');
-  const fileName = (item.originalName || `${item.name}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
+  return File.downloadFileAsync(url, destination, {idempotent: true});
+}
+
+function fileActionErrorMessage(error: unknown, action: FileAction) {
+  const apiError = toAppApiError(error);
+  if (apiError.status === 401) return 'Sesi Anda telah berakhir. Silakan masuk kembali.';
+  if (apiError.status === 403) return 'Anda tidak memiliki izin untuk mengakses file ini.';
+  if (apiError.status === 404) return 'File tidak ditemukan atau sudah dihapus.';
+  if (apiError.isNetworkError) return 'Tidak dapat terhubung ke server HireLoop. Periksa koneksi lalu coba lagi.';
+  return apiError.message || `File tidak dapat ${action === 'view' ? 'dibuka' : 'diunduh'}.`;
+}
+
+async function openItem(item: ProfileFileItem, mediaIndex = 0) {
   if (Platform.OS === 'web') {
-    const blob = item.type === 'certification' ? await profileApi.getCertificationMedia(item.id, 0) : await fetch(url).then(response => {
-      if (!response.ok) throw new Error('File gagal diunduh.');
-      return response.blob();
-    });
+    if (item.type === 'document') {
+      const url = resolveFileUrl(item, mediaIndex);
+      if (!url) throw new Error('URL file tidak tersedia.');
+      const opened = window.open(url, '_blank');
+      if (!opened) throw new Error('Popup diblokir browser. Izinkan popup untuk melihat file.');
+      opened.opener = null;
+      return;
+    }
+    const previewWindow = window.open('about:blank', '_blank');
+    if (!previewWindow) throw new Error('Popup diblokir browser. Izinkan popup untuk melihat file.');
+    previewWindow.opener = null;
+    try {
+      const bytes = await profileApi.getCertificationMedia(item.id, mediaIndex);
+      const objectUrl = URL.createObjectURL(bytesToBlob(bytes, selectedMimeType(item, mediaIndex)));
+      previewWindow.location.href = objectUrl;
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (error) {
+      previewWindow.close();
+      throw error;
+    }
+    return;
+  }
+  const file = await prepareNativeFile(item, mediaIndex);
+  try {
+    await Linking.openURL(file.uri);
+  } catch {
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(file.uri, {dialogTitle: `Buka ${item.name}`, mimeType: selectedMimeType(item, mediaIndex)});
+      return;
+    }
+    throw new Error('Tidak ada aplikasi yang dapat membuka file ini.');
+  }
+}
+
+async function downloadItem(item: ProfileFileItem, mediaIndex = 0) {
+  const fileName = selectedFileName(item, mediaIndex);
+  if (Platform.OS === 'web') {
+    const url = resolveFileUrl(item, mediaIndex);
+    if (item.type === 'document' && !url) throw new Error('URL file tidak tersedia.');
+    const blob = item.type === 'certification'
+      ? bytesToBlob(await profileApi.getCertificationMedia(item.id, mediaIndex), selectedMimeType(item, mediaIndex))
+      : await fetch(url as string).then(response => {
+        if (!response.ok) throw new Error('File gagal diunduh.');
+        return response.blob();
+      });
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
     anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
     anchor.click();
+    anchor.remove();
     setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
     return;
   }
-  const file = await File.downloadFileAsync(url, new File(Paths.cache, fileName), {idempotent: true});
-  if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, {dialogTitle: `Simpan ${item.name}`, mimeType: item.mimeType || undefined});
-  else await Linking.openURL(file.uri);
+  const file = await prepareNativeFile(item, mediaIndex);
+  if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(file.uri, {dialogTitle: `Simpan ${item.name}`, mimeType: selectedMimeType(item, mediaIndex)});
+  else throw new Error('Perangkat tidak mendukung penyimpanan atau berbagi file.');
 }
 
-function FileCard({item, onMenu}: {item: ProfileFileItem; onMenu: () => void}) {
+function FileCard({item, onMenu, onDeleteMedia}: {item: ProfileFileItem; onMenu: () => void; onDeleteMedia: (index: number) => void}) {
   const certification = item.type === 'certification';
+  const [busyAction, setBusyAction] = useState<string | null>(null);
   const description = certification
     ? [item.issuer, item.issuedDate && formatDate(item.issuedDate), item.expiredDate ? `– ${formatDate(item.expiredDate)}` : 'Tanpa kedaluwarsa'].filter(Boolean).join(' · ')
     : [item.originalName, humanSize(item.size)].filter(Boolean).join(' · ');
+
+  const runAction = async (action: FileAction, mediaIndex = 0) => {
+    const actionKey = `${action}:${mediaIndex}`;
+    if (busyAction) return;
+    setBusyAction(actionKey);
+    try {
+      if (action === 'view') await openItem(item, mediaIndex);
+      else await downloadItem(item, mediaIndex);
+    } catch (error) {
+      Alert.alert(action === 'view' ? 'File tidak dapat dibuka' : 'File tidak dapat diunduh', fileActionErrorMessage(error, action));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   return (
     <ProfileCard>
       <View style={styles.fileHeader}>
-        <View style={styles.fileIcon}><Ionicons name={certification ? 'ribbon-outline' : 'document-text-outline'} size={26} color="#7655E9" /></View>
+        <View style={[styles.fileIcon, certification ? styles.certificationIcon : styles.documentIcon]}>
+          <Ionicons name={certification ? 'ribbon-outline' : 'document-text-outline'} size={26} color={certification ? '#168457' : profileColors.blue} />
+        </View>
         <View style={styles.fileCopy}>
           <Text numberOfLines={2} style={styles.fileName}>{item.name}</Text>
           <View style={[styles.typeBadge, certification && styles.certBadge]}><Text style={[styles.typeBadgeText, certification && styles.certBadgeText]}>{certification ? 'Sertifikasi' : 'Dokumen'}</Text></View>
@@ -118,11 +204,37 @@ function FileCard({item, onMenu}: {item: ProfileFileItem; onMenu: () => void}) {
       </View>
       <Text style={styles.fileDescription}>{description || 'Metadata belum tersedia'}</Text>
       {item.credentialId ? <Text style={styles.credential}>ID Kredensial: {item.credentialId}</Text> : null}
-      {certification && item.originalName ? <View style={styles.mediaRow}><Ionicons name="document-outline" size={18} color="#7655E9" /><Text numberOfLines={1} style={styles.mediaName}>{item.originalName}</Text><Text style={styles.mediaSize}>{humanSize(item.size)}</Text></View> : null}
-      <View style={styles.fileActions}>
-        <Pressable onPress={() => void openItem(item).catch(error => Alert.alert('File tidak dapat dibuka', toAppApiError(error).message))} style={styles.outlineButton}><Ionicons name="eye-outline" size={18} color={profileColors.blue} /><Text style={styles.outlineText}>Lihat</Text></Pressable>
-        <Pressable onPress={() => void downloadItem(item).catch(error => Alert.alert('File tidak dapat diunduh', toAppApiError(error).message))} style={styles.downloadButton}><Ionicons name="download-outline" size={18} color="white" /><Text style={styles.downloadText}>Unduh</Text></Pressable>
-      </View>
+      {certification ? item.media.length ? (
+        <View style={styles.mediaList}>
+          {item.media.map((media, index) => {
+            const image = media.mimeType.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(media.originalName);
+            return (
+              <View key={`${media.path}:${index}`} style={styles.mediaRow}>
+                <View style={styles.mediaFileIcon}><Ionicons name={image ? 'image-outline' : 'document-text-outline'} size={18} color="#7655E9" /></View>
+                <Text numberOfLines={1} style={styles.mediaName}>{media.originalName}</Text>
+                <Pressable accessibilityLabel={`Lihat ${media.originalName}`} accessibilityState={{disabled: Boolean(busyAction), busy: busyAction === `view:${index}`}} disabled={Boolean(busyAction)} onPress={() => void runAction('view', index)} style={styles.mediaAction}>
+                  {busyAction === `view:${index}` ? <ActivityIndicator size="small" color={profileColors.blue} /> : <Ionicons name="eye-outline" size={18} color={profileColors.blue} />}
+                </Pressable>
+                <Pressable accessibilityLabel={`Unduh ${media.originalName}`} accessibilityState={{disabled: Boolean(busyAction), busy: busyAction === `download:${index}`}} disabled={Boolean(busyAction)} onPress={() => void runAction('download', index)} style={styles.mediaAction}>
+                  {busyAction === `download:${index}` ? <ActivityIndicator size="small" color={profileColors.blue} /> : <Ionicons name="download-outline" size={18} color={profileColors.blue} />}
+                </Pressable>
+                {item.media.length > 1 ? <Pressable accessibilityLabel={`Hapus ${media.originalName}`} disabled={Boolean(busyAction)} onPress={() => onDeleteMedia(index)} style={[styles.mediaAction, styles.mediaDelete]}><Ionicons name="trash-outline" size={18} color={profileColors.red} /></Pressable> : null}
+              </View>
+            );
+          })}
+        </View>
+      ) : <Text style={styles.emptyMedia}>File sertifikat belum tersedia.</Text> : (
+        <View style={styles.fileActions}>
+          <Pressable accessibilityState={{disabled: Boolean(busyAction), busy: busyAction === 'view:0'}} disabled={Boolean(busyAction)} onPress={() => void runAction('view')} style={styles.outlineButton}>
+            {busyAction === 'view:0' ? <ActivityIndicator size="small" color={profileColors.blue} /> : <Ionicons name="eye-outline" size={18} color={profileColors.blue} />}
+            <Text style={styles.outlineText}>Lihat</Text>
+          </Pressable>
+          <Pressable accessibilityState={{disabled: Boolean(busyAction), busy: busyAction === 'download:0'}} disabled={Boolean(busyAction)} onPress={() => void runAction('download')} style={styles.downloadButton}>
+            {busyAction === 'download:0' ? <ActivityIndicator size="small" color="white" /> : <Ionicons name="download-outline" size={18} color="white" />}
+            <Text style={styles.downloadText}>Unduh</Text>
+          </Pressable>
+        </View>
+      )}
     </ProfileCard>
   );
 }
@@ -132,36 +244,37 @@ function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; 
     type: item?.type ?? 'document', name: item?.name ?? '', issuer: item?.issuer ?? '',
     issuedDate: item?.issuedDate ?? '', expiredDate: item?.expiredDate ?? '', credentialId: item?.credentialId ?? '',
   }));
-  const [picked, setPicked] = useState<UploadInput | null>(null);
+  const [picked, setPicked] = useState<UploadInput[]>([]);
   const saveMutation = useProfileMutation(async (_: void) => {
-    let uploaded: UploadedProfileFile | null = null;
+    const uploaded: UploadedProfileFile[] = [];
     try {
-      if (picked) uploaded = await profileApi.uploadProfileFile(picked);
-      const source = uploaded ?? item?.media[0] ?? (item?.path ? {type: 'file' as const, path: item.path, originalName: item.originalName, mimeType: item.mimeType, size: item.size} : null);
+      for (const file of picked) uploaded.push(await profileApi.uploadProfileFile(file));
+      const existing = item?.media.length ? item.media : item?.path ? [{type: 'file' as const, path: item.path, originalName: item.originalName, mimeType: item.mimeType, size: item.size}] : [];
+      const sources = uploaded.length ? uploaded : existing;
+      const source = sources[0];
       if (!source) throw new Error('Pilih file yang akan disimpan.');
       if (draft.type === 'document') {
         const payload = {name: draft.name.trim(), file_path: source.path, original_name: source.originalName, mime_type: source.mimeType, file_size: source.size, source: 'profile' as const};
         if (item?.type === 'document') await profileApi.updateDocument(item.id, payload);
         else await profileApi.createDocument(payload);
       } else {
-        const payload = {name: draft.name.trim(), issuer: draft.issuer.trim(), issued_date: draft.issuedDate, expired_date: draft.expiredDate || null, credential_id: draft.credentialId.trim() || null, media: [{type: 'file' as const, path: source.path, original_name: source.originalName}]};
+        const payload = {name: draft.name.trim(), issuer: draft.issuer.trim(), issued_date: draft.issuedDate, expired_date: draft.expiredDate || null, credential_id: draft.credentialId.trim() || null, media: sources.map(media => ({type: 'file' as const, path: media.path, original_name: media.originalName}))};
         if (item?.type === 'certification') await profileApi.updateCertification(item.id, payload);
         else await profileApi.createCertification(payload);
       }
     } catch (error) {
-      if (uploaded) await profileApi.deleteUploadedFile(uploaded.path).catch(() => undefined);
+      await Promise.all(uploaded.map(media => profileApi.deleteUploadedFile(media.path).catch(() => undefined)));
       throw error;
     }
   }, {refreshFiles: true});
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft(current => ({...current, [key]: value}));
   const pick = async () => {
-    const result = await DocumentPicker.getDocumentAsync({type: allowedMime, copyToCacheDirectory: true});
+    const result = await DocumentPicker.getDocumentAsync({type: allowedMime, copyToCacheDirectory: true, multiple: draft.type === 'certification'});
     if (result.canceled) return;
-    const asset = result.assets[0];
-    if ((asset.size ?? 0) > 2 * 1024 * 1024) return Alert.alert('File terlalu besar', 'Ukuran file maksimal 2 MB.');
-    if (asset.mimeType && !allowedMime.includes(asset.mimeType)) return Alert.alert('Format tidak didukung', 'Gunakan PDF, JPG, JPEG, atau PNG.');
-    setPicked({uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream', size: asset.size, file: asset.file});
+    if (result.assets.some(asset => (asset.size ?? 0) > 2 * 1024 * 1024)) return Alert.alert('File terlalu besar', 'Ukuran setiap file maksimal 2 MB.');
+    if (result.assets.some(asset => asset.mimeType && !allowedMime.includes(asset.mimeType))) return Alert.alert('Format tidak didukung', 'Gunakan PDF, JPG, JPEG, atau PNG.');
+    setPicked(result.assets.map(asset => ({uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream', size: asset.size, file: asset.file})));
   };
 
   const save = async () => {
@@ -186,11 +299,11 @@ function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; 
             <FormField label={draft.type === 'document' ? 'Nama Dokumen *' : 'Nama Sertifikat *'} value={draft.name} onChangeText={value => set('name', value)} />
             {draft.type === 'certification' ? <>
               <FormField label="Penerbit *" value={draft.issuer} onChangeText={value => set('issuer', value)} />
-              <FormField label="Tanggal Terbit *" placeholder="yyyy-mm-dd" value={draft.issuedDate} onChangeText={value => set('issuedDate', value)} />
-              <FormField label="Tanggal Kedaluwarsa" placeholder="yyyy-mm-dd" value={draft.expiredDate} onChangeText={value => set('expiredDate', value)} />
+              <DateField tone="light" required label="Tanggal Terbit" value={draft.issuedDate} onChange={value => set('issuedDate', value)} maximumDate={new Date()} />
+              <DateField tone="light" label="Tanggal Kedaluwarsa" value={draft.expiredDate} onChange={value => set('expiredDate', value)} minimumDate={draft.issuedDate ? new Date(`${draft.issuedDate}T00:00:00`) : undefined} />
               <FormField label="ID Kredensial" value={draft.credentialId} onChangeText={value => set('credentialId', value)} />
             </> : null}
-            <View style={styles.uploadBox}><Ionicons name="cloud-upload-outline" size={31} color={profileColors.blue} /><Text style={styles.uploadTitle}>{picked?.name || item?.originalName || 'Pilih file pendukung'}</Text><Text style={styles.uploadHint}>{picked ? humanSize(picked.size ?? 0) : 'PDF, JPG, JPEG, PNG · Maksimal 2 MB'}</Text><Pressable onPress={() => void pick()} style={styles.pickButton}><Text style={styles.pickText}>{picked || item?.path ? 'Ganti File' : 'Pilih File'}</Text></Pressable></View>
+            <View style={styles.uploadBox}><Ionicons name="cloud-upload-outline" size={31} color={profileColors.blue} /><Text style={styles.uploadTitle}>{picked.length ? `${picked.length} file dipilih` : item?.media.length ? `${item.media.length} file tersimpan` : item?.originalName || 'Pilih file pendukung'}</Text>{picked.map(file => <Text numberOfLines={1} key={`${file.uri}:${file.name}`} style={styles.pickedName}>{file.name} · {humanSize(file.size ?? 0)}</Text>)}<Text style={styles.uploadHint}>PDF, JPG, JPEG, PNG · Maksimal 2 MB per file{draft.type === 'certification' ? ' · dapat memilih beberapa file' : ''}</Text><Pressable onPress={() => void pick()} style={styles.pickButton}><Text style={styles.pickText}>{picked.length || item?.path ? 'Ganti File' : 'Pilih File'}</Text></Pressable></View>
             <PrimaryButton disabled={saveMutation.isPending} label={saveMutation.isPending ? 'Mengunggah...' : 'Simpan Berkas'} onPress={() => void save()} />
           </ScrollView>
         </View>
@@ -204,21 +317,22 @@ function FormField({label, ...props}: React.ComponentProps<typeof TextInput> & {
 }
 
 function ActionModal({item, visible, onClose, onEdit}: {item: ProfileFileItem | null; visible: boolean; onClose: () => void; onEdit: () => void}) {
+  const itemLabel = item?.type === 'certification' ? 'Sertifikasi' : 'Dokumen';
   const remove = useProfileMutation(async () => {
     if (!item) return;
     if (item.type === 'document') await profileApi.deleteDocument(item.id);
     else await profileApi.deleteCertification(item.id);
   }, {refreshFiles: true});
-  const confirm = () => item && Alert.alert('Hapus berkas?', `${item.name} akan dihapus permanen.`, [
+  const confirm = () => item && Alert.alert(`Hapus ${itemLabel.toLowerCase()}?`, `${item.name} akan dihapus permanen.`, [
     {text: 'Batal', style: 'cancel'},
     {text: 'Hapus', style: 'destructive', onPress: async () => {
       try { await remove.mutateAsync(); onClose(); } catch (error) { Alert.alert('Gagal menghapus', toAppApiError(error).message); }
     }},
   ]);
   return <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}><Pressable onPress={onClose} style={styles.actionBackdrop}><Pressable style={styles.actionSheet}>
-    <View style={styles.handle} /><Text style={styles.actionTitle}>Aksi Dokumen</Text>
-    <Pressable onPress={onEdit} style={styles.actionRow}><Ionicons name="pencil-outline" size={21} color="#344054" /><Text style={styles.actionText}>Ubah Dokumen</Text></Pressable>
-    <Pressable disabled={remove.isPending} onPress={confirm} style={styles.actionRow}><Ionicons name="trash-outline" size={21} color="#D92D20" /><Text style={styles.actionDelete}>{remove.isPending ? 'Menghapus...' : 'Hapus Dokumen'}</Text></Pressable>
+    <View style={styles.handle} /><Text style={styles.actionTitle}>Aksi {itemLabel}</Text>
+    <Pressable onPress={onEdit} style={styles.actionRow}><Ionicons name="pencil-outline" size={21} color="#344054" /><Text style={styles.actionText}>Ubah {itemLabel}</Text></Pressable>
+    <Pressable disabled={remove.isPending} onPress={confirm} style={styles.actionRow}><Ionicons name="trash-outline" size={21} color="#D92D20" /><Text style={styles.actionDelete}>{remove.isPending ? 'Menghapus...' : `Hapus ${itemLabel}`}</Text></Pressable>
   </Pressable></Pressable></Modal>;
 }
 
@@ -228,11 +342,29 @@ export function DocumentsScreen() {
   const [selected, setSelected] = useState<ProfileFileItem | null>(null);
   const [actionOpen, setActionOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const removeMedia = useProfileMutation(async ({item, index}: {item: ProfileFileItem; index: number}) => {
+    const removed = item.media[index];
+    const remaining = item.media.filter((_, mediaIndex) => mediaIndex !== index);
+    if (!removed || remaining.length === 0) throw new Error('Sertifikat harus memiliki minimal satu media.');
+    await profileApi.updateCertification(item.id, {
+      name: item.name,
+      issuer: item.issuer,
+      issued_date: item.issuedDate ?? '',
+      expired_date: item.expiredDate,
+      credential_id: item.credentialId || null,
+      media: remaining.map(media => ({type: 'file' as const, path: media.path, original_name: media.originalName})),
+    });
+    await profileApi.deleteUploadedFile(removed.path).catch(() => undefined);
+  }, {refreshFiles: true});
   const items = useMemo(() => (query.data ?? []).filter(item => filter === 'all' || item.type === filter), [filter, query.data]);
 
   const openMenu = (item: ProfileFileItem) => { setSelected(item); setActionOpen(true); };
   const add = () => { setSelected(null); setFormOpen(true); };
   const edit = () => { setActionOpen(false); setFormOpen(true); };
+  const confirmDeleteMedia = (item: ProfileFileItem, index: number) => Alert.alert('Hapus file sertifikat?', `${item.media[index]?.originalName ?? 'File'} akan dihapus dari sertifikat ini.`, [
+    {text: 'Batal', style: 'cancel'},
+    {text: 'Hapus', style: 'destructive', onPress: async () => { try { await removeMedia.mutateAsync({item, index}); } catch (error) { Alert.alert('Gagal menghapus file', toAppApiError(error).message); } }},
+  ]);
 
   return (
     <View style={styles.screen}>
@@ -241,7 +373,7 @@ export function DocumentsScreen() {
         <Text style={styles.subtitle}>Kelola berkas pendukung lamaran.</Text>
         <PrimaryButton label="Tambah Dokumen" icon="add" onPress={add} />
         <View style={styles.filters}>{([['all', 'Semua'], ['document', 'Dokumen'], ['certification', 'Sertifikat']] as [Filter, string][]).map(([value, label]) => <Pressable key={value} onPress={() => setFilter(value)} style={[styles.filter, filter === value && styles.filterActive]}><Text style={[styles.filterText, filter === value && styles.filterTextActive]}>{label}</Text></Pressable>)}</View>
-        {query.isLoading || query.isError ? <ScreenState loading={query.isLoading} error={query.isError ? toAppApiError(query.error).message : undefined} onRetry={() => void query.refetch()} /> : items.length === 0 ? <ScreenState empty={filter === 'all' ? 'Belum ada dokumen atau sertifikat.' : `Belum ada ${filter === 'document' ? 'dokumen' : 'sertifikat'}.`} /> : items.map(item => <FileCard key={item.key} item={item} onMenu={() => openMenu(item)} />)}
+        {query.isLoading || query.isError ? <ScreenState loading={query.isLoading} error={query.isError ? toAppApiError(query.error).message : undefined} onRetry={() => void query.refetch()} /> : items.length === 0 ? <ScreenState empty={filter === 'all' ? 'Belum ada dokumen atau sertifikat.' : `Belum ada ${filter === 'document' ? 'dokumen' : 'sertifikat'}.`} /> : items.map(item => <FileCard key={item.key} item={item} onMenu={() => openMenu(item)} onDeleteMedia={index => confirmDeleteMedia(item, index)} />)}
       </ProfilePage>
       <ActionModal item={selected} visible={actionOpen} onClose={() => setActionOpen(false)} onEdit={edit} />
       {formOpen ? <FileFormModal item={selected} visible onClose={() => setFormOpen(false)} /> : null}
@@ -258,7 +390,9 @@ const styles = StyleSheet.create({
   filterText: {fontFamily: profileFonts.semibold, fontSize: 11, color: '#475467'},
   filterTextActive: {color: 'white'},
   fileHeader: {flexDirection: 'row', alignItems: 'flex-start', gap: 11},
-  fileIcon: {width: 47, height: 47, borderRadius: 12, backgroundColor: '#F0EBFF', alignItems: 'center', justifyContent: 'center'},
+  fileIcon: {width: 47, height: 47, borderRadius: 12, alignItems: 'center', justifyContent: 'center'},
+  documentIcon: {backgroundColor: '#EAF2FF'},
+  certificationIcon: {backgroundColor: '#DFF8EA'},
   fileCopy: {flex: 1, minWidth: 0, alignItems: 'flex-start'},
   fileName: {fontFamily: profileFonts.bold, fontSize: 14, lineHeight: 19, color: profileColors.ink},
   typeBadge: {marginTop: 5, borderRadius: 10, backgroundColor: '#EAF2FF', paddingHorizontal: 9, paddingVertical: 3},
@@ -267,9 +401,14 @@ const styles = StyleSheet.create({
   certBadgeText: {color: '#168457'},
   fileDescription: {fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 17, color: profileColors.muted, marginTop: 11},
   credential: {fontFamily: profileFonts.regular, fontSize: 10, color: '#7B8493', marginTop: 4},
+  mediaList: {marginTop: 8, gap: 4},
   mediaRow: {minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8},
+  mediaFileIcon: {width: 32, height: 32, borderRadius: 8, backgroundColor: '#F0EBFF', alignItems: 'center', justifyContent: 'center'},
   mediaName: {flex: 1, fontFamily: profileFonts.medium, fontSize: 10.5, color: '#344054'},
   mediaSize: {fontFamily: profileFonts.regular, fontSize: 9, color: '#7B8493'},
+  mediaAction: {width: 36, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF5FF'},
+  mediaDelete: {backgroundColor: '#FFF0F2'},
+  emptyMedia: {fontFamily: profileFonts.regular, fontSize: 10.5, color: profileColors.muted, marginTop: 12, fontStyle: 'italic'},
   fileActions: {flexDirection: 'row', gap: 10, marginTop: 13},
   outlineButton: {flex: 1, height: 43, borderRadius: 10, borderWidth: 1.5, borderColor: profileColors.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7},
   outlineText: {fontFamily: profileFonts.semibold, fontSize: 11, color: profileColors.blue},
@@ -290,6 +429,7 @@ const styles = StyleSheet.create({
   field: {height: 48, borderWidth: 1.5, borderColor: '#D7DFEA', borderRadius: 11, paddingHorizontal: 12, fontFamily: profileFonts.regular, fontSize: 12, color: profileColors.ink},
   uploadBox: {minHeight: 155, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#72A8FF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', padding: 15},
   uploadTitle: {fontFamily: profileFonts.semibold, fontSize: 11.5, color: profileColors.ink, marginTop: 6, textAlign: 'center'},
+  pickedName: {maxWidth: '100%', fontFamily: profileFonts.regular, fontSize: 9.5, color: '#475467', marginTop: 4},
   uploadHint: {fontFamily: profileFonts.regular, fontSize: 9.5, color: profileColors.muted, marginTop: 3},
   pickButton: {minHeight: 36, borderRadius: 9, borderWidth: 1, borderColor: profileColors.blue, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', marginTop: 10},
   pickText: {fontFamily: profileFonts.semibold, fontSize: 10, color: profileColors.blue},
