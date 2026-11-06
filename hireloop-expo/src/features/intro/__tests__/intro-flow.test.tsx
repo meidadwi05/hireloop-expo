@@ -2,7 +2,7 @@ import {act, fireEvent, render, within} from '@testing-library/react-native';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
 import React from 'react';
-import {StyleSheet} from 'react-native';
+import {AccessibilityInfo, StyleSheet} from 'react-native';
 
 import WelcomeRoute from '../../../app/(public)/welcome';
 import {ONBOARDING_SPLASH_DURATION_MS} from '../components/OnboardingSplash';
@@ -22,11 +22,13 @@ describe('alur onboarding intro', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
   });
 
   afterEach(() => {
     jest.clearAllTimers();
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   it('menampilkan splash selama 3,5 detik sebelum onboarding pertama', () => {
@@ -230,5 +232,19 @@ describe('alur onboarding intro', () => {
     fireEvent.press(screen.getByText('Mulai Sekarang'));
     expect(mockedRouter.replace).toHaveBeenLastCalledWith('/(public)/login');
     screen.unmount();
+  });
+
+  it('menempatkan bullet di kiri dalam footer yang terpisah dari tombol', () => {
+    const screen = render(<WelcomeRoute />);
+    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
+    jest.useRealTimers();
+
+    const dotsStyle = StyleSheet.flatten(screen.getByTestId('intro-dots').props.style);
+    const footerStyle = StyleSheet.flatten(screen.getByTestId('intro-footer-controls').props.style);
+
+    expect(dotsStyle.alignSelf).toBe('flex-start');
+    expect(dotsStyle.marginLeft).toBeGreaterThan(0);
+    expect(footerStyle.gap).toBeGreaterThanOrEqual(20);
+    expect(footerStyle.position).not.toBe('absolute');
   });
 });

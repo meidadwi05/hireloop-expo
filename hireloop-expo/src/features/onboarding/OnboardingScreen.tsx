@@ -17,6 +17,7 @@ import {mapCurrentOnboarding} from './onboarding.mapper';
 import {onboardingReducer} from './onboarding.reducer';
 import {firstValidationMessage, validatePersonalStep, validateWorkStep} from './onboarding.schemas';
 import {createEmptyOnboardingDraft, type MasterOption, type OnboardingActionFeedback, type RunOnboardingAction} from './onboarding.types';
+import {clearOnboardingDraft, loadOnboardingDraft, saveOnboardingDraft} from './onboarding.storage';
 
 function normalizeMasterOptions(input: unknown): MasterOption[] {
   const root = input && typeof input === 'object' ? input as Record<string, unknown> : {};
@@ -42,6 +43,7 @@ export function OnboardingScreen() {
   const actionId = useRef(0);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [overlay, setOverlay] = useState<ActionOverlay | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
   const [state, dispatch] = useReducer(onboardingReducer, {
     step: 1,
     draft: createEmptyOnboardingDraft(user?.full_name ?? ''),
@@ -59,10 +61,26 @@ export function OnboardingScreen() {
   useEffect(() => {
     if (hydrated.current || currentLoading) return;
     hydrated.current = true;
-    if (currentData) {
-      dispatch({type: 'hydrate', draft: mapCurrentOnboarding(currentData, user?.full_name ?? '')});
-    }
-  }, [currentData, currentLoading, user?.full_name]);
+    void (async () => {
+      const localDraft = user?.id ? await loadOnboardingDraft(user.id) : null;
+      if (!mounted.current) return;
+      if (localDraft) {
+        dispatch({type: 'hydrate', draft: localDraft.draft});
+        dispatch({type: 'set-step', step: localDraft.step});
+      } else if (currentData) {
+        dispatch({type: 'hydrate', draft: mapCurrentOnboarding(currentData, user?.full_name ?? '')});
+      }
+      setDraftReady(true);
+    })();
+  }, [currentData, currentLoading, user?.full_name, user?.id]);
+
+  useEffect(() => {
+    if (!draftReady || !user?.id) return;
+    const timer = setTimeout(() => {
+      void saveOnboardingDraft(user.id, state.step, state.draft);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [draftReady, state.draft, state.step, user?.id]);
 
   const majors = useMemo(() => normalizeMasterOptions(onboarding.majors.data), [onboarding.majors.data]);
   const notify = useCallback((status: 'success' | 'error', title: string, message: string) => {
@@ -97,6 +115,7 @@ export function OnboardingScreen() {
     } else if (nextAction === 'home') {
       void (async () => {
         try {
+          if (user?.id) await clearOnboardingDraft(user.id);
           const refreshedUser = await onboarding.refreshAfterSubmit();
           if (!refreshedUser) throw new Error('Profil sudah tersimpan, tetapi sesi belum dapat diperbarui. Silakan masuk kembali.');
           router.replace('/(candidate)/(tabs)/home');

@@ -10,6 +10,7 @@ import {notificationsKeys} from '../../notifications/notifications.keys';
 import {useProfile} from '../../profile/hooks/use-profile';
 import {calculateProfileCompletion} from '../../profile/profile.mapper';
 import {dashboardApi} from '../api/dashboard.api';
+import {selectUpcomingInterviews} from '../dashboard.interviews';
 import {dashboardKeys} from '../dashboard.keys';
 
 export function useDashboardHome() {
@@ -37,7 +38,7 @@ export function useDashboardHome() {
   return {
     applications,
     candidate: candidate.candidate,
-    interviews: dashboard.data?.interviews ?? [],
+    interviews: selectUpcomingInterviews(dashboard.data?.interviews ?? []),
     jobs: jobs.data ?? [],
     unread: unread.data ?? 0,
     profileCompletion: profile.data ? calculateProfileCompletion(profile.data) : 0,

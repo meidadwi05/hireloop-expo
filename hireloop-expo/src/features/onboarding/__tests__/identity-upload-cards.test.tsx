@@ -32,6 +32,7 @@ jest.mock('../api/onboarding.api', () => ({
   onboardingApi: {
     uploadKtp: jest.fn(),
     uploadAvatar: jest.fn(),
+    checkNik: jest.fn().mockResolvedValue({available: true, status: 'fresh', message: 'NIK tersedia.'}),
   },
 }));
 
@@ -52,11 +53,50 @@ describe('card upload identitas onboarding', () => {
     expect(screen.getByTestId('ktp-upload-card')).toBeTruthy();
     expect(screen.getByText('Upload KTP')).toBeTruthy();
     expect(screen.getByText('Ambil Foto KTP')).toBeTruthy();
-    expect(screen.getByText('Unggah Foto')).toBeTruthy();
+    expect(screen.getByTestId('ktp-photo-trigger')).toBeTruthy();
     expect(screen.getByTestId('profile-photo-card')).toBeTruthy();
     expect(screen.getByText('Foto Profil')).toBeTruthy();
-    expect(screen.getByText('Pilih dari Galeri')).toBeTruthy();
+    expect(screen.getByText('Ambil Foto Profil')).toBeTruthy();
+    expect(screen.getByTestId('avatar-photo-trigger')).toBeTruthy();
+    expect(screen.queryByText('Pilih dari Galeri')).toBeNull();
     expect(screen.getByTestId('personal-information-card')).toBeTruthy();
+  });
+
+  it('membuka pilihan Galeri dan Batal ketika ikon KTP ditekan', () => {
+    const screen = render(
+      <PersonalDataStep
+        draft={createEmptyOnboardingDraft('Andi Permana')}
+        dispatch={jest.fn()}
+        majorOptions={[]}
+        onNext={jest.fn()}
+        runAction={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('ktp-photo-trigger'));
+
+    expect(screen.getByText('Galeri')).toBeTruthy();
+    expect(screen.getByText('Batal')).toBeTruthy();
+    fireEvent.press(screen.getByText('Batal'));
+    expect(screen.queryByText('Galeri')).toBeNull();
+  });
+
+  it('membuka pilihan Galeri dan Batal ketika ikon foto profil ditekan', () => {
+    const screen = render(
+      <PersonalDataStep
+        draft={createEmptyOnboardingDraft('Andi Permana')}
+        dispatch={jest.fn()}
+        majorOptions={[]}
+        onNext={jest.fn()}
+        runAction={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('avatar-photo-trigger'));
+
+    expect(screen.getByText('Unggah Foto Profil')).toBeTruthy();
+    expect(screen.getByText('Galeri')).toBeTruthy();
+    expect(screen.getByText('Batal')).toBeTruthy();
   });
 
   it('menampilkan NIK wajib sebagai field lokal 16 digit', () => {

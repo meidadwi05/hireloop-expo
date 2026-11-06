@@ -78,6 +78,7 @@ export type DashboardRoute =
   | '/(candidate)/(tabs)/jobs'
   | '/(candidate)/(tabs)/career'
   | '/(candidate)/(tabs)/notifications'
+  | '/(candidate)/interviews'
   | '/(candidate)/jobs/saved';
 
 const shortcutItems = [
@@ -360,11 +361,15 @@ function InterviewContent({compact, dateWidth, interview}: {compact: boolean; da
   );
 }
 
-export function NearestInterviewCard({containerWidth = 390, interviews}: {containerWidth?: number; interviews: DashboardInterview[]}) {
+export function NearestInterviewCard({containerWidth = 390, interviews, onOpenAll}: {
+  containerWidth?: number;
+  interviews: DashboardInterview[];
+  onOpenAll?: () => void;
+}) {
   const responsive = getDashboardResponsiveLayout(containerWidth);
   return (
     <View>
-      <SectionHeader compact={responsive.compact} title="Interview Terdekat" onPress={() => Alert.alert('Interview', 'Buka seluruh jadwal interview.')} />
+      <SectionHeader compact={responsive.compact} title="Interview Terdekat" onPress={() => onOpenAll?.()} />
       <View style={[styles.interviewCard, responsive.compact && styles.interviewCardCompact]}>
         <InterviewContent compact={responsive.compact} dateWidth={responsive.interviewDateWidth} interview={interviews[0]} />
       </View>
@@ -718,7 +723,11 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
           />
           {interviewsLoading
             ? <InterviewCardSkeleton compact={responsive.compact} dateWidth={responsive.interviewDateWidth} />
-            : <NearestInterviewCard containerWidth={width} interviews={interviews} />}
+            : <NearestInterviewCard
+                containerWidth={width}
+                interviews={interviews}
+                onOpenAll={() => onNavigate?.('/(candidate)/interviews')}
+              />}
           {profileLoading
             ? <View style={[styles.profileCompletionLoading, {height: responsive.compact ? 170 : 190}]} />
             : <ProfileCompletionCard completion={profileCompletion} containerWidth={width} onOpenProfile={() => onNavigate?.('/profile')} />}

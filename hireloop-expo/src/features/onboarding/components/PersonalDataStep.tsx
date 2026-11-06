@@ -1,16 +1,18 @@
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
 import {calculateAge} from '../onboarding.schemas';
+import {toAppApiError} from '../../../core/api/api-error';
 import type {EducationDraft, MasterOption, OnboardingAction, OnboardingDraft, RunOnboardingAction} from '../onboarding.types';
 import {AddressFields} from './AddressFields';
 import {DateField} from './DateField';
 import {EducationModal} from './EducationModal';
 import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
 import {IdentityUploadCards} from './IdentityUploadCards';
-import type {KtpExtractedData} from '../api/onboarding.api';
+import {onboardingApi, type KtpExtractedData} from '../api/onboarding.api';
+import {resolveKtpAddress} from '../ktp-ocr';
 
 const genderOptions: MasterOption[] = [{value: 'male', label: 'Laki-laki'}, {value: 'female', label: 'Perempuan'}];
 const maritalOptions: MasterOption[] = [{value: 'single', label: 'Belum Menikah'}, {value: 'married', label: 'Menikah'}, {value: 'other', label: 'Lainnya'}];
@@ -28,6 +30,8 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
   const {width} = useWindowDimensions();
   const [educationOpen, setEducationOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<EducationDraft | null>(null);
+  const [nikCheck, setNikCheck] = useState<{status: 'idle' | 'checking' | 'valid' | 'warning' | 'invalid' | 'error'; message: string}>({status: 'idle', message: ''});
+  const nikRequestId = useRef(0);
   const age = useMemo(() => calculateAge(draft.birthDate), [draft.birthDate]);
   const birthDateLimits = useMemo(() => {
     const today = new Date();
@@ -37,15 +41,54 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
     };
   }, []);
   const setField = <K extends keyof OnboardingDraft>(field: K, value: OnboardingDraft[K]) => dispatch({type: 'set-field', field, value});
-  const applyOcr = (extracted: KtpExtractedData) => {
+  const applyOcr = async (extracted: KtpExtractedData) => {
     if (extracted.nik) setField('nik', extracted.nik.replace(/\D/g, '').slice(0, 16));
     if (extracted.full_name) setField('fullName', extracted.full_name);
     if (extracted.birth_place) setField('birthPlace', extracted.birth_place);
     if (extracted.birth_date) setField('birthDate', extracted.birth_date);
     if (extracted.gender) setField('gender', extracted.gender);
     if (extracted.marital_status) setField('maritalStatus', extracted.marital_status);
-    const addressLine = extracted.full_address || extracted.address;
-    if (addressLine) dispatch({type: 'set-address', target: 'identityAddress', address: {...draft.identityAddress, addressLine}});
+    try {
+      const resolvedAddress = await resolveKtpAddress(extracted, draft.identityAddress);
+      dispatch({type: 'set-address', target: 'identityAddress', address: resolvedAddress});
+    } catch {
+      const addressLine = extracted.full_address || extracted.address;
+      if (addressLine) dispatch({type: 'set-address', target: 'identityAddress', address: {...draft.identityAddress, addressLine}});
+    }
+  };
+
+  useEffect(() => {
+    const nik = draft.nik.replace(/\D/g, '');
+    const requestId = ++nikRequestId.current;
+    if (nik.length !== 16) {
+      setNikCheck({status: 'idle', message: ''});
+      return;
+    }
+    setNikCheck({status: 'checking', message: 'Memeriksa ketersediaan NIK...'});
+    const timer = setTimeout(() => {
+      void onboardingApi.checkNik(nik).then(result => {
+        if (requestId !== nikRequestId.current) return;
+        if (!result.available || result.status === 'active_user') {
+          setNikCheck({status: 'invalid', message: result.message});
+        } else if (result.status === 'reused_deleted' || result.hasBlacklist) {
+          setNikCheck({status: 'warning', message: result.message});
+        } else {
+          setNikCheck({status: 'valid', message: result.message});
+        }
+      }).catch(error => {
+        if (requestId !== nikRequestId.current) return;
+        setNikCheck({status: 'error', message: toAppApiError(error).message});
+      });
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [draft.nik]);
+
+  const continueWhenNikValid = () => {
+    if (nikCheck.status === 'checking') return Alert.alert('NIK sedang diperiksa', 'Tunggu hingga pemeriksaan NIK selesai.');
+    if (nikCheck.status === 'invalid' || nikCheck.status === 'error') {
+      return Alert.alert('NIK belum dapat digunakan', nikCheck.message || 'Periksa kembali NIK Anda.');
+    }
+    onNext();
   };
 
   const openEducation = (item: EducationDraft | null = null) => {
@@ -78,7 +121,7 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
         onKtpUploaded={result => {
           setField('ktpPath', result.path);
           setField('ktpUrl', result.url);
-          applyOcr(result.extracted);
+          void applyOcr(result.extracted);
         }}
       />
       <View testID="personal-information-card" style={[styles.card, width < 390 && styles.cardNarrow]}>
@@ -92,6 +135,14 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
           maxLength={16}
           placeholder="Contoh: 3275010101900001"
         />
+        {nikCheck.status !== 'idle' ? (
+          <View style={[styles.nikStatus, nikCheck.status === 'invalid' || nikCheck.status === 'error' ? styles.nikStatusError : nikCheck.status === 'warning' ? styles.nikStatusWarning : styles.nikStatusValid]}>
+            {nikCheck.status === 'checking'
+              ? <Ionicons name="sync-outline" size={15} color="#8DBBFF" />
+              : <Ionicons name={nikCheck.status === 'invalid' || nikCheck.status === 'error' ? 'alert-circle-outline' : nikCheck.status === 'warning' ? 'warning-outline' : 'checkmark-circle-outline'} size={15} color={nikCheck.status === 'invalid' || nikCheck.status === 'error' ? '#FF8A98' : nikCheck.status === 'warning' ? '#FACC15' : '#5EE2AE'} />}
+            <Text style={styles.nikStatusText}>{nikCheck.message}</Text>
+          </View>
+        ) : null}
         <TextField label="Nama Lengkap" required value={draft.fullName} onChangeText={value => setField('fullName', value)} placeholder="Contoh: Andi Permana" />
       <SelectField label="Jenis Kelamin" required value={draft.gender} onChange={value => setField('gender', value as OnboardingDraft['gender'])} options={genderOptions} placeholder="Pilih jenis kelamin" />
       <View style={[styles.columns, width < 390 && styles.columnsNarrow]}>
@@ -131,7 +182,7 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
       ))}
 
       <View style={styles.privacy}><Ionicons name="shield-checkmark-outline" size={25} color="#3B86FF" /><Text style={styles.privacyText}>Data yang Anda berikan ke sistem kami akan dilindungi dan hanya digunakan untuk kebutuhan rekrutmen.</Text></View>
-      <Pressable accessibilityRole="button" onPress={onNext} style={styles.primaryButton}>
+      <Pressable accessibilityRole="button" onPress={continueWhenNikValid} style={styles.primaryButton}>
         <LinearGradient colors={['#0B5CFF', '#00D8F4']} end={{x: 1, y: 0}} start={{x: 0, y: 0}} style={styles.gradient}><Text style={styles.primaryText}>Selanjutnya</Text></LinearGradient>
       </Pressable>
 
@@ -151,6 +202,11 @@ const styles = StyleSheet.create({
   columnsNarrow: {flexDirection: 'column', gap: 0},
   column: {flex: 1, minWidth: 0},
   sameAddress: {marginBottom: 10},
+  nikStatus: {marginTop: -8, marginBottom: 14, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9, flexDirection: 'row', alignItems: 'flex-start', gap: 7},
+  nikStatusValid: {backgroundColor: '#073B45'},
+  nikStatusWarning: {backgroundColor: '#4A3B08'},
+  nikStatusError: {backgroundColor: '#4B1930'},
+  nikStatusText: {flex: 1, fontFamily: 'PlusJakartaSans_400Regular', color: 'white', fontSize: 10, lineHeight: 15},
   itemCard: {backgroundColor: 'white', borderRadius: 11, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
   itemIcon: {width: 28, height: 28, borderRadius: 14, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center'},
   itemCopy: {flex: 1, minWidth: 0},

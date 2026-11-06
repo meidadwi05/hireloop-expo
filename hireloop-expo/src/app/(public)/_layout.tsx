@@ -11,5 +11,9 @@ export default function PublicLayout() {
     return <Redirect href={user?.onboarding_finished ? '/(candidate)/(tabs)/home' : '/(onboarding)/onboarding'} />;
   }
 
-  return <Stack screenOptions={{headerShown: false}} />;
+  return (
+    <Stack screenOptions={{headerShown: false}}>
+      <Stack.Screen name="welcome" options={{gestureEnabled: false}} />
+    </Stack>
+  );
 }

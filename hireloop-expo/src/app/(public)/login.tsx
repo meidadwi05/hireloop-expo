@@ -79,7 +79,6 @@ export default function LoginRoute() {
         onGoogleLogin={() => void submitGoogle()}
         onForgotPassword={() => router.push({pathname: '/(public)/forgot-password', params: {email}})}
         onRegister={() => router.push('/(public)/register')}
-        onShowOnboarding={() => router.push('/(public)/welcome')}
       />
     </View>
   );

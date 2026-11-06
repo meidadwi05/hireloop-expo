@@ -337,7 +337,7 @@ export default function App(){
 
 
 
-    screen==='login'?<LoginPage email={email} password={password} errors={errors} remember={remember} notice={notice} loading={isLoggingIn} onEmailChange={setEmail} onPasswordChange={setPassword} onRememberChange={setRemember} onNoticeChange={setNotice} onLogin={login} onForgotPassword={()=>{setResetEmail(email);go('forgot');}} onRegister={()=>go('register')} onShowOnboarding={()=>{setSlide(0);go('onboarding');}}/>:
+    screen==='login'?<LoginPage email={email} password={password} errors={errors} remember={remember} notice={notice} loading={isLoggingIn} onEmailChange={setEmail} onPasswordChange={setPassword} onRememberChange={setRemember} onNoticeChange={setNotice} onLogin={login} onForgotPassword={()=>{setResetEmail(email);go('forgot');}} onRegister={()=>go('register')}/>:
 
 
 

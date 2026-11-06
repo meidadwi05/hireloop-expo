@@ -25,9 +25,21 @@ export type KtpExtractedData = {
   marital_status?: 'single' | 'married' | 'other' | null;
   full_address?: string | null;
   address?: string | null;
+  rt_rw?: string | null;
+  provinsi?: string | null;
+  kota_kab?: string | null;
+  kecamatan?: string | null;
+  kel_desa?: string | null;
 };
 export type KtpUploadResult = {path: string; url: string; extracted: KtpExtractedData};
 export type AvatarUploadResult = {path: string; url: string};
+export type NikAvailabilityResult = {
+  available: boolean;
+  status?: 'active_user' | 'reused_deleted' | 'fresh' | null;
+  hasBlacklist?: boolean;
+  isBanned?: boolean;
+  message: string;
+};
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
@@ -103,5 +115,20 @@ export const onboardingApi = {
     const root = record(response.data);
     const data = record(root.data ?? root);
     return {path: String(data.avatar_path ?? ''), url: String(data.avatar_url ?? '')};
+  },
+
+  async checkNik(nik: string): Promise<NikAvailabilityResult> {
+    const response = await httpClient.get('/prod-candidate/onboarding/check-nik', {params: {nik}});
+    const root = record(response.data);
+    const data = record(root.data ?? root);
+    return {
+      available: Boolean(data.available),
+      status: ['active_user', 'reused_deleted', 'fresh'].includes(String(data.status))
+        ? String(data.status) as NikAvailabilityResult['status']
+        : null,
+      hasBlacklist: Boolean(data.has_blacklist),
+      isBanned: Boolean(data.is_banned),
+      message: String(data.message ?? (data.available ? 'NIK tersedia.' : 'NIK tidak dapat digunakan.')),
+    };
   },
 };

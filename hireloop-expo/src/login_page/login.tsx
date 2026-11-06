@@ -38,7 +38,6 @@ type LoginPageProps = {
   onGoogleLogin?: () => void;
   onForgotPassword: () => void;
   onRegister: () => void;
-  onShowOnboarding: () => void;
 };
 
 function GradientWelcome() {
@@ -51,6 +50,7 @@ function GradientWelcome() {
         colors={['#0051FD', '#00DAFD']}
         start={{x: 0, y: 0.5}}
         end={{x: 1, y: 0.5}}
+        testID="login-welcome-gradient"
       >
         <Text style={[styles.welcome, {opacity: 0}]}>Selamat Datang!</Text>
       </LinearGradient>
@@ -117,10 +117,10 @@ function Field({
   );
 }
 
-function Link({label, onPress, light = false}: {label: string; onPress: () => void; light?: boolean}) {
+function Link({label, onPress}: {label: string; onPress: () => void}) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={styles.link}>
-      <Text style={[styles.linkText, light && styles.linkTextLight]}>{label}</Text>
+      <Text style={styles.linkText}>{label}</Text>
     </Pressable>
   );
 }
@@ -168,10 +168,17 @@ export default function LoginPage({
   onGoogleLogin,
   onForgotPassword,
   onRegister,
-  onShowOnboarding,
 }: LoginPageProps) {
   return (
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.loginScroll}>
+    <View style={styles.screen}>
+      <Image
+        accessibilityIgnoresInvertColors
+        resizeMode="cover"
+        source={require('../assets/login_background.png')}
+        style={styles.backgroundImage}
+        testID="login-background"
+      />
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.loginScroll}>
       <View style={styles.brand}>
         <Image
           source={require('../assets/HireLoopLogo.png')}
@@ -235,7 +242,13 @@ export default function LoginPage({
           style={({pressed}) => [styles.google, pressed && styles.pressed]}
           onPress={onGoogleLogin}
         >
-          <Text style={styles.googleG}>G</Text>
+          <Image
+            accessibilityIgnoresInvertColors
+            resizeMode="contain"
+            source={require('../assets/goggle_login.png')}
+            style={styles.googleLogo}
+            testID="google-login-logo"
+          />
           <Text style={styles.googleText}>
             {googleLoading ? 'Menghubungkan ke Google...' : 'Masuk dengan Google'}
           </Text>
@@ -248,13 +261,14 @@ export default function LoginPage({
         {!!notice && <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text>}
       </View>
 
-      <Text style={styles.demoNote}>API KANDIDAT · LARAVEL SANCTUM</Text>
-      <Link label="Lihat onboarding" light onPress={onShowOnboarding}/>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {flex: 1, overflow: 'hidden', backgroundColor: '#050D49'},
+  backgroundImage: {position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%'},
   loginScroll: {flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 35},
   brand: {alignItems: 'center', marginBottom: 30},
   logo: {width: 235, height: 61, alignSelf: 'center'},
@@ -278,7 +292,6 @@ const styles = StyleSheet.create({
   small: {fontFamily: F.regular, fontSize: 11, color: C.muted},
   link: {paddingVertical: 12},
   linkText: {fontFamily: F.regular, color: C.blue, fontSize: 12, fontWeight: '600'},
-  linkTextLight: {color: '#C7D5FF'},
   button: {borderRadius: 10, overflow: 'hidden'},
   pressed: {opacity: 0.82},
   buttonInner: {height: 52, paddingHorizontal: 22, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16},
@@ -286,9 +299,8 @@ const styles = StyleSheet.create({
   divider: {flexDirection: 'row', gap: 14, alignItems: 'center', marginVertical: 21},
   line: {height: 1, backgroundColor: '#EDF0F6', flex: 1},
   google: {minHeight: 48, borderColor: '#E5EAF3', borderWidth: 1, borderRadius: 8, flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center'},
-  googleG: {fontFamily: F.bold, color: '#4285F4', fontSize: 21},
+  googleLogo: {width: 24, height: 24, flexShrink: 0},
   googleText: {fontFamily: F.semibold, color: C.ink, fontSize: 12},
   signup: {flexDirection: 'row', gap: 5, justifyContent: 'center', alignItems: 'center', marginTop: 10, flexWrap: 'wrap'},
   notice: {fontFamily: F.regular, fontSize: 12, lineHeight: 19, backgroundColor: '#EDF5FF', padding: 12, borderRadius: 8, color: '#275DA8', marginTop: 8},
-  demoNote: {fontFamily: F.medium, fontSize: 10, letterSpacing: 1.1, color: '#8D9BC6', textAlign: 'center', marginTop: 24},
 });

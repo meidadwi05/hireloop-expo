@@ -1,10 +1,10 @@
 import React from 'react';
 import {StyleSheet, View} from 'react-native';
 
-export function GradientIntroTitle({children}: {children: string}) {
+export function GradientIntroTitle({children, compact = false}: {children: string; compact?: boolean}) {
   return (
-    <View style={styles.wrapper} testID="gradient-intro-title">
-      <span style={webTitleStyle}>{children}</span>
+    <View style={[styles.wrapper, compact && styles.wrapperCompact]} testID="gradient-intro-title">
+      <span style={{...webTitleStyle, ...(compact ? compactWebTitleStyle : {})}}>{children}</span>
     </View>
   );
 }
@@ -24,6 +24,13 @@ const webTitleStyle: React.CSSProperties = {
   width: '100%',
 };
 
+const compactWebTitleStyle: React.CSSProperties = {
+  fontSize: 22,
+  lineHeight: '29px',
+  minHeight: 58,
+};
+
 const styles = StyleSheet.create({
   wrapper: {width: '100%', minHeight: 72, marginTop: 18},
+  wrapperCompact: {minHeight: 58, marginTop: 10},
 });

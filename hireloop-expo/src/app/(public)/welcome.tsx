@@ -1,4 +1,5 @@
 import {router} from 'expo-router';
+import {LinearGradient} from 'expo-linear-gradient';
 import {StatusBar} from 'expo-status-bar';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
@@ -29,7 +30,6 @@ const COLORS = {
   navyText: '#00195E',
   darkBody: '#C3CCE7',
   darkDot: '#4C5A92',
-  primary: '#0865FF',
   white: '#FFFFFF',
 } as const;
 
@@ -69,7 +69,7 @@ const slides: IntroSlide[] = [
 ];
 
 export default function WelcomeRoute() {
-  const {width} = useWindowDimensions();
+  const {height, width} = useWindowDimensions();
   const [phase, setPhase] = useState<WelcomePhase>('splash');
   const [index, setIndex] = useState(0);
   const [pageWidth, setPageWidth] = useState(width - 56);
@@ -78,6 +78,7 @@ export default function WelcomeRoute() {
   const programmaticTargetRef = useRef<number | null>(null);
   const slide = slides[index];
   const isLightSlide = slide.theme === 'light';
+  const compactHeight = height < 700;
 
   const activateSlide = useCallback((
     targetIndex: number,
@@ -149,7 +150,11 @@ export default function WelcomeRoute() {
     <SafeAreaView
       testID="intro-screen"
       edges={['top', 'right', 'bottom', 'left']}
-      style={[styles.screen, {backgroundColor: isLightSlide ? COLORS.lightBackground : COLORS.navy}]}
+      style={[
+        styles.screen,
+        compactHeight && styles.screenCompact,
+        {backgroundColor: isLightSlide ? COLORS.lightBackground : COLORS.navy},
+      ]}
     >
       <StatusBar animated style={isLightSlide ? 'dark' : 'light'} />
       <Pressable
@@ -176,59 +181,75 @@ export default function WelcomeRoute() {
       >
         {slides.map(item => (
           <View key={item.id} testID={`intro-slide-${item.id}`} style={[styles.slide, {width: pageWidth}]}>
-            <Image source={item.image} style={styles.image} resizeMode="contain" />
+            <Image source={item.image} style={[styles.image, compactHeight && styles.imageCompact]} resizeMode="contain" />
             {item.titleVariant === 'gradient'
-              ? <GradientIntroTitle>{item.title}</GradientIntroTitle>
-              : <Text style={[styles.title, styles.darkTitle]}>{item.title}</Text>}
-            <Text style={[styles.body, {color: item.theme === 'light' ? COLORS.lightBody : COLORS.darkBody}]}>{item.body}</Text>
+              ? <GradientIntroTitle compact={compactHeight}>{item.title}</GradientIntroTitle>
+              : <Text style={[styles.title, compactHeight && styles.titleCompact, styles.darkTitle]}>{item.title}</Text>}
+            <Text style={[styles.body, compactHeight && styles.bodyCompact, {color: item.theme === 'light' ? COLORS.lightBody : COLORS.darkBody}]}>{item.body}</Text>
           </View>
         ))}
       </ScrollView>
-      <View style={styles.dots} accessibilityRole="tablist">
-        {slides.map((_, itemIndex) => (
-          <View
-            key={itemIndex}
-            accessibilityRole="tab"
-            accessibilityLabel={`Halaman onboarding ${itemIndex + 1}`}
-            accessibilityState={{selected: itemIndex === index}}
-            style={[
-              styles.dot,
-              {backgroundColor: isLightSlide ? COLORS.lightDot : COLORS.darkDot},
-              itemIndex === index && styles.dotActive,
-            ]}
-          />
-        ))}
+      <View style={[styles.footerControls, compactHeight && styles.footerControlsCompact]} testID="intro-footer-controls">
+        <View style={styles.dots} accessibilityRole="tablist" testID="intro-dots">
+          {slides.map((_, itemIndex) => (
+            <View
+              key={itemIndex}
+              accessibilityRole="tab"
+              accessibilityLabel={`Halaman onboarding ${itemIndex + 1}`}
+              accessibilityState={{selected: itemIndex === index}}
+              style={[
+                styles.dot,
+                {backgroundColor: isLightSlide ? COLORS.lightDot : COLORS.darkDot},
+                itemIndex === index && styles.dotActive,
+              ]}
+            />
+          ))}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            if (index === slides.length - 1) {
+              router.replace('/(public)/login');
+              return;
+            }
+            activateSlide(index + 1, {scroll: true, animated: true});
+          }}
+          style={styles.button}
+        >
+          <LinearGradient
+            colors={['#0051FD', '#00DAFD']}
+            end={{x: 1, y: 0.5}}
+            start={{x: 0, y: 0.5}}
+            style={styles.buttonGradient}
+          >
+            <Text style={styles.buttonText}>{index === slides.length - 1 ? 'Mulai Sekarang' : 'Lanjut'}</Text>
+          </LinearGradient>
+        </Pressable>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          if (index === slides.length - 1) {
-            router.replace('/(public)/login');
-            return;
-          }
-          activateSlide(index + 1, {scroll: true, animated: true});
-        }}
-        style={styles.button}
-      >
-        <Text style={styles.buttonText}>{index === slides.length - 1 ? 'Mulai Sekarang' : 'Lanjut'}</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {flex: 1, alignItems: 'center', paddingHorizontal: 28, paddingVertical: 18},
+  screenCompact: {paddingHorizontal: 20, paddingVertical: 10},
   slides: {flex: 1, width: '100%'},
   slide: {flex: 1},
   skip: {alignSelf: 'flex-end', minHeight: 44, minWidth: 44, padding: 10, alignItems: 'center', justifyContent: 'center'},
   skipText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12},
   image: {width: '100%', height: '48%', marginTop: 12},
+  imageCompact: {height: '42%', marginTop: 2},
   title: {width: '100%', minHeight: 72, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 26, lineHeight: 34, textAlign: 'center', textAlignVertical: 'center', marginTop: 18},
+  titleCompact: {minHeight: 58, fontSize: 22, lineHeight: 29, marginTop: 10},
   darkTitle: {color: COLORS.white},
   body: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 12},
-  dots: {flexDirection: 'row', gap: 7, marginTop: 24},
+  bodyCompact: {fontSize: 11.5, lineHeight: 18, marginTop: 7},
+  footerControls: {width: '100%', flexShrink: 0, gap: 24, paddingTop: 18},
+  footerControlsCompact: {gap: 20, paddingTop: 10},
+  dots: {alignSelf: 'flex-start', flexDirection: 'row', gap: 7, marginLeft: 14},
   dot: {width: 7, height: 7, borderRadius: 4},
   dotActive: {width: 24, backgroundColor: COLORS.cyan},
-  button: {height: 52, width: '100%', borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginTop: 'auto'},
+  button: {height: 52, width: '100%', borderRadius: 12, overflow: 'hidden'},
+  buttonGradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   buttonText: {fontFamily: 'PlusJakartaSans_700Bold', color: COLORS.white, fontSize: 14},
 });
