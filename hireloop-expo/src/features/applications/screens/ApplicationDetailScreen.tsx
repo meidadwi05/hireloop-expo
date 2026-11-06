@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -21,6 +22,7 @@ import {dashboardKeys} from '../../dashboard/dashboard.keys';
 import {jobsApi} from '../../jobs/api/jobs.api';
 import {JobInformationSections} from '../../jobs/components/JobInformationSections';
 import {jobsKeys} from '../../jobs/jobs.keys';
+import {useSavedJobs} from '../../jobs/saved-jobs-provider';
 import type {CandidateJobDetail, CandidateJobSource} from '../../jobs/jobs.types';
 import {useAuth} from '../../auth/auth-provider';
 import {applicationsApi} from '../api/applications.api';
@@ -101,8 +103,11 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
+  const compact = containerWidth <= 520;
+  const pagePadding = containerWidth <= 350 ? 14 : 18;
   const queryClient = useQueryClient();
   const {refreshUser} = useAuth();
+  const {isSaved, toggleSaved} = useSavedJobs();
   const applicationsQuery = useApplications();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
@@ -195,6 +200,10 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 
   const presentation = applicationStatePresentation(application.state, application.currentStageLabel);
   const heroCopy = statusHeroCopy(application);
+  const saved = isSaved(job.key);
+  const submittedLabel = application.state === 'canceled'
+    ? `Lamaran dibatalkan pada ${formatApplicationDate(application.canceledAt ?? application.updatedAt)}`
+    : `Lamaran dikirim pada ${formatApplicationDate(application.submittedAt)}`;
   const processError = processQuery.isError ? toAppApiError(processQuery.error).message : '';
   const jobError = jobQuery.isError ? toAppApiError(jobQuery.error).message : '';
 
@@ -215,31 +224,68 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
           <View style={styles.headerSpacer} />
         </BrandedHeaderBackground>
 
-        <View style={styles.content}>
+        <View style={[styles.content, {paddingHorizontal: pagePadding}]}>
           <View style={styles.summaryCard}>
-            <View style={styles.summaryHeader}>
-              <View style={styles.companyIcon}><Ionicons name="business-outline" size={27} color={APPLICATION_COLORS.blue} /></View>
-              <View style={styles.summaryCopy}>
-                <Text style={styles.jobTitle}>{job.title}</Text>
-                <Text style={styles.company}>{job.company}</Text>
+            <View style={[styles.summaryTop, compact && styles.summaryTopCompact]}>
+              <View style={styles.summaryHeader}>
+                <View style={styles.companyIcon}><Ionicons name="business-outline" size={27} color={APPLICATION_COLORS.blue} /></View>
+                <View style={styles.summaryCopy}>
+                  <View style={styles.titleStatusRow}>
+                    <Text style={styles.jobTitle}>{job.title}</Text>
+                    <View style={[styles.statusBadge, {borderColor: presentation.color, backgroundColor: presentation.background}]}>
+                      <Text style={[styles.statusBadgeText, {color: presentation.color}]}>{presentation.label}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.company}>{job.company}</Text>
+                </View>
+              </View>
+              <View style={styles.summaryActions}>
+                <Pressable
+                  accessibilityLabel={saved ? 'Hapus dari lowongan disimpan' : 'Simpan lowongan'}
+                  accessibilityRole="button"
+                  onPress={() => toggleSaved(job)}
+                  style={[styles.bookmarkButton, saved && styles.bookmarkButtonActive]}
+                >
+                  <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={APPLICATION_COLORS.blue} />
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="Bagikan lowongan"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    void Share.share({message: `${job.title} di ${job.company} - ${job.location}`})
+                      .catch(() => {
+                        setFeedback('Lowongan belum dapat dibagikan.');
+                        setFeedbackError(true);
+                      });
+                  }}
+                  style={styles.shareButton}
+                >
+                  <Ionicons name="share-social-outline" size={18} color={APPLICATION_COLORS.body} />
+                  <Text style={styles.shareButtonText}>Bagikan</Text>
+                </Pressable>
               </View>
             </View>
             <View style={styles.summaryMetadata}>
+              <SummaryRow icon="wallet-outline">{job.salaryLabel}</SummaryRow>
               <SummaryRow icon="location-outline">{job.location}</SummaryRow>
               <SummaryRow icon="briefcase-outline">{`${job.contractType} · ${job.workMode}`}</SummaryRow>
-              <SummaryRow icon="wallet-outline">{job.salaryLabel}</SummaryRow>
               <SummaryRow icon="calendar-outline">{job.closingLabel}</SummaryRow>
+            </View>
+            <View style={styles.summaryActivity}>
+              {!!job.publishedLabel && <Text style={styles.activityText}>{job.publishedLabel}</Text>}
+              {!!job.publishedLabel && !!job.updatedLabel && <Text style={styles.activitySeparator}>•</Text>}
+              {!!job.updatedLabel && <Text style={styles.activityText}>{job.updatedLabel}</Text>}
+              <View style={[styles.submittedPill, {borderColor: presentation.color, backgroundColor: presentation.background}]}>
+                <Text style={[styles.submittedPillText, {color: presentation.color}]}>{submittedLabel}</Text>
+              </View>
             </View>
           </View>
 
           <View style={[styles.statusHero, {backgroundColor: presentation.background, borderColor: `${presentation.color}55`}]}>
             <View style={[styles.statusIcon, {backgroundColor: `${presentation.color}18`}]}>
-              <Ionicons name={heroCopy.icon} size={28} color={presentation.color} />
+              <Ionicons name={heroCopy.icon} size={23} color={presentation.color} />
             </View>
             <View style={styles.statusCopy}>
-              <View style={[styles.statusBadge, {borderColor: presentation.color}]}>
-                <Text style={[styles.statusBadgeText, {color: presentation.color}]}>{presentation.label}</Text>
-              </View>
               <Text style={styles.statusTitle}>{heroCopy.title}</Text>
               <Text style={styles.statusSubtitle}>{heroCopy.subtitle}</Text>
             </View>
@@ -260,9 +306,9 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Informasi Lamaran</Text>
-            <View style={styles.infoRow}><Text style={styles.infoLabel}>Tanggal melamar</Text><Text style={styles.infoValue}>{formatApplicationDate(application.submittedAt)}</Text></View>
-            <View style={styles.infoRow}><Text style={styles.infoLabel}>Penutupan lowongan</Text><Text style={styles.infoValue}>{job.closingDate ? formatApplicationDate(job.closingDate, false) : '-'}</Text></View>
-            <View style={styles.infoRow}><Text style={styles.infoLabel}>Terakhir diperbarui</Text><Text style={styles.infoValue}>{formatApplicationDate(application.updatedAt)}</Text></View>
+            <View style={[styles.infoRow, compact && styles.infoRowCompact]}><Text style={styles.infoLabel}>Tanggal melamar</Text><Text style={[styles.infoValue, compact && styles.infoValueCompact]}>{formatApplicationDate(application.submittedAt)}</Text></View>
+            <View style={[styles.infoRow, compact && styles.infoRowCompact]}><Text style={styles.infoLabel}>Penutupan lowongan</Text><Text style={[styles.infoValue, compact && styles.infoValueCompact]}>{job.closingDate ? formatApplicationDate(job.closingDate, false) : '-'}</Text></View>
+            <View style={[styles.infoRow, compact && styles.infoRowCompact]}><Text style={styles.infoLabel}>Terakhir diperbarui</Text><Text style={[styles.infoValue, compact && styles.infoValueCompact]}>{formatApplicationDate(application.updatedAt)}</Text></View>
             <View style={styles.infoBanner}>
               <Ionicons name="information-circle-outline" size={19} color={APPLICATION_COLORS.blue} />
               <Text style={styles.infoBannerText}>Penutupan lowongan tidak otomatis membatalkan lamaran. Status proses mengikuti data rekrutmen HireLoop.</Text>
@@ -336,22 +382,35 @@ const styles = StyleSheet.create({
   backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   headerTitle: {flex: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 22, color: 'white', textAlign: 'center'},
   headerSpacer: {width: 44},
-  content: {paddingHorizontal: 18, paddingTop: 17, gap: 15},
+  content: {paddingTop: 17, gap: 15},
   summaryCard: {...applicationShadow, borderRadius: 16, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', padding: 16},
-  summaryHeader: {flexDirection: 'row', gap: 12},
+  summaryTop: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12},
+  summaryTopCompact: {flexDirection: 'column', alignItems: 'stretch'},
+  summaryHeader: {flex: 1, minWidth: 0, flexDirection: 'row', gap: 12},
   companyIcon: {width: 54, height: 54, borderRadius: 14, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   summaryCopy: {flex: 1, minWidth: 0},
-  jobTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 17, lineHeight: 23, color: APPLICATION_COLORS.navy},
+  titleStatusRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8},
+  jobTitle: {minWidth: 0, flexShrink: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 17, lineHeight: 23, color: APPLICATION_COLORS.navy},
   company: {fontFamily: APPLICATION_FONTS.medium, fontSize: 11.5, lineHeight: 18, color: APPLICATION_COLORS.body, marginTop: 3},
-  summaryMetadata: {gap: 8, marginTop: 14},
-  summaryRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 9},
-  summaryText: {flex: 1, minWidth: 0, fontFamily: APPLICATION_FONTS.regular, fontSize: 11, lineHeight: 18, color: APPLICATION_COLORS.body},
-  statusHero: {minHeight: 132, borderRadius: 16, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16},
-  statusIcon: {width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  summaryActions: {flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0},
+  bookmarkButton: {width: 42, height: 42, borderRadius: 10, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center'},
+  bookmarkButtonActive: {borderColor: '#BFD8FF', backgroundColor: '#EDF5FF'},
+  shareButton: {height: 42, borderRadius: 10, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12},
+  shareButtonText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 10.5, color: APPLICATION_COLORS.body},
+  summaryMetadata: {flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 9, marginTop: 14},
+  summaryRow: {maxWidth: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 7},
+  summaryText: {minWidth: 0, flexShrink: 1, fontFamily: APPLICATION_FONTS.regular, fontSize: 11, lineHeight: 18, color: APPLICATION_COLORS.body},
+  summaryActivity: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7, marginTop: 13},
+  activityText: {fontFamily: APPLICATION_FONTS.medium, fontSize: 9.5, lineHeight: 15, color: APPLICATION_COLORS.green},
+  activitySeparator: {fontFamily: APPLICATION_FONTS.bold, fontSize: 10, color: APPLICATION_COLORS.muted},
+  submittedPill: {maxWidth: '100%', minHeight: 28, borderRadius: 14, borderWidth: 1, justifyContent: 'center', paddingHorizontal: 11, paddingVertical: 4},
+  submittedPillText: {flexShrink: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 9.5, lineHeight: 15},
+  statusHero: {minHeight: 88, borderRadius: 16, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13},
+  statusIcon: {width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   statusCopy: {flex: 1, minWidth: 0},
-  statusBadge: {alignSelf: 'flex-start', minHeight: 26, borderRadius: 13, borderWidth: 1, justifyContent: 'center', paddingHorizontal: 11},
-  statusBadgeText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 9.5},
-  statusTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 15, lineHeight: 21, color: APPLICATION_COLORS.navy, marginTop: 8},
+  statusBadge: {maxWidth: '100%', minHeight: 26, borderRadius: 13, borderWidth: 1, justifyContent: 'center', paddingHorizontal: 11, paddingVertical: 3},
+  statusBadgeText: {flexShrink: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 9.5, textTransform: 'uppercase'},
+  statusTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 14, lineHeight: 20, color: APPLICATION_COLORS.navy},
   statusSubtitle: {fontFamily: APPLICATION_FONTS.regular, fontSize: 11, lineHeight: 17, color: APPLICATION_COLORS.body, marginTop: 2},
   sectionCard: {...applicationShadow, borderRadius: 16, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', padding: 16},
   sectionTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 16, color: APPLICATION_COLORS.navy, marginBottom: 12},
@@ -360,8 +419,10 @@ const styles = StyleSheet.create({
   partialErrorText: {flex: 1, fontFamily: APPLICATION_FONTS.regular, fontSize: 9.5, lineHeight: 15, color: '#7D570F'},
   retryText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 9.5, color: APPLICATION_COLORS.blue},
   infoRow: {minHeight: 34, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12},
+  infoRowCompact: {flexDirection: 'column', gap: 3, paddingVertical: 3},
   infoLabel: {flex: 1, fontFamily: APPLICATION_FONTS.medium, fontSize: 11, lineHeight: 17, color: APPLICATION_COLORS.body},
   infoValue: {flex: 1, fontFamily: APPLICATION_FONTS.semibold, fontSize: 10.5, lineHeight: 17, color: APPLICATION_COLORS.navy, textAlign: 'right'},
+  infoValueCompact: {flex: 0, width: '100%', textAlign: 'left'},
   infoBanner: {flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: 10, backgroundColor: '#EAF2FF', padding: 11, marginTop: 8},
   infoBannerText: {flex: 1, fontFamily: APPLICATION_FONTS.regular, fontSize: 9.5, lineHeight: 15, color: '#3C5A82'},
   feedback: {borderRadius: 11, backgroundColor: '#E7F9F1', padding: 12},

@@ -35,7 +35,7 @@ describe('getBrandedHeaderLayout', () => {
     expect(withInset.height).toBeGreaterThanOrEqual(withoutInset.height);
   });
 
-  it.each([320, 360, 390, 412, 440, 720])('keeps the complete artwork visible at %ipx', width => {
+  it.each([320, 360, 390, 412, 430])('keeps the complete artwork visible on phone width %ipx', width => {
     const layout = getBrandedHeaderLayout('application-list', width, 24);
     const artwork = layout.artworkStyle;
 
@@ -44,5 +44,16 @@ describe('getBrandedHeaderLayout', () => {
     expect(artwork.width).toBe(width);
     expect(artwork.height).toBeCloseTo(width / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
     expect((artwork.top as number) + (artwork.height as number)).toBeLessThanOrEqual(layout.height);
+    expect(layout.resizeMode).toBe('cover');
+  });
+
+  it('caps the application header height on a wide PWA viewport', () => {
+    const phone = getBrandedHeaderLayout('application-list', 430, 24);
+    const wide = getBrandedHeaderLayout('application-list', 720, 24);
+
+    expect(wide.height).toBe(phone.height);
+    expect(wide.artworkStyle.width).toBe(720);
+    expect(wide.artworkStyle.height).toBe(phone.artworkStyle.height);
+    expect(wide.resizeMode).toBe('cover');
   });
 });

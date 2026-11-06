@@ -21,13 +21,13 @@ export function JobsSearchField({value, height, iconSize, iconSlotSize, onChange
         <Ionicons name="search-outline" color="#536684" size={iconSize} />
       </View>
       <TextInput
-        accessibilityLabel="Cari posisi atau perusahaan"
+        accessibilityLabel="Cari posisi, perusahaan, atau lokasi"
         autoCapitalize="none"
         autoCorrect={false}
         onBlur={() => setFocused(false)}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
-        placeholder="Cari posisi atau perusahaan"
+        placeholder="Cari posisi, perusahaan, atau lokasi"
         placeholderTextColor="#8F9AB0"
         returnKeyType="search"
         style={styles.input}

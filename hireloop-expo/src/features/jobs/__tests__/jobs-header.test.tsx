@@ -25,7 +25,6 @@ describe('JobsHeader', () => {
         horizontalPadding={20}
         search=""
         onChangeSearch={jest.fn()}
-        onOpenSaved={jest.fn()}
       />,
     );
 
@@ -38,11 +37,13 @@ describe('JobsHeader', () => {
 
     expect(artwork.props.resizeMode).toBe('contain');
     expect(headerStyle.backgroundColor).toBe('#00419E');
-    expect(headerStyle.height).toBe(157);
+    expect(headerStyle.height).toBe(165);
     expect(contentStyle.paddingHorizontal).toBe(20);
     expect(artworkStyle.top).toBe(0);
     expect(artworkStyle.left).toBe(0);
     expect(artworkStyle.width).toBe(390);
-    expect(artworkStyle.height).toBeLessThanOrEqual(157);
+    expect(artworkStyle.height).toBeLessThanOrEqual(165);
+    expect(screen.queryByLabelText('Lowongan tersimpan')).toBeNull();
+    expect(screen.getByLabelText('Cari posisi, perusahaan, atau lokasi')).toBeTruthy();
   });
 });

@@ -136,6 +136,17 @@ describe('authApi', () => {
     expect(setToken).toHaveBeenCalledWith('registration-token', true);
   });
 
+  it('requests the Expo reset-password flow as a mobile client', async () => {
+    post.mockResolvedValue({data: {success: true}});
+
+    await authApi.forgotPassword(' ANDI@EXAMPLE.COM ');
+
+    expect(post).toHaveBeenCalledWith('/forgot-password', {
+      email: 'andi@example.com',
+      client_type: 'mobile',
+    });
+  });
+
   it('marks a new professional candidate as needing onboarding', () => {
     expect(normalizeCandidateOnboarding({
       ...candidate,

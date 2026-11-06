@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React from 'react';
-import {StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import React, {useState} from 'react';
+import {StyleSheet, Text, View} from 'react-native';
 
 import type {CandidateJobDetail} from '../jobs.types';
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
@@ -9,12 +9,12 @@ type InformationCardProps = React.PropsWithChildren<{
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   testID: string;
-  wide: boolean;
+  cardWidth?: number;
 }>;
 
-function InformationCard({icon, title, testID, wide, children}: InformationCardProps) {
+function InformationCard({icon, title, testID, cardWidth, children}: InformationCardProps) {
   return (
-    <View testID={testID} style={[styles.card, wide && styles.cardWide]}>
+    <View testID={testID} style={[styles.card, cardWidth ? {width: cardWidth} : null]}>
       <View style={styles.header}>
         <View style={styles.iconBox}>
           <Ionicons name={icon} size={18} color={JOBS_COLORS.blue} />
@@ -54,24 +54,32 @@ function SkillChips({items}: {items: string[]}) {
 }
 
 export function JobInformationSections({job}: {job: CandidateJobDetail}) {
-  const {width} = useWindowDimensions();
-  const wide = width >= 680;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const wide = containerWidth >= 620;
+  const cardWidth = wide ? (containerWidth - 13) / 2 : undefined;
   const qualifications = [...job.additionalQualifications, ...job.requirements].filter((item, index, items) => (
     items.findIndex(candidate => candidate.trim().toLocaleLowerCase('id-ID') === item.trim().toLocaleLowerCase('id-ID')) === index
   ));
 
   return (
-    <View testID="job-information-sections" style={[styles.grid, wide && styles.gridWide]}>
-      <InformationCard icon="clipboard-outline" title="Deskripsi Pekerjaan" testID="job-information-description" wide={wide}>
+    <View
+      testID="job-information-sections"
+      onLayout={event => {
+        const nextWidth = Math.round(event.nativeEvent.layout.width);
+        if (nextWidth > 0) setContainerWidth(current => current === nextWidth ? current : nextWidth);
+      }}
+      style={[styles.grid, wide && styles.gridWide]}
+    >
+      <InformationCard icon="clipboard-outline" title="Deskripsi Pekerjaan" testID="job-information-description" cardWidth={cardWidth}>
         <BulletList items={job.descriptionItems} />
       </InformationCard>
-      <InformationCard icon="person-outline" title="Kualifikasi" testID="job-information-qualifications" wide={wide}>
+      <InformationCard icon="person-outline" title="Kualifikasi" testID="job-information-qualifications" cardWidth={cardWidth}>
         <BulletList items={qualifications} />
       </InformationCard>
-      <InformationCard icon="star-outline" title="Keahlian yang Dibutuhkan" testID="job-information-skills" wide={wide}>
+      <InformationCard icon="star-outline" title="Keahlian yang Dibutuhkan" testID="job-information-skills" cardWidth={cardWidth}>
         <SkillChips items={job.skills} />
       </InformationCard>
-      <InformationCard icon="gift-outline" title="Benefit" testID="job-information-benefits" wide={wide}>
+      <InformationCard icon="gift-outline" title="Benefit" testID="job-information-benefits" cardWidth={cardWidth}>
         <BulletList items={job.benefits} />
       </InformationCard>
     </View>
@@ -80,7 +88,7 @@ export function JobInformationSections({job}: {job: CandidateJobDetail}) {
 
 const styles = StyleSheet.create({
   grid: {gap: 13},
-  gridWide: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'stretch'},
+  gridWide: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start'},
   card: {
     ...jobsCardShadow,
     width: '100%',
@@ -91,16 +99,15 @@ const styles = StyleSheet.create({
     backgroundColor: JOBS_COLORS.card,
     padding: 16,
   },
-  cardWide: {width: '48.9%'},
   header: {flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 14},
   iconBox: {width: 34, height: 34, flexShrink: 0, borderRadius: 9, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center'},
   title: {flex: 1, minWidth: 0, fontFamily: JOBS_FONTS.extrabold, fontSize: 12, lineHeight: 17, letterSpacing: 0.25, color: '#30405B', textTransform: 'uppercase'},
   list: {gap: 8},
   bulletRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 8},
   bullet: {width: 8, flexShrink: 0, fontFamily: JOBS_FONTS.bold, fontSize: 15, lineHeight: 20, color: '#30405B'},
-  body: {flex: 1, minWidth: 0, fontFamily: JOBS_FONTS.semibold, fontSize: 11.5, lineHeight: 20, color: '#334155'},
+  body: {flex: 1, flexShrink: 1, minWidth: 0, flexWrap: 'wrap', fontFamily: JOBS_FONTS.semibold, fontSize: 11.5, lineHeight: 20, color: '#334155'},
   empty: {fontFamily: JOBS_FONTS.medium, fontSize: 12, color: JOBS_COLORS.muted},
   chips: {flexDirection: 'row', flexWrap: 'wrap', gap: 9},
   chip: {maxWidth: '100%', borderRadius: 18, backgroundColor: '#EDF5FF', paddingHorizontal: 13, paddingVertical: 8},
-  chipText: {fontFamily: JOBS_FONTS.bold, fontSize: 10.5, lineHeight: 15, color: JOBS_COLORS.blue},
+  chipText: {flexShrink: 1, flexWrap: 'wrap', fontFamily: JOBS_FONTS.bold, fontSize: 10.5, lineHeight: 15, color: JOBS_COLORS.blue},
 });

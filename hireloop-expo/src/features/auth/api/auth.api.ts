@@ -80,7 +80,10 @@ export const authApi = {
   getCurrentUser,
 
   async forgotPassword(email: string): Promise<void> {
-    await httpClient.post('/forgot-password', {email: email.trim().toLowerCase()});
+    await httpClient.post('/forgot-password', {
+      email: email.trim().toLowerCase(),
+      client_type: 'mobile',
+    });
   },
 
   async resetPassword(input: ResetPasswordInput): Promise<string | undefined> {

@@ -14,10 +14,9 @@ type JobsHeaderProps = {
   horizontalPadding: number;
   search: string;
   onChangeSearch: (value: string) => void;
-  onOpenSaved: () => void;
 };
 
-export function JobsHeader({containerWidth, horizontalPadding, search, onChangeSearch, onOpenSaved}: JobsHeaderProps) {
+export function JobsHeader({containerWidth, horizontalPadding, search, onChangeSearch}: JobsHeaderProps) {
   const insets = useSafeAreaInsets();
   const iconLayout = getJobsIconLayout(containerWidth);
 
@@ -51,26 +50,16 @@ export function JobsHeader({containerWidth, horizontalPadding, search, onChangeS
           <Text style={styles.title}>Lowongan Kerja</Text>
           <Text style={styles.subtitle}>Temukan peluang yang sesuai untukmu</Text>
         </View>
-        <Pressable
-          accessibilityLabel="Lowongan tersimpan"
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={onOpenSaved}
-          style={[
-            styles.iconButton,
-            {height: iconLayout.navigationButtonSize, width: iconLayout.navigationButtonSize},
-          ]}
-        >
-          <Ionicons name="bookmark-outline" color="white" size={iconLayout.navigationIconSize} />
-        </Pressable>
       </View>
-      <JobsSearchField
-        value={search}
-        iconSize={iconLayout.searchIconSize}
-        iconSlotSize={iconLayout.iconSlotSize}
-        height={iconLayout.searchFieldHeight}
-        onChangeText={onChangeSearch}
-      />
+      <View style={styles.searchOffset}>
+        <JobsSearchField
+          value={search}
+          iconSize={iconLayout.searchIconSize}
+          iconSlotSize={iconLayout.iconSlotSize}
+          height={iconLayout.searchFieldHeight}
+          onChangeText={onChangeSearch}
+        />
+      </View>
     </BrandedHeaderBackground>
   );
 }
@@ -82,4 +71,5 @@ const styles = StyleSheet.create({
   copy: {flex: 1, minWidth: 0},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},
   subtitle: {fontFamily: JOBS_FONTS.regular, fontSize: 12.5, lineHeight: 18, color: 'rgba(255,255,255,0.88)', marginTop: 2},
+  searchOffset: {marginTop: 8},
 });

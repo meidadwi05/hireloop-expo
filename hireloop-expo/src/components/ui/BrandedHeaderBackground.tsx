@@ -1,6 +1,7 @@
 import React, {type PropsWithChildren} from 'react';
 import {
   Image,
+  type ImageResizeMode,
   type ImageStyle,
   type StyleProp,
   StyleSheet,
@@ -18,6 +19,8 @@ type BrandedHeaderPreset = {
   backgroundColor: string;
   minimumContentHeight: number;
   artworkTop: number;
+  maximumArtworkReferenceWidth?: number;
+  resizeMode?: ImageResizeMode;
 };
 
 const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
@@ -30,6 +33,8 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#003E9A',
     minimumContentHeight: 88,
     artworkTop: 0,
+    maximumArtworkReferenceWidth: 430,
+    resizeMode: 'cover',
   },
   'compact-detail': {
     backgroundColor: '#003E9A',
@@ -38,7 +43,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
   },
   'jobs-list': {
     backgroundColor: '#00419E',
-    minimumContentHeight: 133,
+    minimumContentHeight: 141,
     artworkTop: 0,
   },
   notifications: {
@@ -51,6 +56,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
 export type BrandedHeaderLayout = {
   height: number;
   backgroundColor: string;
+  resizeMode: ImageResizeMode;
   artworkStyle: Pick<ImageStyle, 'height' | 'left' | 'top' | 'width'>;
 };
 
@@ -62,14 +68,16 @@ export function getBrandedHeaderLayout(
   const preset = PRESETS[variant];
   const safeWidth = Math.max(1, containerWidth);
   const safeInset = Math.max(0, topInset);
+  const artworkReferenceWidth = Math.min(safeWidth, preset.maximumArtworkReferenceWidth ?? safeWidth);
   const artworkWidth = safeWidth;
-  const artworkHeight = artworkWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
+  const artworkHeight = artworkReferenceWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
   const height = Math.max(minimumContentHeight, preset.artworkTop + artworkHeight);
 
   return {
     height,
     backgroundColor: preset.backgroundColor,
+    resizeMode: preset.resizeMode ?? 'contain',
     artworkStyle: {
       width: artworkWidth,
       height: artworkHeight,
@@ -116,7 +124,7 @@ export function BrandedHeaderBackground({
         <Image
           accessibilityIgnoresInvertColors
           accessible={false}
-          resizeMode="contain"
+          resizeMode={layout.resizeMode}
           source={headerBackground}
           style={[styles.artwork, layout.artworkStyle]}
           testID={artworkTestID}

@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React from 'react';
+import React, {useState} from 'react';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import type {ApplicationStage} from '../applications.types';
@@ -44,8 +44,17 @@ export function ApplicationHorizontalTimeline({stages}: {stages: ApplicationStag
 }
 
 export function ApplicationVerticalTimeline({stages}: {stages: ApplicationStage[]}) {
+  const [containerWidth, setContainerWidth] = useState(0);
+  const compact = containerWidth > 0 && containerWidth <= 390;
+
   return (
-    <View style={styles.verticalList}>
+    <View
+      onLayout={event => {
+        const nextWidth = Math.round(event.nativeEvent.layout.width);
+        if (nextWidth > 0) setContainerWidth(current => current === nextWidth ? current : nextWidth);
+      }}
+      style={styles.verticalList}
+    >
       {stages.map((stage, index) => {
         const color = stageTone(stage);
         const negative = ['canceled', 'rejected'].includes(stage.value.toLowerCase());
@@ -71,8 +80,9 @@ export function ApplicationVerticalTimeline({stages}: {stages: ApplicationStage[
               <Text style={[styles.verticalDescription, stage.isCurrent && styles.currentDescription]}>
                 {stage.note || (stage.isCurrent ? 'Tahap saat ini' : stage.isCompleted ? 'Tahap selesai' : 'Belum dimulai')}
               </Text>
+              {compact && <Text style={[styles.verticalDate, styles.verticalDateCompact]}>{formatApplicationDate(date)}</Text>}
             </View>
-            <Text style={styles.verticalDate}>{formatApplicationDate(date)}</Text>
+            {!compact && <Text style={styles.verticalDate}>{formatApplicationDate(date)}</Text>}
           </View>
         );
       })}
@@ -98,4 +108,5 @@ const styles = StyleSheet.create({
   verticalDescription: {fontFamily: APPLICATION_FONTS.regular, fontSize: 11, lineHeight: 17, color: APPLICATION_COLORS.body, marginTop: 2},
   currentDescription: {fontFamily: APPLICATION_FONTS.semibold, color: APPLICATION_COLORS.blue},
   verticalDate: {width: 105, fontFamily: APPLICATION_FONTS.medium, fontSize: 9.5, lineHeight: 16, textAlign: 'right', color: APPLICATION_COLORS.body},
+  verticalDateCompact: {width: 'auto', textAlign: 'left', marginTop: 4},
 });

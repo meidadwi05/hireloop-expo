@@ -10,16 +10,30 @@ type JobsLocationFilterProps = {
   chevronIconSize: number;
   iconSlotSize: number;
   onUnavailablePress: () => void;
+  showAdvancedFilter?: boolean;
 };
 
-export function JobsLocationFilter({controlHeight, controlIconSize, chevronIconSize, iconSlotSize, onUnavailablePress}: JobsLocationFilterProps) {
+export function JobsLocationFilter({
+  controlHeight,
+  controlIconSize,
+  chevronIconSize,
+  iconSlotSize,
+  onUnavailablePress,
+  showAdvancedFilter = true,
+}: JobsLocationFilterProps) {
   return (
     <View style={styles.row}>
       <Pressable
         accessibilityHint="Filter lokasi khusus belum didukung oleh server"
         accessibilityRole="button"
         onPress={onUnavailablePress}
-        style={({pressed}) => [styles.control, styles.location, {height: controlHeight, minHeight: controlHeight}, pressed && styles.pressed]}
+        style={({pressed}) => [
+          styles.control,
+          styles.location,
+          !showAdvancedFilter && styles.locationFullWidth,
+          {height: controlHeight, minHeight: controlHeight},
+          pressed && styles.pressed,
+        ]}
       >
         <View style={[styles.iconSlot, {width: iconSlotSize}]}>
           <Ionicons name="location-outline" size={controlIconSize} color="#49607F" />
@@ -27,18 +41,20 @@ export function JobsLocationFilter({controlHeight, controlIconSize, chevronIconS
         <Text numberOfLines={1} style={styles.text}>Semua lokasi</Text>
         <Ionicons name="chevron-down" size={chevronIconSize} color="#49607F" />
       </Pressable>
-      <Pressable
-        accessibilityHint="Filter lanjutan belum didukung oleh server"
-        accessibilityRole="button"
-        onPress={onUnavailablePress}
-        style={({pressed}) => [styles.control, styles.filter, {height: controlHeight, minHeight: controlHeight}, pressed && styles.pressed]}
-      >
-        <View style={[styles.iconSlot, {width: iconSlotSize}]}>
-          <Ionicons name="options-outline" size={controlIconSize} color="#49607F" />
-        </View>
-        <Text style={styles.text}>Filter</Text>
-        <View style={styles.dot} />
-      </Pressable>
+      {showAdvancedFilter && (
+        <Pressable
+          accessibilityHint="Filter lanjutan belum didukung oleh server"
+          accessibilityRole="button"
+          onPress={onUnavailablePress}
+          style={({pressed}) => [styles.control, styles.filter, {height: controlHeight, minHeight: controlHeight}, pressed && styles.pressed]}
+        >
+          <View style={[styles.iconSlot, {width: iconSlotSize}]}>
+            <Ionicons name="options-outline" size={controlIconSize} color="#49607F" />
+          </View>
+          <Text style={styles.text}>Filter</Text>
+          <View style={styles.dot} />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -47,6 +63,7 @@ const styles = StyleSheet.create({
   row: {flexDirection: 'row', gap: 10},
   control: {...jobsCardShadow, borderRadius: 14, backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, gap: 7},
   location: {flex: 1},
+  locationFullWidth: {width: '100%'},
   filter: {flexBasis: 112},
   text: {flex: 1, fontFamily: JOBS_FONTS.medium, fontSize: 14, color: JOBS_COLORS.body},
   iconSlot: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},

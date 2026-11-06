@@ -20,14 +20,12 @@ import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackg
 import {toAppApiError} from '../../../core/api/api-error';
 import {jobsApi} from '../../jobs/api/jobs.api';
 import {jobsKeys} from '../../jobs/jobs.keys';
-import {useSavedJobs} from '../../jobs/saved-jobs-provider';
 import type {CandidateJobDetail} from '../../jobs/jobs.types';
 import {useApplications} from '../hooks/use-applications';
 import type {ApplicationCardModel, ApplicationUiState, CandidateApplication} from '../applications.types';
 import {ApplicationCard} from '../components/ApplicationCard';
 import {APPLICATION_COLORS, APPLICATION_FONTS} from '../components/applications.ui';
 
-type ActiveTab = 'all' | 'saved' | 'canceled';
 type StatusFilter = 'all' | ApplicationUiState;
 type SortOrder = 'newest' | 'oldest';
 const EMPTY_APPLICATIONS: CandidateApplication[] = [];
@@ -55,22 +53,6 @@ function fallbackJob(application: CandidateApplication): CandidateJobDetail {
     updatedLabel: '',
     workType: 'Sistem kerja belum tersedia',
     salary: 'Gaji tidak disebutkan',
-    description: '',
-    descriptionItems: [],
-    requirements: [],
-    additionalQualifications: [],
-    benefits: [],
-    education: 'Tidak ditentukan',
-    experience: 'Tidak ditentukan',
-    documentRequirements: [],
-    familyDeclarationRequired: false,
-    policies: [],
-  };
-}
-
-function savedJobDetail(job: ReturnType<typeof useSavedJobs>['savedJobs'][number]): CandidateJobDetail {
-  return {
-    ...job,
     description: '',
     descriptionItems: [],
     requirements: [],
@@ -135,8 +117,6 @@ export function ApplicationsScreen() {
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const applicationsQuery = useApplications();
-  const {savedJobs} = useSavedJobs();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('all');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [sort, setSort] = useState<SortOrder>('newest');
@@ -162,31 +142,10 @@ export function ApplicationsScreen() {
     savedOnly: false,
   })), [applications, jobQueries]);
 
-  const savedModels = useMemo<ApplicationCardModel[]>(() => savedJobs.map(job => {
-    const application = applications.find(item => item.source === job.source && item.referenceId === job.id) ?? null;
-    return {
-      key: `${job.key}:saved`,
-      application,
-      job: savedJobDetail(job),
-      savedOnly: !application,
-    };
-  }), [applications, savedJobs]);
-
-  const counts = useMemo(() => ({
-    all: applications.length,
-    saved: savedJobs.length,
-    canceled: applications.filter(application => application.state === 'canceled').length,
-  }), [applications, savedJobs.length]);
-
   const visibleModels = useMemo(() => {
-    const base = activeTab === 'saved'
-      ? savedModels
-      : activeTab === 'canceled'
-        ? appliedModels.filter(model => model.application?.state === 'canceled')
-        : appliedModels;
     const keyword = search.trim().toLowerCase();
 
-    return base
+    return appliedModels
       .filter(model => filter === 'all' || model.application?.state === filter)
       .filter(model => !keyword || [model.job.title, model.job.company, model.job.location]
         .some(value => value.toLowerCase().includes(keyword)))
@@ -195,7 +154,7 @@ export function ApplicationsScreen() {
         const rightDate = Date.parse(right.application?.updatedAt ?? right.application?.submittedAt ?? right.job.updatedAt ?? right.job.publishedAt ?? '') || 0;
         return sort === 'newest' ? rightDate - leftDate : leftDate - rightDate;
       });
-  }, [activeTab, appliedModels, filter, savedModels, search, sort]);
+  }, [appliedModels, filter, search, sort]);
   const error = applicationsQuery.isError ? toAppApiError(applicationsQuery.error).message : null;
 
   const header = (
@@ -221,27 +180,6 @@ export function ApplicationsScreen() {
       </BrandedHeaderBackground>
 
       <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
-        <View accessibilityRole="tablist" style={styles.tabs}>
-          {([
-            {value: 'all' as const, label: 'Semua', count: counts.all},
-            {value: 'saved' as const, label: 'Disimpan', count: counts.saved},
-            {value: 'canceled' as const, label: 'Dibatalkan', count: counts.canceled},
-          ]).map(tab => {
-            const selected = activeTab === tab.value;
-            return (
-              <Pressable
-                key={tab.value}
-                accessibilityRole="tab"
-                accessibilityState={{selected}}
-                onPress={() => setActiveTab(tab.value)}
-                style={[styles.tab, selected && styles.tabActive]}
-              >
-                <Text numberOfLines={1} style={[styles.tabText, selected && styles.tabTextActive]}>{tab.label} ({tab.count})</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={22} color={APPLICATION_COLORS.body} />
           <TextInput
@@ -361,13 +299,8 @@ const styles = StyleSheet.create({
   heroCopy: {flex: 1, minWidth: 0},
   heroTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},
   heroSubtitle: {fontFamily: APPLICATION_FONTS.regular, fontSize: 13, lineHeight: 19, color: '#DDEAFF', marginTop: 2},
-  controlsSheet: {borderTopLeftRadius: 18, borderTopRightRadius: 18, backgroundColor: 'white', paddingTop: 17, paddingBottom: 18},
-  tabs: {height: 53, flexDirection: 'row', gap: 7, borderRadius: 17, backgroundColor: '#F4F7FB', padding: 3},
-  tab: {flex: 1, minWidth: 0, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3},
-  tabActive: {backgroundColor: APPLICATION_COLORS.blue},
-  tabText: {fontFamily: APPLICATION_FONTS.semibold, fontSize: 10.5, color: APPLICATION_COLORS.navy},
-  tabTextActive: {color: 'white'},
-  searchBox: {height: 52, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', paddingHorizontal: 14, marginTop: 14},
+  controlsSheet: {position: 'relative', zIndex: 2, marginTop: -16, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', backgroundColor: 'white', paddingTop: 21, paddingBottom: 18},
+  searchBox: {height: 52, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', paddingHorizontal: 14},
   searchInput: {flex: 1, minWidth: 0, height: '100%', fontFamily: APPLICATION_FONTS.regular, fontSize: 11.5, color: APPLICATION_COLORS.navy},
   clearButton: {width: 30, height: 40, alignItems: 'center', justifyContent: 'center'},
   toolbar: {flexDirection: 'row', gap: 10, marginTop: 12},
