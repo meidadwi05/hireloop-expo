@@ -11,7 +11,6 @@ import {getJobsIconLayout} from '../jobs-header.layout';
 import {
   countSavedJobsByStatus,
   filterAndSortSavedJobs,
-  getSavedJobLocations,
   type SavedJobsSort,
   type SavedJobsStatus,
 } from '../saved-jobs.filters';
@@ -82,26 +81,23 @@ export function SavedJobsScreen() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SavedJobsSort>('newest');
   const [status, setStatus] = useState<SavedJobsStatus>('all');
-  const [location, setLocation] = useState('all');
-  const [dropdown, setDropdown] = useState<{anchor: DropdownAnchor; kind: 'location' | 'sort'} | null>(null);
-  const locationAnchorRef = useRef<View>(null);
+  const [dropdownAnchor, setDropdownAnchor] = useState<DropdownAnchor | null>(null);
   const sortAnchorRef = useRef<View>(null);
   const containerWidth = Math.min(width, 720);
   const pagePadding = containerWidth <= 350 ? 14 : 20;
   const iconLayout = getJobsIconLayout(containerWidth);
-  const locations = useMemo(() => getSavedJobLocations(savedJobs), [savedJobs]);
   const statusCounts = useMemo(
-    () => countSavedJobsByStatus(savedJobs, search, location),
-    [location, savedJobs, search],
+    () => countSavedJobsByStatus(savedJobs, search, 'all'),
+    [savedJobs, search],
   );
   const visibleJobs = useMemo(
-    () => filterAndSortSavedJobs(savedJobs, {location, search, sort, status}),
-    [location, savedJobs, search, sort, status],
+    () => filterAndSortSavedJobs(savedJobs, {location: 'all', search, sort, status}),
+    [savedJobs, search, sort, status],
   );
 
-  const openDropdown = (kind: 'location' | 'sort', anchorView: View | null) => {
+  const openSortDropdown = (anchorView: View | null) => {
     anchorView?.measureInWindow((x, y, measuredWidth, height) => {
-      setDropdown({anchor: {height, width: measuredWidth, x, y}, kind});
+      setDropdownAnchor({height, width: measuredWidth, x, y});
     });
   };
 
@@ -136,31 +132,21 @@ export function SavedJobsScreen() {
               </View>
             </BrandedHeaderBackground>
             <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
-              <JobsSearchField
-                height={iconLayout.searchFieldHeight}
-                iconSize={iconLayout.searchIconSize}
-                iconSlotSize={iconLayout.iconSlotSize}
-                onChangeText={setSearch}
-                value={search}
-              />
               <View style={styles.filterRow}>
-                <View ref={locationAnchorRef} collapsable={false} style={styles.locationAnchor}>
-                  <Pressable
-                    accessibilityLabel="Pilih lokasi lowongan disimpan"
-                    accessibilityRole="button"
-                    onPress={() => openDropdown('location', locationAnchorRef.current)}
-                    style={({pressed}) => [styles.filterControl, pressed && styles.controlPressed]}
-                  >
-                    <Ionicons name="location-outline" size={18} color="#49607F" />
-                    <Text numberOfLines={1} style={styles.filterControlText}>{location === 'all' ? 'Semua lokasi' : location}</Text>
-                    <Ionicons name="chevron-down" size={17} color="#49607F" />
-                  </Pressable>
+                <View style={styles.searchAnchor}>
+                  <JobsSearchField
+                    height={iconLayout.searchFieldHeight}
+                    iconSize={iconLayout.searchIconSize}
+                    iconSlotSize={iconLayout.iconSlotSize}
+                    onChangeText={setSearch}
+                    value={search}
+                  />
                 </View>
                 <View ref={sortAnchorRef} collapsable={false} style={styles.sortAnchor}>
                   <Pressable
                     accessibilityLabel="Filter urutan lowongan disimpan"
                     accessibilityRole="button"
-                    onPress={() => openDropdown('sort', sortAnchorRef.current)}
+                    onPress={() => openSortDropdown(sortAnchorRef.current)}
                     style={({pressed}) => [styles.filterControl, styles.sortControl, pressed && styles.controlPressed]}
                   >
                     <Ionicons name="options-outline" size={18} color="#49607F" />
@@ -230,7 +216,6 @@ export function SavedJobsScreen() {
                   setSearch('');
                   setSort('newest');
                   setStatus('all');
-                  setLocation('all');
                 } else {
                   router.replace('/(candidate)/(tabs)/jobs');
                 }
@@ -245,19 +230,14 @@ export function SavedJobsScreen() {
         showsVerticalScrollIndicator={false}
       />
       <DropdownMenu
-        anchor={dropdown?.anchor ?? null}
-        onChange={value => {
-          if (dropdown?.kind === 'location') setLocation(value);
-          if (dropdown?.kind === 'sort') setSort(value as SavedJobsSort);
-        }}
-        onClose={() => setDropdown(null)}
-        options={dropdown?.kind === 'location'
-          ? [{label: 'Semua lokasi', value: 'all'}, ...locations.map(item => ({label: item, value: item}))]
-          : [{label: 'Terbaru', value: 'newest'}, {label: 'Terlama', value: 'oldest'}]}
-        title={dropdown?.kind === 'location' ? 'Pilih lokasi' : 'Urutkan'}
-        value={dropdown?.kind === 'location' ? location : sort}
+        anchor={dropdownAnchor}
+        onChange={value => setSort(value as SavedJobsSort)}
+        onClose={() => setDropdownAnchor(null)}
+        options={[{label: 'Terbaru', value: 'newest'}, {label: 'Terlama', value: 'oldest'}]}
+        title="Urutkan"
+        value={sort}
         viewportWidth={width}
-        visible={Boolean(dropdown)}
+        visible={Boolean(dropdownAnchor)}
       />
     </View>
   );
@@ -272,19 +252,19 @@ const styles = StyleSheet.create({
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 22, lineHeight: 29, color: 'white'},
   subtitle: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 17, color: 'rgba(255,255,255,0.86)', marginTop: 1},
   controlsSheet: {position: 'relative', zIndex: 2, marginTop: -16, borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: JOBS_COLORS.background, paddingTop: 20, paddingBottom: 17, gap: 13},
-  filterRow: {width: '100%', minHeight: 48, flexDirection: 'row', alignItems: 'stretch', gap: 10},
-  locationAnchor: {flex: 1, minWidth: 0},
-  sortAnchor: {width: 104, flexShrink: 0},
-  filterControl: {minHeight: 48, flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 13},
+  filterRow: {width: '100%', minHeight: 52, flexDirection: 'row', alignItems: 'stretch', gap: 9},
+  searchAnchor: {flex: 1, minWidth: 0},
+  sortAnchor: {width: 100, flexShrink: 0},
+  filterControl: {minHeight: 52, flex: 1, borderRadius: 14, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12},
   sortControl: {justifyContent: 'center'},
   filterControlText: {flex: 1, minWidth: 0, fontFamily: JOBS_FONTS.semibold, fontSize: 11.5, color: '#283A5C'},
   filterDot: {position: 'absolute', right: 8, top: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: JOBS_COLORS.blue},
   controlPressed: {opacity: 0.72},
-  statusTabs: {width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8},
-  statusPill: {flex: 1, minWidth: 0, minHeight: 42, borderRadius: 22, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8},
+  statusTabs: {alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 7},
+  statusPill: {minWidth: 78, minHeight: 36, borderRadius: 18, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
   statusPillSelected: {borderColor: '#062A70', backgroundColor: '#062A70'},
-  statusText: {fontFamily: JOBS_FONTS.bold, fontSize: 11, color: '#283A5C'},
-  statusTextCompact: {fontSize: 9.5},
+  statusText: {fontFamily: JOBS_FONTS.bold, fontSize: 10.5, color: '#283A5C'},
+  statusTextCompact: {fontSize: 9},
   statusTextSelected: {color: 'white'},
   resultRow: {minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
   resultText: {flex: 1, fontFamily: JOBS_FONTS.bold, color: JOBS_COLORS.navy, fontSize: 13},
