@@ -8,10 +8,10 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import MaskedView from '@react-native-masked-view/masked-view';
 import {LinearGradient} from 'expo-linear-gradient';
 
 import {FormTextInput} from '../components/forms/FormTextInput';
+import {GradientWelcomeText} from './components/GradientWelcomeText';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -39,24 +39,6 @@ type LoginPageProps = {
   onForgotPassword: () => void;
   onRegister: () => void;
 };
-
-function GradientWelcome() {
-  return (
-    <MaskedView
-      style={styles.welcomeMask}
-      maskElement={<Text style={styles.welcome}>Selamat Datang!</Text>}
-    >
-      <LinearGradient
-        colors={['#0051FD', '#00DAFD']}
-        start={{x: 0, y: 0.5}}
-        end={{x: 1, y: 0.5}}
-        testID="login-welcome-gradient"
-      >
-        <Text style={[styles.welcome, {opacity: 0}]}>Selamat Datang!</Text>
-      </LinearGradient>
-    </MaskedView>
-  );
-}
 
 function Field({
   label,
@@ -192,7 +174,7 @@ export default function LoginPage({
       <View style={styles.loginCard}>
         <View style={styles.row}>
           <View>
-            <GradientWelcome/>
+            <GradientWelcomeText />
             <Text style={styles.sub}>Masuk untuk melanjutkan</Text>
           </View>
           <View style={styles.iconBox}>
@@ -275,8 +257,6 @@ const styles = StyleSheet.create({
   tagline: {fontFamily: F.regular, fontSize: 12, lineHeight: 18, color: '#D1DAF4', textAlign: 'center', marginTop: 12},
   loginCard: {backgroundColor: 'white', borderRadius: 22, padding: 24},
   row: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  welcomeMask: {alignSelf: 'flex-start'},
-  welcome: {fontFamily: F.bold, fontSize: 22, letterSpacing: -0.5},
   sub: {fontFamily: F.regular, fontSize: 12, color: C.muted, marginTop: 6},
   iconBox: {width: 52, height: 52, justifyContent: 'center', alignItems: 'center'},
   loginLockImage: {width: 52, height: 52},

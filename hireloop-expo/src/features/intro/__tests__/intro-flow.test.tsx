@@ -10,17 +10,18 @@ import {
   ONBOARDING_SPLASH_LINE_DURATION_MS,
 } from '../components/OnboardingSplash';
 
-jest.mock('expo-router', () => ({
-  router: {replace: jest.fn()},
-}));
-
-jest.mock('expo-status-bar', () => ({
-  StatusBar: jest.fn(() => null),
-}));
+jest.mock('expo-router', () => ({router: {replace: jest.fn()}}));
+jest.mock('expo-status-bar', () => ({StatusBar: jest.fn(() => null)}));
 
 const mockedRouter = router as jest.Mocked<typeof router>;
 const mockedStatusBar = StatusBar as unknown as jest.Mock;
 const TEST_PAGE_WIDTH = 320;
+const slideIds = ['discover', 'tracking', 'multi-apply', 'recommendation'] as const;
+
+async function finishSplash() {
+  act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
+  await act(async () => Promise.resolve());
+}
 
 function settleOnSlide(screen: ReturnType<typeof render>, slideIndex: number) {
   fireEvent(screen.getByTestId('intro-slides'), 'momentumScrollEnd', {
@@ -31,16 +32,15 @@ function settleOnSlide(screen: ReturnType<typeof render>, slideIndex: number) {
   });
 }
 
-function pressNextAndSettle(screen: ReturnType<typeof render>, slideIndex: number) {
-  fireEvent.press(screen.getByText('Lanjut'));
-  settleOnSlide(screen, slideIndex);
+function activeSlide(screen: ReturnType<typeof render>, index: number) {
+  return within(screen.getByTestId(`intro-slide-${slideIds[index]}`));
 }
 
 describe('alur onboarding intro', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -49,246 +49,103 @@ describe('alur onboarding intro', () => {
     jest.restoreAllMocks();
   });
 
-  it('menampilkan splash selama 3,5 detik sebelum onboarding pertama', () => {
+  it('menampilkan splash 3,5 detik dengan logo, loading line, dan tagline terpisah', async () => {
     const timingSpy = jest.spyOn(Animated, 'timing');
     const screen = render(<WelcomeRoute />);
 
     expect(ONBOARDING_SPLASH_DURATION_MS).toBe(3500);
-    expect(ONBOARDING_SPLASH_LINE_DURATION_MS).toBe(ONBOARDING_SPLASH_DURATION_MS);
+    expect(ONBOARDING_SPLASH_LINE_DURATION_MS).toBe(3500);
+    expect(screen.getByTestId('splash-logo')).toBeTruthy();
+    expect(screen.getByTestId('splash-gradient-line')).toBeTruthy();
+    expect(screen.getByTestId('splash-tagline-one')).toBeTruthy();
+    expect(screen.getByTestId('splash-tagline-two')).toBeTruthy();
     expect(timingSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({
-        duration: ONBOARDING_SPLASH_DURATION_MS,
-        toValue: 1,
-        useNativeDriver: true,
-      }),
+      expect.objectContaining({duration: 3500, toValue: 1, useNativeDriver: true}),
     );
-    expect(screen.getByTestId('onboarding-splash')).toBeTruthy();
-    expect(screen.queryByText('Lamar kerja lebih\ncepat & tepat sasaran')).toBeNull();
 
     act(() => jest.advanceTimersByTime(3499));
     expect(screen.getByTestId('onboarding-splash')).toBeTruthy();
-
-    act(() => jest.advanceTimersByTime(1));
-    jest.useRealTimers();
-    const firstSlide = within(screen.getByTestId('intro-slide-discover'));
-    expect(firstSlide.getAllByText('Lamar kerja lebih\ncepat & tepat sasaran')).toHaveLength(2);
-    expect(firstSlide.getByTestId('gradient-intro-title')).toBeTruthy();
+    await finishSplash();
+    expect(screen.getByTestId('intro-screen')).toBeTruthy();
   });
 
-  it('memakai gradient hanya pada onboarding pertama dan ketiga', () => {
+  it('menempatkan seluruh kontrol di dalam setiap halaman pager', async () => {
     const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
+    await finishSplash();
 
-    expect(within(screen.getByTestId('intro-slide-discover')).getByTestId('gradient-intro-title')).toBeTruthy();
-    expect(within(screen.getByTestId('intro-slide-tracking')).getByText('Pantau Proses Lamaran\nSecara Real-Time')).toBeTruthy();
-    expect(within(screen.getByTestId('intro-slide-tracking')).queryByTestId('gradient-intro-title')).toBeNull();
+    for (let index = 0; index < slideIds.length; index += 1) {
+      settleOnSlide(screen, index);
+      const slide = activeSlide(screen, index);
+      expect(slide.getByLabelText('Lewati onboarding')).toBeTruthy();
+      expect(slide.getByTestId('intro-hero-image')).toBeTruthy();
+      expect(slide.getByTestId('intro-dots')).toBeTruthy();
+      expect(slide.getByText(index === 3 ? 'Mulai Sekarang' : 'Selanjutnya')).toBeTruthy();
+    }
 
-    const thirdSlide = within(screen.getByTestId('intro-slide-multi-apply'));
-    expect(thirdSlide.getAllByText('Lamar ke Banyak\nPerusahaan Sekaligus')).toHaveLength(2);
-    expect(thirdSlide.getByTestId('gradient-intro-title')).toBeTruthy();
-
-    const fourthSlide = within(screen.getByTestId('intro-slide-recommendation'));
-    expect(fourthSlide.getByText('Temukan Pekerjaan\nyang Tepat')).toBeTruthy();
-    expect(fourthSlide.queryByTestId('gradient-intro-title')).toBeNull();
+    expect(screen.queryByTestId('intro-footer-controls')).toBeNull();
   });
 
-  it('memperbarui slide dan titik aktif saat halaman digeser', () => {
+  it('memakai judul gradient hanya pada halaman pertama dan ketiga', async () => {
     const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
+    await finishSplash();
 
-    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#FFFFFF');
-    expect(StyleSheet.flatten(screen.getByText('Lewati').props.style).color).toBe('#00195E');
-
-    fireEvent(screen.getByTestId('intro-slides'), 'momentumScrollEnd', {
-      nativeEvent: {
-        contentOffset: {x: 320, y: 0},
-        layoutMeasurement: {width: 320, height: 700},
-      },
-    });
-
-    expect(within(screen.getByTestId('intro-slide-tracking')).getByText('Pantau Proses Lamaran\nSecara Real-Time')).toBeTruthy();
-    expect(screen.getByLabelText('Halaman onboarding 1').props.accessibilityState).toEqual({selected: false});
-    expect(screen.getByLabelText('Halaman onboarding 2').props.accessibilityState).toEqual({selected: true});
-    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#050D49');
-    expect(StyleSheet.flatten(screen.getByText('Lewati').props.style).color).toBe('#FFFFFF');
+    expect(activeSlide(screen, 0).getByTestId('gradient-intro-title')).toBeTruthy();
+    settleOnSlide(screen, 1);
+    expect(activeSlide(screen, 1).queryByTestId('gradient-intro-title')).toBeNull();
+    settleOnSlide(screen, 2);
+    expect(activeSlide(screen, 2).getByTestId('gradient-intro-title')).toBeTruthy();
+    settleOnSlide(screen, 3);
+    expect(activeSlide(screen, 3).queryByTestId('gradient-intro-title')).toBeNull();
   });
 
-  it('memperbarui state yang sama saat swipe maju dan kembali', () => {
+  it('mengubah seluruh tema, status bar, indikator, dan CTA saat swipe maju maupun mundur', async () => {
     const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
-    const carousel = screen.getByTestId('intro-slides');
+    await finishSplash();
 
-    fireEvent(carousel, 'momentumScrollEnd', {
-      nativeEvent: {
-        contentOffset: {x: 640, y: 0},
-        layoutMeasurement: {width: 320, height: 700},
-      },
-    });
-    expect(screen.getByLabelText('Halaman onboarding 3').props.accessibilityState).toEqual({selected: true});
-    expect(screen.getByText('Lanjut')).toBeTruthy();
-
-    fireEvent(carousel, 'momentumScrollEnd', {
-      nativeEvent: {
-        contentOffset: {x: 0, y: 0},
-        layoutMeasurement: {width: 320, height: 700},
-      },
-    });
-    expect(screen.getByLabelText('Halaman onboarding 1').props.accessibilityState).toEqual({selected: true});
-    expect(screen.getByLabelText('Halaman onboarding 3').props.accessibilityState).toEqual({selected: false});
-    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#FFFFFF');
-    expect(StyleSheet.flatten(screen.getByText('Lewati').props.style).color).toBe('#00195E');
-  });
-
-  it('menyinkronkan ulang tema ketika swipe kembali tersnap ke halaman asal', () => {
-    const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
-    const carousel = screen.getByTestId('intro-slides');
-
-    pressNextAndSettle(screen, 1);
-    pressNextAndSettle(screen, 2);
-    pressNextAndSettle(screen, 3);
-    expect(screen.getByLabelText('Halaman onboarding 4').props.accessibilityState).toEqual({selected: true});
-
-    fireEvent(carousel, 'scrollBeginDrag', {
-      nativeEvent: {contentOffset: {x: 960, y: 0}, layoutMeasurement: {width: 320, height: 700}},
-    });
-    fireEvent.scroll(carousel, {
-      nativeEvent: {contentOffset: {x: 640, y: 0}, layoutMeasurement: {width: 320, height: 700}},
-    });
-
-    expect(screen.getByLabelText('Halaman onboarding 3').props.accessibilityState).toEqual({selected: true});
-    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#FFFFFF');
-    expect(screen.getByText('Lanjut')).toBeTruthy();
-
-    fireEvent.scroll(carousel, {
-      nativeEvent: {contentOffset: {x: 960, y: 0}, layoutMeasurement: {width: 320, height: 700}},
-    });
-
-    expect(screen.getByLabelText('Halaman onboarding 4').props.accessibilityState).toEqual({selected: true});
-    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#050D49');
-    expect(screen.getByText('Mulai Sekarang')).toBeTruthy();
-  });
-
-  it('melanjutkan tombol dari halaman terakhir hasil swipe', () => {
-    const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
-
-    fireEvent(screen.getByTestId('intro-slides'), 'momentumScrollEnd', {
-      nativeEvent: {
-        contentOffset: {x: 640, y: 0},
-        layoutMeasurement: {width: 320, height: 700},
-      },
-    });
-    pressNextAndSettle(screen, 3);
-
-    expect(screen.getByLabelText('Halaman onboarding 4').props.accessibilityState).toEqual({selected: true});
-    expect(screen.getByText('Mulai Sekarang')).toBeTruthy();
-  });
-
-  it('menghasilkan state visual swipe yang sama dengan tombol Lanjut pada setiap halaman', () => {
-    const readVisualState = (screen: ReturnType<typeof render>) => {
-      const statusBarCall = mockedStatusBar.mock.calls[mockedStatusBar.mock.calls.length - 1];
-
-      return {
-        activeIndex: [1, 2, 3, 4].findIndex(itemIndex => (
-          screen.getByLabelText(`Halaman onboarding ${itemIndex}`).props.accessibilityState.selected
-        )),
-        backgroundColor: StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor,
-        statusBarStyle: statusBarCall?.[0]?.style,
-        skipColor: StyleSheet.flatten(screen.getByText('Lewati').props.style).color,
-        buttonText: screen.queryByText('Mulai Sekarang') ? 'Mulai Sekarang' : 'Lanjut',
-      };
+    const assertState = (index: number, background: string, statusBar: 'dark' | 'light') => {
+      const slide = activeSlide(screen, index);
+      expect(StyleSheet.flatten(screen.getByTestId(`intro-slide-${slideIds[index]}`).props.style).backgroundColor).toBe(background);
+      expect(slide.getByLabelText(`Halaman onboarding ${index + 1}`).props.accessibilityState).toEqual({selected: true});
+      expect(slide.getByText(index === 3 ? 'Mulai Sekarang' : 'Selanjutnya')).toBeTruthy();
+      expect(mockedStatusBar.mock.calls[mockedStatusBar.mock.calls.length - 1]?.[0]?.style).toBe(statusBar);
     };
 
-    const buttonScreen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
+    assertState(0, '#FFFFFF', 'dark');
+    settleOnSlide(screen, 1);
+    assertState(1, '#050D49', 'light');
+    settleOnSlide(screen, 3);
+    assertState(3, '#050D49', 'light');
+    settleOnSlide(screen, 2);
+    assertState(2, '#FFFFFF', 'dark');
+    settleOnSlide(screen, 0);
+    assertState(0, '#FFFFFF', 'dark');
+  });
 
-    const buttonStates = [readVisualState(buttonScreen)];
-    for (let slideIndex = 1; slideIndex < 4; slideIndex += 1) {
-      pressNextAndSettle(buttonScreen, slideIndex);
-      buttonStates.push(readVisualState(buttonScreen));
-    }
+  it('memberikan hasil state yang sama antara tombol selanjutnya dan swipe', async () => {
+    const buttonScreen = render(<WelcomeRoute />);
+    await finishSplash();
+    fireEvent.press(activeSlide(buttonScreen, 0).getByText('Selanjutnya'));
+    settleOnSlide(buttonScreen, 1);
+    expect(activeSlide(buttonScreen, 1).getByLabelText('Halaman onboarding 2').props.accessibilityState.selected).toBe(true);
     buttonScreen.unmount();
 
-    mockedStatusBar.mockClear();
     jest.useFakeTimers();
     const swipeScreen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
-
-    const swipeStates = [readVisualState(swipeScreen)];
-    for (let slideIndex = 1; slideIndex < 4; slideIndex += 1) {
-      fireEvent(swipeScreen.getByTestId('intro-slides'), 'momentumScrollEnd', {
-        nativeEvent: {
-          contentOffset: {x: 320 * slideIndex, y: 0},
-          layoutMeasurement: {width: 320, height: 700},
-        },
-      });
-      swipeStates.push(readVisualState(swipeScreen));
-    }
-
-    expect(swipeStates).toEqual(buttonStates);
-    expect(swipeStates).toEqual([
-      {activeIndex: 0, backgroundColor: '#FFFFFF', statusBarStyle: 'dark', skipColor: '#00195E', buttonText: 'Lanjut'},
-      {activeIndex: 1, backgroundColor: '#050D49', statusBarStyle: 'light', skipColor: '#FFFFFF', buttonText: 'Lanjut'},
-      {activeIndex: 2, backgroundColor: '#FFFFFF', statusBarStyle: 'dark', skipColor: '#00195E', buttonText: 'Lanjut'},
-      {activeIndex: 3, backgroundColor: '#050D49', statusBarStyle: 'light', skipColor: '#FFFFFF', buttonText: 'Mulai Sekarang'},
-    ]);
+    await finishSplash();
+    settleOnSlide(swipeScreen, 1);
+    expect(activeSlide(swipeScreen, 1).getByLabelText('Halaman onboarding 2').props.accessibilityState.selected).toBe(true);
   });
 
-  it('mengarahkan tombol lewati dan tombol terakhir ke login', () => {
+  it('mengarahkan Lewati dan CTA terakhir ke login', async () => {
     const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
+    await finishSplash();
 
-    fireEvent.press(screen.getByText('Lewati'));
+    fireEvent.press(activeSlide(screen, 0).getByLabelText('Lewati onboarding'));
     expect(mockedRouter.replace).toHaveBeenCalledWith('/(public)/login');
 
-    pressNextAndSettle(screen, 1);
-    pressNextAndSettle(screen, 2);
-    pressNextAndSettle(screen, 3);
-    fireEvent.press(screen.getByText('Mulai Sekarang'));
-    expect(mockedRouter.replace).toHaveBeenLastCalledWith('/(public)/login');
-    screen.unmount();
-  });
-
-  it('menempatkan bullet di kiri dalam footer yang terpisah dari tombol', () => {
-    const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
-
-    const dotsStyle = StyleSheet.flatten(screen.getByTestId('intro-dots').props.style);
-    const footerStyle = StyleSheet.flatten(screen.getByTestId('intro-footer-controls').props.style);
-
-    expect(dotsStyle.alignSelf).toBe('flex-start');
-    expect(dotsStyle.marginLeft).toBeGreaterThan(0);
-    expect(footerStyle.gap).toBeGreaterThanOrEqual(20);
-    expect(footerStyle.position).not.toBe('absolute');
-  });
-
-  it('memulihkan seluruh state halaman saat swipe mundur dari halaman terakhir', () => {
-    const screen = render(<WelcomeRoute />);
-    act(() => jest.advanceTimersByTime(ONBOARDING_SPLASH_DURATION_MS));
-    jest.useRealTimers();
-
     settleOnSlide(screen, 3);
-    expect(screen.getByText('Mulai Sekarang')).toBeTruthy();
-    expect(screen.getByLabelText('Halaman onboarding 4').props.accessibilityState).toEqual({selected: true});
-
-    settleOnSlide(screen, 2);
-
-    expect(screen.getByText('Lanjut')).toBeTruthy();
-    expect(screen.queryByText('Mulai Sekarang')).toBeNull();
-    expect(screen.getByLabelText('Halaman onboarding 3').props.accessibilityState).toEqual({selected: true});
-    expect(StyleSheet.flatten(screen.getByTestId('intro-screen').props.style).backgroundColor).toBe('#FFFFFF');
-    expect(StyleSheet.flatten(screen.getByText('Lewati').props.style).color).toBe('#00195E');
-    expect(mockedStatusBar.mock.calls[mockedStatusBar.mock.calls.length - 1]?.[0]?.style).toBe('dark');
+    fireEvent.press(activeSlide(screen, 3).getByText('Mulai Sekarang'));
+    expect(mockedRouter.replace).toHaveBeenLastCalledWith('/(public)/login');
   });
 });

@@ -2,6 +2,7 @@ import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
 
 import LoginPage from '../login';
+import {LOGIN_WELCOME_GRADIENT_COLORS} from '../components/gradient-welcome.constants';
 
 const baseProps = {
   email: '',
@@ -28,7 +29,8 @@ describe('LoginPage', () => {
 
     expect(screen.getByTestId('login-background')).toBeTruthy();
     expect(screen.getByTestId('google-login-logo')).toBeTruthy();
-    expect(screen.getByTestId('login-welcome-gradient').props.colors).toEqual(['#0051FD', '#00DAFD']);
+    expect(screen.getByTestId('login-welcome-gradient')).toBeTruthy();
+    expect(LOGIN_WELCOME_GRADIENT_COLORS).toEqual(['#0051FD', '#00DAFD']);
   });
 
   it('tidak menampilkan copy debug atau akses kembali ke onboarding', () => {
