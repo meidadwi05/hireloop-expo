@@ -3,6 +3,7 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {StatusBar} from 'expo-status-bar';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
+  Animated,
   Image,
   type LayoutChangeEvent,
   type NativeScrollEvent,
@@ -74,34 +75,37 @@ export default function WelcomeRoute() {
   const [index, setIndex] = useState(0);
   const [pageWidth, setPageWidth] = useState(width - 56);
   const slidesRef = useRef<ScrollView>(null);
+  const [scrollX] = useState(() => new Animated.Value(0));
   const pendingResizeRef = useRef(false);
   const programmaticTargetRef = useRef<number | null>(null);
   const slide = slides[index];
   const isLightSlide = slide.theme === 'light';
   const compactHeight = height < 700;
 
-  const activateSlide = useCallback((
-    targetIndex: number,
-    options: {scroll?: boolean; animated?: boolean} = {},
-  ) => {
+  const commitActiveSlide = useCallback((targetIndex: number) => {
     const nextIndex = clampIntroIndex(targetIndex, slides.length);
     setIndex(currentIndex => currentIndex === nextIndex ? currentIndex : nextIndex);
 
-    if (options.scroll) {
-      programmaticTargetRef.current = nextIndex;
-      slidesRef.current?.scrollTo({
-        x: pageWidth * nextIndex,
-        animated: options.animated ?? true,
-      });
-    }
+    return nextIndex;
+  }, []);
+
+  const scrollToSlide = useCallback((targetIndex: number, animated = true) => {
+    const nextIndex = clampIntroIndex(targetIndex, slides.length);
+    programmaticTargetRef.current = nextIndex;
+    slidesRef.current?.scrollTo({
+      x: pageWidth * nextIndex,
+      animated,
+    });
 
     return nextIndex;
   }, [pageWidth]);
 
   const syncSlideFromScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const viewportWidth = event.nativeEvent.layoutMeasurement.width || pageWidth;
+    const offsetX = event.nativeEvent.contentOffset.x;
+    scrollX.setValue(offsetX);
     const nextIndex = getIntroIndexFromOffset(
-      event.nativeEvent.contentOffset.x,
+      offsetX,
       viewportWidth,
       slides.length,
       index,
@@ -109,15 +113,14 @@ export default function WelcomeRoute() {
 
     const programmaticTarget = programmaticTargetRef.current;
     if (programmaticTarget !== null) {
-      const pagePosition = event.nativeEvent.contentOffset.x / viewportWidth;
+      const pagePosition = offsetX / viewportWidth;
       if (Math.abs(pagePosition - programmaticTarget) <= 0.02) {
         programmaticTargetRef.current = null;
       }
-      return;
     }
 
-    activateSlide(nextIndex);
-  }, [activateSlide, index, pageWidth]);
+    commitActiveSlide(nextIndex);
+  }, [commitActiveSlide, index, pageWidth, scrollX]);
 
   const handleSwipeStart = useCallback(() => {
     programmaticTargetRef.current = null;
@@ -142,7 +145,8 @@ export default function WelcomeRoute() {
 
     pendingResizeRef.current = false;
     slidesRef.current?.scrollTo({x: pageWidth * index, animated: false});
-  }, [index, pageWidth, phase]);
+    scrollX.setValue(pageWidth * index);
+  }, [index, pageWidth, phase, scrollX]);
 
   if (phase === 'splash') return <OnboardingSplash />;
 
@@ -165,7 +169,7 @@ export default function WelcomeRoute() {
       >
         <Text style={[styles.skipText, {color: isLightSlide ? COLORS.navyText : COLORS.white}]}>Lewati</Text>
       </Pressable>
-      <ScrollView
+      <Animated.ScrollView
         ref={slidesRef}
         testID="intro-slides"
         horizontal
@@ -177,6 +181,7 @@ export default function WelcomeRoute() {
         onLayout={handleSlidesLayout}
         onScrollBeginDrag={handleSwipeStart}
         onScroll={syncSlideFromScroll}
+        onScrollEndDrag={syncSlideFromScroll}
         onMomentumScrollEnd={syncSlideFromScroll}
       >
         {slides.map(item => (
@@ -188,11 +193,11 @@ export default function WelcomeRoute() {
             <Text style={[styles.body, compactHeight && styles.bodyCompact, {color: item.theme === 'light' ? COLORS.lightBody : COLORS.darkBody}]}>{item.body}</Text>
           </View>
         ))}
-      </ScrollView>
+      </Animated.ScrollView>
       <View style={[styles.footerControls, compactHeight && styles.footerControlsCompact]} testID="intro-footer-controls">
         <View style={styles.dots} accessibilityRole="tablist" testID="intro-dots">
           {slides.map((_, itemIndex) => (
-            <View
+            <Animated.View
               key={itemIndex}
               accessibilityRole="tab"
               accessibilityLabel={`Halaman onboarding ${itemIndex + 1}`}
@@ -201,6 +206,13 @@ export default function WelcomeRoute() {
                 styles.dot,
                 {backgroundColor: isLightSlide ? COLORS.lightDot : COLORS.darkDot},
                 itemIndex === index && styles.dotActive,
+                {
+                  width: scrollX.interpolate({
+                    inputRange: slides.map((_, slideIndex) => slideIndex * pageWidth),
+                    outputRange: slides.map((_, slideIndex) => slideIndex === itemIndex ? 24 : 7),
+                    extrapolate: 'clamp',
+                  }),
+                },
               ]}
             />
           ))}
@@ -212,7 +224,7 @@ export default function WelcomeRoute() {
               router.replace('/(public)/login');
               return;
             }
-            activateSlide(index + 1, {scroll: true, animated: true});
+            scrollToSlide(index + 1);
           }}
           style={styles.button}
         >
@@ -237,18 +249,18 @@ const styles = StyleSheet.create({
   slide: {flex: 1},
   skip: {alignSelf: 'flex-end', minHeight: 44, minWidth: 44, padding: 10, alignItems: 'center', justifyContent: 'center'},
   skipText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12},
-  image: {width: '100%', height: '48%', marginTop: 12},
-  imageCompact: {height: '42%', marginTop: 2},
-  title: {width: '100%', minHeight: 72, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 26, lineHeight: 34, textAlign: 'center', textAlignVertical: 'center', marginTop: 18},
-  titleCompact: {minHeight: 58, fontSize: 22, lineHeight: 29, marginTop: 10},
+  image: {width: '100%', height: '50%', marginTop: 12},
+  imageCompact: {height: '44%', marginTop: 2},
+  title: {width: '100%', minHeight: 76, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 28, lineHeight: 36, textAlign: 'center', textAlignVertical: 'center', marginTop: 18},
+  titleCompact: {minHeight: 64, fontSize: 24, lineHeight: 31, marginTop: 10},
   darkTitle: {color: COLORS.white},
-  body: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 13, lineHeight: 21, textAlign: 'center', marginTop: 12},
-  bodyCompact: {fontSize: 11.5, lineHeight: 18, marginTop: 7},
+  body: {fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, lineHeight: 23, textAlign: 'center', marginTop: 12},
+  bodyCompact: {fontSize: 13, lineHeight: 20, marginTop: 8},
   footerControls: {width: '100%', flexShrink: 0, gap: 24, paddingTop: 18},
   footerControlsCompact: {gap: 20, paddingTop: 10},
   dots: {alignSelf: 'flex-start', flexDirection: 'row', gap: 7, marginLeft: 14},
   dot: {width: 7, height: 7, borderRadius: 4},
-  dotActive: {width: 24, backgroundColor: COLORS.cyan},
+  dotActive: {backgroundColor: COLORS.cyan},
   button: {height: 52, width: '100%', borderRadius: 12, overflow: 'hidden'},
   buttonGradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   buttonText: {fontFamily: 'PlusJakartaSans_700Bold', color: COLORS.white, fontSize: 14},

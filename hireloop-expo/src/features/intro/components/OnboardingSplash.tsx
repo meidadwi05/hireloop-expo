@@ -1,29 +1,37 @@
 import {LinearGradient} from 'expo-linear-gradient';
 import {StatusBar} from 'expo-status-bar';
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useState} from 'react';
 import {AccessibilityInfo, Animated, Easing, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 export const ONBOARDING_SPLASH_DURATION_MS = 3500;
+export const ONBOARDING_SPLASH_LINE_DURATION_MS = ONBOARDING_SPLASH_DURATION_MS;
 
 export function OnboardingSplash() {
   const {width} = useWindowDimensions();
   const logoWidth = Math.min(Math.max(width - 64, 230), 360);
-  const logoProgress = useRef(new Animated.Value(0)).current;
-  const lineProgress = useRef(new Animated.Value(0)).current;
-  const taglineOneProgress = useRef(new Animated.Value(0)).current;
-  const taglineTwoProgress = useRef(new Animated.Value(0)).current;
-  const screenOpacity = useRef(new Animated.Value(1)).current;
+  const [logoProgress] = useState(() => new Animated.Value(0));
+  const [lineProgress] = useState(() => new Animated.Value(0));
+  const [taglineOneProgress] = useState(() => new Animated.Value(0));
+  const [taglineTwoProgress] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let active = true;
-    let animation: Animated.CompositeAnimation | null = null;
+    let revealAnimation: Animated.CompositeAnimation | null = null;
+
+    const lineAnimation = Animated.timing(lineProgress, {
+      duration: ONBOARDING_SPLASH_LINE_DURATION_MS,
+      easing: Easing.linear,
+      toValue: 1,
+      useNativeDriver: true,
+    });
+
+    lineAnimation.start();
 
     void AccessibilityInfo.isReduceMotionEnabled().then(reduceMotion => {
       if (!active) return;
       if (reduceMotion) {
         logoProgress.setValue(1);
-        lineProgress.setValue(1);
         taglineOneProgress.setValue(1);
         taglineTwoProgress.setValue(1);
         return;
@@ -36,30 +44,28 @@ export function OnboardingSplash() {
         useNativeDriver: true,
       });
 
-      animation = Animated.sequence([
-        Animated.delay(150),
-        reveal(logoProgress, 650),
-        reveal(lineProgress, 500),
-        Animated.stagger(140, [
-          reveal(taglineOneProgress, 520),
-          reveal(taglineTwoProgress, 520),
+      revealAnimation = Animated.parallel([
+        Animated.sequence([
+          Animated.delay(150),
+          reveal(logoProgress, 650),
         ]),
-        Animated.delay(900),
-        Animated.timing(screenOpacity, {
-          duration: 300,
-          easing: Easing.inOut(Easing.quad),
-          toValue: 0,
-          useNativeDriver: true,
-        }),
+        Animated.sequence([
+          Animated.delay(850),
+          Animated.stagger(140, [
+            reveal(taglineOneProgress, 520),
+            reveal(taglineTwoProgress, 520),
+          ]),
+        ]),
       ]);
-      animation.start();
+      revealAnimation.start();
     });
 
     return () => {
       active = false;
-      animation?.stop();
+      lineAnimation.stop();
+      revealAnimation?.stop();
     };
-  }, [lineProgress, logoProgress, screenOpacity, taglineOneProgress, taglineTwoProgress]);
+  }, [lineProgress, logoProgress, taglineOneProgress, taglineTwoProgress]);
 
   const rise = (progress: Animated.Value) => ({
     opacity: progress,
@@ -67,7 +73,7 @@ export function OnboardingSplash() {
   });
 
   return (
-    <Animated.View style={styles.animatedScreen}>
+    <View style={styles.animatedScreen}>
       <SafeAreaView
         accessibilityLabel="Splash onboarding HireLoop"
         edges={['top', 'right', 'bottom', 'left']}
@@ -80,7 +86,7 @@ export function OnboardingSplash() {
         <View pointerEvents="none" style={[styles.glow, styles.glowOne]} />
         <View pointerEvents="none" style={[styles.glow, styles.glowTwo]} />
 
-        <Animated.View style={[styles.content, {opacity: screenOpacity}]}>
+        <View style={styles.content}>
           <Animated.Image
             accessibilityLabel="Logo HireLoop"
             resizeMode="contain"
@@ -95,20 +101,25 @@ export function OnboardingSplash() {
             ]}
             testID="splash-logo"
           />
-          <Animated.View
-            style={{
-              opacity: lineProgress,
-              transform: [{scaleX: lineProgress}],
-            }}
-            testID="splash-gradient-line"
-          >
-            <LinearGradient
-              colors={['#0051FD', '#00DAFD']}
-              end={{x: 1, y: 0.5}}
-              start={{x: 0, y: 0.5}}
-              style={styles.loadingLine}
-            />
-          </Animated.View>
+          <View style={styles.loadingLineTrack}>
+            <Animated.View
+              style={[
+                styles.loadingLineProgress,
+                {
+                  transform: [{scaleX: lineProgress}],
+                  transformOrigin: 'left center',
+                },
+              ]}
+              testID="splash-gradient-line"
+            >
+              <LinearGradient
+                colors={['#0051FD', '#00DAFD']}
+                end={{x: 1, y: 0.5}}
+                start={{x: 0, y: 0.5}}
+                style={styles.loadingLine}
+              />
+            </Animated.View>
+          </View>
           <View style={styles.tagline}>
             <Animated.View style={rise(taglineOneProgress)} testID="splash-tagline-one">
               <Text style={styles.taglineText}>Find the right job.</Text>
@@ -119,9 +130,9 @@ export function OnboardingSplash() {
               </Text>
             </Animated.View>
           </View>
-        </Animated.View>
+        </View>
       </SafeAreaView>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -130,7 +141,9 @@ const styles = StyleSheet.create({
   screen: {flex: 1, overflow: 'hidden', backgroundColor: '#001552'},
   content: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32},
   logo: {height: 112, maxWidth: '100%'},
-  loadingLine: {width: 138, height: 8, borderRadius: 5, marginTop: 76},
+  loadingLineTrack: {width: 138, height: 8, borderRadius: 5, marginTop: 76, overflow: 'hidden'},
+  loadingLineProgress: {position: 'absolute', top: 0, right: 0, bottom: 0, left: 0},
+  loadingLine: {flex: 1, borderRadius: 5},
   tagline: {alignItems: 'center', gap: 12, marginTop: 76},
   taglineText: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FFFFFF', fontSize: 24, lineHeight: 34, textAlign: 'center'},
   loopText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#00A9F8'},

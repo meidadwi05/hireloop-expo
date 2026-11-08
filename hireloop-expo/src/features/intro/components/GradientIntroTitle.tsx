@@ -23,20 +23,20 @@ export function GradientIntroTitle({children, compact = false}: {children: strin
 }
 
 const styles = StyleSheet.create({
-  mask: {width: '100%', minHeight: 72, marginTop: 18},
-  maskCompact: {minHeight: 58, marginTop: 10},
-  gradient: {width: '100%', minHeight: 72},
-  gradientCompact: {minHeight: 58},
+  mask: {width: '100%', minHeight: 76, marginTop: 18},
+  maskCompact: {minHeight: 64, marginTop: 10},
+  gradient: {width: '100%', minHeight: 76},
+  gradientCompact: {minHeight: 64},
   title: {
     width: '100%',
-    minHeight: 72,
+    minHeight: 76,
     color: '#0051FD',
     fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 26,
-    lineHeight: 34,
+    fontSize: 28,
+    lineHeight: 36,
     textAlign: 'center',
     textAlignVertical: 'center',
   },
-  titleCompact: {minHeight: 58, fontSize: 22, lineHeight: 29},
+  titleCompact: {minHeight: 64, fontSize: 24, lineHeight: 31},
   transparent: {opacity: 0},
 });
