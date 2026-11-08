@@ -22,7 +22,6 @@ import {JobsCategoryTabs} from './JobsCategoryTabs';
 import {JobsEmptyState} from './JobsEmptyState';
 import {JobsHeader} from './JobsHeader';
 import {JobsListSkeleton} from './JobsListSkeleton';
-import {JobsLocationFilter} from './JobsLocationFilter';
 import {JobsResultHeader} from './JobsResultHeader';
 import {JOBS_COLORS} from './jobs.ui';
 
@@ -64,17 +63,6 @@ export function JobsScreen() {
         onChangeSearch={jobs.setSearch}
       />
       <View style={[styles.controls, {paddingHorizontal: pagePadding}]}>
-        <JobsLocationFilter
-          chevronIconSize={iconLayout.chevronIconSize}
-          controlHeight={iconLayout.controlHeight}
-          controlIconSize={iconLayout.controlIconSize}
-          iconSlotSize={iconLayout.iconSlotSize}
-          onUnavailablePress={() => Alert.alert(
-            'Pencarian lokasi',
-            'Masukkan nama lokasi pada kolom pencarian untuk mencari lowongan berdasarkan lokasi.',
-          )}
-          showAdvancedFilter={false}
-        />
         <JobsCategoryTabs value={priority} onChange={setPriority} />
         <JobsResultHeader total={jobs.total} />
       </View>

@@ -96,8 +96,10 @@ function skill(value: unknown): ProfileSkill | null {
   const name = text(raw.name, raw.custom_name, asRecord(raw.skill).name);
   if (!name) return null;
   const skillId = raw.skill_id === null || raw.skill_id === undefined ? null : number(raw.skill_id);
+  const rawEntryId = raw.pivot_id ?? raw.entry_id ?? (skillId === null ? raw.id : null);
+  const entryId = rawEntryId === null || rawEntryId === undefined ? null : number(rawEntryId);
   return {
-    entryId: number(raw.pivot_id, number(raw.entry_id, number(raw.id))),
+    entryId: entryId && entryId > 0 ? entryId : null,
     skillId,
     name,
     source: text(raw.source) === 'custom' || skillId === null ? 'custom' : 'dataset',

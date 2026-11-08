@@ -192,10 +192,11 @@ describe('authApi', () => {
     });
   });
 
-  it('uses a web token lifecycle for PWA and mobile for native platforms', () => {
+  it('uses the mobile token lifecycle for every Expo target unless explicitly overridden', () => {
+    expect(resolveAuthClientType()).toBe('mobile');
+    expect(resolveAuthClientType('mobile')).toBe('mobile');
     expect(resolveAuthClientType('web')).toBe('web');
-    expect(resolveAuthClientType('android')).toBe('mobile');
-    expect(resolveAuthClientType('ios')).toBe('mobile');
+    expect(resolveAuthClientType('unknown')).toBe('mobile');
   });
 
   it('sends the trusted client type when starting Google OAuth', async () => {
@@ -206,14 +207,14 @@ describe('authApi', () => {
     await expect(
       googleAuthApi.getAuthorizationUrl(
         'https://pwa.example/auth/google/callback',
-        'web',
+        'mobile',
       ),
     ).resolves.toBe('https://accounts.google.com/o/oauth2/auth');
 
     expect(get).toHaveBeenCalledWith('/google/mobile/redirect', {
       params: {
         return_url: 'https://pwa.example/auth/google/callback',
-        client_type: 'web',
+        client_type: 'mobile',
       },
     });
   });

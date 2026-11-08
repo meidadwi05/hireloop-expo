@@ -59,7 +59,7 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}).format(date);
 }
 
-function resolveFileUrl(item: ProfileFileItem, mediaIndex = 0) {
+export function resolveFileUrl(item: ProfileFileItem, mediaIndex = 0) {
   const direct = item.media[mediaIndex]?.path || item.url || item.path;
   if (!direct) return null;
   if (/^https?:\/\//i.test(direct)) return direct;
@@ -107,39 +107,19 @@ function fileActionErrorMessage(error: unknown, action: FileAction) {
 }
 
 async function openItem(item: ProfileFileItem, mediaIndex = 0) {
+  const url = resolveFileUrl(item, mediaIndex);
+  if (!url) throw new Error('URL file tidak tersedia.');
+
   if (Platform.OS === 'web') {
-    if (item.type === 'document') {
-      const url = resolveFileUrl(item, mediaIndex);
-      if (!url) throw new Error('URL file tidak tersedia.');
-      const opened = window.open(url, '_blank');
-      if (!opened) throw new Error('Popup diblokir browser. Izinkan popup untuk melihat file.');
-      opened.opener = null;
-      return;
-    }
-    const previewWindow = window.open('about:blank', '_blank');
+    const previewWindow = window.open(url, '_blank');
     if (!previewWindow) throw new Error('Popup diblokir browser. Izinkan popup untuk melihat file.');
     previewWindow.opener = null;
-    try {
-      const bytes = await profileApi.getCertificationMedia(item.id, mediaIndex);
-      const objectUrl = URL.createObjectURL(bytesToBlob(bytes, selectedMimeType(item, mediaIndex)));
-      previewWindow.location.href = objectUrl;
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-    } catch (error) {
-      previewWindow.close();
-      throw error;
-    }
     return;
   }
-  const file = await prepareNativeFile(item, mediaIndex);
-  try {
-    await Linking.openURL(file.uri);
-  } catch {
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(file.uri, {dialogTitle: `Buka ${item.name}`, mimeType: selectedMimeType(item, mediaIndex)});
-      return;
-    }
-    throw new Error('Tidak ada aplikasi yang dapat membuka file ini.');
-  }
+
+  const supported = await Linking.canOpenURL(url);
+  if (!supported) throw new Error('Browser tidak dapat membuka URL file ini.');
+  await Linking.openURL(url);
 }
 
 async function downloadItem(item: ProfileFileItem, mediaIndex = 0) {

@@ -120,6 +120,10 @@ export const profileApi = {
     await httpClient.delete(`/job-seeker/skills/entries/${entryId}`);
   },
 
+  async deleteDatasetSkill(skillId: number): Promise<void> {
+    await httpClient.delete(`/job-seeker/skills/${skillId}`);
+  },
+
   async listSkillTools(): Promise<{id: number; name: string}[]> {
     const response = await httpClient.get('/job-seeker/skill-tools');
     return unwrapArray(response.data).map(item => ({id: Number(item.id), name: String(item.tool_name ?? '')})).filter(item => item.id > 0 && item.name);

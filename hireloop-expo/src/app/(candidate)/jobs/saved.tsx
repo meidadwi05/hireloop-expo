@@ -1,7 +1,6 @@
+import {Redirect} from 'expo-router';
 import React from 'react';
 
-import {SavedJobsScreen} from '../../../features/jobs/components/SavedJobsScreen';
-
 export default function SavedJobsRoute() {
-  return <SavedJobsScreen />;
+  return <Redirect href={'/(candidate)/(tabs)/saved' as never} />;
 }

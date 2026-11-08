@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQuery} from '@tanstack/react-query';
-import {router, Tabs} from 'expo-router';
+import {Tabs} from 'expo-router';
 import React from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
@@ -29,13 +29,7 @@ export default function CandidateTabsLayout() {
       <Tabs.Screen name="home" options={{title: 'Beranda', tabBarIcon: ({color, size}) => <Ionicons name="home" color={color} size={size} />}} />
       <Tabs.Screen name="jobs" options={{title: 'Lowongan', tabBarIcon: ({color, size}) => <Ionicons name="briefcase-outline" color={color} size={size} />}} />
       <Tabs.Screen
-        name="career"
-        listeners={{
-          tabPress: event => {
-            event.preventDefault();
-            router.push('/(candidate)/jobs/saved' as never);
-          },
-        }}
+        name="saved"
         options={{
           title: 'Disimpan',
           tabBarAccessibilityLabel: 'Buka Lowongan Tersimpan',
@@ -60,6 +54,7 @@ export default function CandidateTabsLayout() {
           tabBarIcon: ({color, focused, size}) => <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={size} />,
         }}
       />
+      <Tabs.Screen name="career" options={{href: null}} />
     </Tabs>
   );
 }

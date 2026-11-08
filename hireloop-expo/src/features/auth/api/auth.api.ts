@@ -1,6 +1,5 @@
 import {httpClient} from '../../../core/api/http-client';
 import {tokenStorage} from '../../../api/tokenStorage';
-import {Platform} from 'react-native';
 import {
   authMessageResponseSchema,
   currentUserResponseSchema,
@@ -12,8 +11,8 @@ import type {CandidateUser, LoginInput, RegisterInput, ResetPasswordInput} from 
 
 export type AuthClientType = 'web' | 'mobile';
 
-export function resolveAuthClientType(platform: string = Platform.OS): AuthClientType {
-  return platform === 'web' ? 'web' : 'mobile';
+export function resolveAuthClientType(configuredType: string | undefined = process.env.EXPO_PUBLIC_AUTH_CLIENT_TYPE): AuthClientType {
+  return configuredType === 'web' ? 'web' : 'mobile';
 }
 
 export const AUTH_CLIENT_TYPE = resolveAuthClientType();

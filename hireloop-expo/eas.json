@@ -7,6 +7,9 @@
     "development": {
       "distribution": "internal",
       "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_AUTH_CLIENT_TYPE": "mobile"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -14,6 +17,9 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_AUTH_CLIENT_TYPE": "mobile"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -22,14 +28,16 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://app.hireloop.site/api"
+        "EXPO_PUBLIC_API_URL": "https://app.hireloop.site/api",
+        "EXPO_PUBLIC_AUTH_CLIENT_TYPE": "mobile"
       }
     },
     "production-apk": {
       "distribution": "internal",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://app.hireloop.site/api"
+        "EXPO_PUBLIC_API_URL": "https://app.hireloop.site/api",
+        "EXPO_PUBLIC_AUTH_CLIENT_TYPE": "mobile"
       },
       "android": {
         "buildType": "apk"

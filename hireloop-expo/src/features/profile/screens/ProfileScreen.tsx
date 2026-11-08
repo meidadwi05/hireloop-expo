@@ -5,7 +5,6 @@ import React, {useMemo, useState} from 'react';
 import {
   Alert,
   Image,
-  ImageBackground,
   Linking,
   Modal,
   Pressable,
@@ -49,7 +48,6 @@ export function ProfileScreen() {
   const [about, setAbout] = useState('');
   const updateDescription = useProfileMutation(profileApi.updateDescription);
   const uploadAvatar = useProfileMutation(profileApi.uploadAvatar);
-  const uploadCover = useProfileMutation(profileApi.uploadCover);
   const data = profile.data;
   const completion = useMemo(() => data ? calculateProfileCompletion(data) : 0, [data]);
 
@@ -72,22 +70,6 @@ export function ProfileScreen() {
       Alert.alert('Berhasil', 'Foto profil berhasil diperbarui.');
     } catch (error) {
       Alert.alert('Gagal memperbarui foto', toAppApiError(error).message);
-    }
-  };
-
-  const chooseCover = async () => {
-    const result = await DocumentPicker.getDocumentAsync({type: ['image/jpeg', 'image/png'], copyToCacheDirectory: true});
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if ((asset.size ?? 0) > 4 * 1024 * 1024) {
-      Alert.alert('File terlalu besar', 'Foto sampul maksimal 4 MB.');
-      return;
-    }
-    try {
-      await uploadCover.mutateAsync({uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'image/jpeg', size: asset.size, file: asset.file});
-      Alert.alert('Berhasil', 'Foto sampul berhasil diperbarui.');
-    } catch (error) {
-      Alert.alert('Gagal memperbarui sampul', toAppApiError(error).message);
     }
   };
 
@@ -131,7 +113,7 @@ export function ProfileScreen() {
 
   return (
     <View style={styles.screen}>
-      <ProfileHeader title="Profil Saya" rightIcon="settings-outline" rightLabel="Pengaturan" onRightPress={() => router.push('/(candidate)/(tabs)/account' as never)} fallback="/(candidate)/(tabs)/home" />
+      <ProfileHeader title="Profil Saya" rightIcon="settings-outline" onRightPress={() => router.push('/(candidate)/(tabs)/account' as never)} fallback="/(candidate)/(tabs)/home" />
       {profile.isLoading || profile.isError || !data ? (
         <ScreenState
           loading={profile.isLoading}
@@ -140,17 +122,6 @@ export function ProfileScreen() {
         />
       ) : (
         <ProfilePage refreshControl={undefined}>
-          <ImageBackground
-            source={data.coverUrl ? {uri: data.coverUrl} : require('../../../assets/up_background.png')}
-            resizeMode="cover"
-            style={styles.cover}
-            imageStyle={styles.coverImage}
-          >
-            <Pressable accessibilityLabel="Ubah foto sampul" onPress={() => void chooseCover()} style={styles.coverButton}>
-              <Ionicons name="camera-outline" size={17} color="white" />
-              <Text style={styles.coverButtonText}>{uploadCover.isPending ? 'Mengunggah...' : 'Ubah Sampul'}</Text>
-            </Pressable>
-          </ImageBackground>
           <ProfileCard style={styles.summaryCard}>
             <View style={styles.avatarWrap}>
               {data.avatarUrl ? (
@@ -229,10 +200,6 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   screen: {flex: 1, backgroundColor: profileColors.background},
-  cover: {height: 138, borderRadius: 18, overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'flex-end', padding: 12, backgroundColor: profileColors.navy},
-  coverImage: {borderRadius: 18},
-  coverButton: {minHeight: 38, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(0,20,55,0.78)'},
-  coverButtonText: {fontFamily: profileFonts.semibold, fontSize: 10.5, color: 'white'},
   summaryCard: {flexDirection: 'row', alignItems: 'center', gap: 16},
   avatarWrap: {width: 108, height: 108, flexShrink: 0},
   avatar: {width: 104, height: 104, borderRadius: 52, backgroundColor: '#E8EEF6'},

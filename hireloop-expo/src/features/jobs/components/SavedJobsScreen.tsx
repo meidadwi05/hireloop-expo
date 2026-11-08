@@ -1,55 +1,73 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import React, {useMemo, useState} from 'react';
-import {FlatList, Modal, Pressable, Share, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import React, {useMemo, useRef, useState} from 'react';
+import {FlatList, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {getJobsIconLayout} from '../jobs-header.layout';
-import {filterAndSortSavedJobs, type SavedJobsSort} from '../saved-jobs.filters';
+import {
+  countSavedJobsByStatus,
+  filterAndSortSavedJobs,
+  getSavedJobLocations,
+  type SavedJobsSort,
+  type SavedJobsStatus,
+} from '../saved-jobs.filters';
 import {useSavedJobs} from '../saved-jobs-provider';
 import type {CandidateJobCard} from '../jobs.types';
 import {JobListingCard} from './JobListingCard';
 import {JobsSearchField} from './JobsSearchField';
 import {JOBS_COLORS, JOBS_FONTS} from './jobs.ui';
 
-function SortModal({visible, value, onClose, onChange}: {
+type DropdownAnchor = {height: number; width: number; x: number; y: number};
+type DropdownOption = {label: string; value: string};
+
+function DropdownMenu({visible, anchor, options, title, value, viewportWidth, onClose, onChange}: {
   visible: boolean;
-  value: SavedJobsSort;
+  anchor: DropdownAnchor | null;
+  options: DropdownOption[];
+  title: string;
+  value: string;
+  viewportWidth: number;
   onClose: () => void;
-  onChange: (value: SavedJobsSort) => void;
+  onChange: (value: string) => void;
 }) {
-  const options: {value: SavedJobsSort; label: string}[] = [
-    {value: 'newest', label: 'Terbaru'},
-    {value: 'oldest', label: 'Terlama'},
-  ];
+  if (!anchor) return null;
+
+  const menuWidth = Math.min(Math.max(anchor.width, 176), viewportWidth - 24);
+  const menuLeft = Math.max(12, Math.min(anchor.x + anchor.width - menuWidth, viewportWidth - menuWidth - 12));
 
   return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
-      <Pressable onPress={onClose} style={styles.modalOverlay}>
-        <Pressable accessibilityViewIsModal onPress={event => event.stopPropagation()} style={styles.modalCard}>
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Urutkan</Text>
-          {options.map(option => {
-            const selected = option.value === value;
-            return (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{selected}}
-                key={option.value}
-                onPress={() => {
-                  onChange(option.value);
-                  onClose();
-                }}
-                style={styles.optionRow}
-              >
-                <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{option.label}</Text>
-                <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} color={selected ? JOBS_COLORS.blue : '#A8B3C3'} size={21} />
-              </Pressable>
-            );
-          })}
+    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
+      <Pressable onPress={onClose} style={styles.dropdownOverlay}>
+        <Pressable
+          accessibilityViewIsModal
+          onPress={event => event.stopPropagation()}
+          style={[styles.dropdownCard, {left: menuLeft, top: anchor.y + anchor.height + 6, width: menuWidth}]}
+        >
+          <Text style={styles.dropdownTitle}>{title}</Text>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={options.length > 5} style={styles.dropdownOptions}>
+            {options.map(option => {
+              const selected = option.value === value;
+              return (
+                <Pressable
+                  accessibilityRole="radio"
+                  accessibilityState={{selected}}
+                  key={option.value}
+                  onPress={() => {
+                    onChange(option.value);
+                    onClose();
+                  }}
+                  style={styles.dropdownOption}
+                >
+                  <Text numberOfLines={1} style={[styles.dropdownOptionText, selected && styles.dropdownOptionTextSelected]}>{option.label}</Text>
+                  <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} color={selected ? JOBS_COLORS.blue : '#A8B3C3'} size={21} />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -63,14 +81,29 @@ export function SavedJobsScreen() {
   const applyAccess = useCandidateApplyAccess();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SavedJobsSort>('newest');
-  const [sortOpen, setSortOpen] = useState(false);
+  const [status, setStatus] = useState<SavedJobsStatus>('all');
+  const [location, setLocation] = useState('all');
+  const [dropdown, setDropdown] = useState<{anchor: DropdownAnchor; kind: 'location' | 'sort'} | null>(null);
+  const locationAnchorRef = useRef<View>(null);
+  const sortAnchorRef = useRef<View>(null);
   const containerWidth = Math.min(width, 720);
   const pagePadding = containerWidth <= 350 ? 14 : 20;
   const iconLayout = getJobsIconLayout(containerWidth);
-  const visibleJobs = useMemo(
-    () => filterAndSortSavedJobs(savedJobs, search, sort),
-    [savedJobs, search, sort],
+  const locations = useMemo(() => getSavedJobLocations(savedJobs), [savedJobs]);
+  const statusCounts = useMemo(
+    () => countSavedJobsByStatus(savedJobs, search, location),
+    [location, savedJobs, search],
   );
+  const visibleJobs = useMemo(
+    () => filterAndSortSavedJobs(savedJobs, {location, search, sort, status}),
+    [location, savedJobs, search, sort, status],
+  );
+
+  const openDropdown = (kind: 'location' | 'sort', anchorView: View | null) => {
+    anchorView?.measureInWindow((x, y, measuredWidth, height) => {
+      setDropdown({anchor: {height, width: measuredWidth, x, y}, kind});
+    });
+  };
 
   const openJob = (job: CandidateJobCard, intent?: 'apply') => {
     if (intent === 'apply' && applyAccess.isTier2Banned) return;
@@ -110,13 +143,64 @@ export function SavedJobsScreen() {
                 onChangeText={setSearch}
                 value={search}
               />
+              <View style={styles.filterRow}>
+                <View ref={locationAnchorRef} collapsable={false} style={styles.locationAnchor}>
+                  <Pressable
+                    accessibilityLabel="Pilih lokasi lowongan disimpan"
+                    accessibilityRole="button"
+                    onPress={() => openDropdown('location', locationAnchorRef.current)}
+                    style={({pressed}) => [styles.filterControl, pressed && styles.controlPressed]}
+                  >
+                    <Ionicons name="location-outline" size={18} color="#49607F" />
+                    <Text numberOfLines={1} style={styles.filterControlText}>{location === 'all' ? 'Semua lokasi' : location}</Text>
+                    <Ionicons name="chevron-down" size={17} color="#49607F" />
+                  </Pressable>
+                </View>
+                <View ref={sortAnchorRef} collapsable={false} style={styles.sortAnchor}>
+                  <Pressable
+                    accessibilityLabel="Filter urutan lowongan disimpan"
+                    accessibilityRole="button"
+                    onPress={() => openDropdown('sort', sortAnchorRef.current)}
+                    style={({pressed}) => [styles.filterControl, styles.sortControl, pressed && styles.controlPressed]}
+                  >
+                    <Ionicons name="options-outline" size={18} color="#49607F" />
+                    <Text style={styles.filterControlText}>Filter</Text>
+                    {sort === 'oldest' ? <View style={styles.filterDot} /> : null}
+                  </Pressable>
+                </View>
+              </View>
+              <View accessibilityRole="tablist" style={styles.statusTabs}>
+                {([
+                  {label: 'Semua', value: 'all' as const},
+                  {label: 'Aktif', value: 'active' as const},
+                  {label: 'Ditutup', value: 'closed' as const},
+                ]).map(item => {
+                  const selected = status === item.value;
+                  return (
+                    <Pressable
+                      accessibilityRole="tab"
+                      accessibilityState={{selected}}
+                      key={item.value}
+                      onPress={() => setStatus(item.value)}
+                      style={[styles.statusPill, selected && styles.statusPillSelected]}
+                      testID={`saved-status-${item.value}`}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.statusText,
+                          containerWidth <= 350 && styles.statusTextCompact,
+                          selected && styles.statusTextSelected,
+                        ]}
+                      >
+                        {item.label} ({statusCounts[item.value]})
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               <View style={styles.resultRow}>
                 <Text style={styles.resultText}>{visibleJobs.length} lowongan disimpan</Text>
-                <Pressable accessibilityLabel="Urutkan lowongan disimpan" accessibilityRole="button" onPress={() => setSortOpen(true)} style={styles.sortButton}>
-                  <Ionicons name="options-outline" size={18} color={JOBS_COLORS.navy} />
-                  <Text style={styles.sortText}>{sort === 'newest' ? 'Terbaru' : 'Terlama'}</Text>
-                  <Ionicons name="chevron-down" size={17} color={JOBS_COLORS.navy} />
-                </Pressable>
               </View>
             </View>
           </>
@@ -145,6 +229,8 @@ export function SavedJobsScreen() {
                 if (savedJobs.length) {
                   setSearch('');
                   setSort('newest');
+                  setStatus('all');
+                  setLocation('all');
                 } else {
                   router.replace('/(candidate)/(tabs)/jobs');
                 }
@@ -158,7 +244,21 @@ export function SavedJobsScreen() {
         contentContainerStyle={[styles.content, {paddingBottom: Math.max(insets.bottom, 14) + 18}]}
         showsVerticalScrollIndicator={false}
       />
-      <SortModal visible={sortOpen} value={sort} onChange={setSort} onClose={() => setSortOpen(false)} />
+      <DropdownMenu
+        anchor={dropdown?.anchor ?? null}
+        onChange={value => {
+          if (dropdown?.kind === 'location') setLocation(value);
+          if (dropdown?.kind === 'sort') setSort(value as SavedJobsSort);
+        }}
+        onClose={() => setDropdown(null)}
+        options={dropdown?.kind === 'location'
+          ? [{label: 'Semua lokasi', value: 'all'}, ...locations.map(item => ({label: item, value: item}))]
+          : [{label: 'Terbaru', value: 'newest'}, {label: 'Terlama', value: 'oldest'}]}
+        title={dropdown?.kind === 'location' ? 'Pilih lokasi' : 'Urutkan'}
+        value={dropdown?.kind === 'location' ? location : sort}
+        viewportWidth={width}
+        visible={Boolean(dropdown)}
+      />
     </View>
   );
 }
@@ -171,22 +271,34 @@ const styles = StyleSheet.create({
   headerCopy: {flex: 1, minWidth: 0},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 22, lineHeight: 29, color: 'white'},
   subtitle: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 17, color: 'rgba(255,255,255,0.86)', marginTop: 1},
-  controlsSheet: {position: 'relative', zIndex: 2, marginTop: -16, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', backgroundColor: JOBS_COLORS.background, paddingTop: 20, paddingBottom: 17, gap: 13},
+  controlsSheet: {position: 'relative', zIndex: 2, marginTop: -16, borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: JOBS_COLORS.background, paddingTop: 20, paddingBottom: 17, gap: 13},
+  filterRow: {width: '100%', minHeight: 48, flexDirection: 'row', alignItems: 'stretch', gap: 10},
+  locationAnchor: {flex: 1, minWidth: 0},
+  sortAnchor: {width: 104, flexShrink: 0},
+  filterControl: {minHeight: 48, flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 13},
+  sortControl: {justifyContent: 'center'},
+  filterControlText: {flex: 1, minWidth: 0, fontFamily: JOBS_FONTS.semibold, fontSize: 11.5, color: '#283A5C'},
+  filterDot: {position: 'absolute', right: 8, top: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: JOBS_COLORS.blue},
+  controlPressed: {opacity: 0.72},
+  statusTabs: {width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8},
+  statusPill: {flex: 1, minWidth: 0, minHeight: 42, borderRadius: 22, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8},
+  statusPillSelected: {borderColor: '#062A70', backgroundColor: '#062A70'},
+  statusText: {fontFamily: JOBS_FONTS.bold, fontSize: 11, color: '#283A5C'},
+  statusTextCompact: {fontSize: 9.5},
+  statusTextSelected: {color: 'white'},
   resultRow: {minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
   resultText: {flex: 1, fontFamily: JOBS_FONTS.bold, color: JOBS_COLORS.navy, fontSize: 13},
-  sortButton: {minHeight: 42, borderRadius: 11, borderWidth: 1, borderColor: '#D6DEEA', backgroundColor: 'white', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7},
-  sortText: {fontFamily: JOBS_FONTS.semibold, color: JOBS_COLORS.navy, fontSize: 11.5},
   separator: {height: 16},
   empty: {flex: 1, minHeight: 420, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34},
   emptyTitle: {fontFamily: JOBS_FONTS.bold, fontSize: 16, color: JOBS_COLORS.navy, textAlign: 'center', marginTop: 13},
   emptyText: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 18, color: JOBS_COLORS.body, textAlign: 'center', marginTop: 6},
   findButton: {minHeight: 46, borderRadius: 11, backgroundColor: JOBS_COLORS.blue, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, marginTop: 18},
   findButtonText: {fontFamily: JOBS_FONTS.bold, fontSize: 11.5, color: 'white'},
-  modalOverlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,18,58,0.56)'},
-  modalCard: {width: '100%', maxWidth: 720, alignSelf: 'center', borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: 'white', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30},
-  modalHandle: {width: 42, height: 4, borderRadius: 2, backgroundColor: '#D8DFE9', alignSelf: 'center'},
-  modalTitle: {fontFamily: JOBS_FONTS.bold, fontSize: 17, color: JOBS_COLORS.navy, marginVertical: 16},
-  optionRow: {minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#EEF1F5'},
-  optionText: {fontFamily: JOBS_FONTS.medium, fontSize: 12.5, color: JOBS_COLORS.body},
-  optionTextSelected: {fontFamily: JOBS_FONTS.bold, color: JOBS_COLORS.blue},
+  dropdownOverlay: {flex: 1, backgroundColor: 'rgba(6,26,77,0.08)'},
+  dropdownCard: {position: 'absolute', maxHeight: 310, borderRadius: 14, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6, shadowColor: '#193A70', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.16, shadowRadius: 14, elevation: 9},
+  dropdownTitle: {fontFamily: JOBS_FONTS.bold, fontSize: 12.5, color: JOBS_COLORS.navy, paddingHorizontal: 4, paddingVertical: 10},
+  dropdownOptions: {maxHeight: 245},
+  dropdownOption: {minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, borderTopColor: '#EEF1F5', paddingHorizontal: 4},
+  dropdownOptionText: {flex: 1, minWidth: 0, fontFamily: JOBS_FONTS.medium, fontSize: 11.5, color: JOBS_COLORS.body},
+  dropdownOptionTextSelected: {fontFamily: JOBS_FONTS.bold, color: JOBS_COLORS.blue},
 });

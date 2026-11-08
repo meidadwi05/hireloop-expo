@@ -41,7 +41,7 @@ export type ProfileExperience = {
 };
 
 export type ProfileSkill = {
-  entryId: number;
+  entryId: number | null;
   skillId: number | null;
   name: string;
   source: 'dataset' | 'custom';

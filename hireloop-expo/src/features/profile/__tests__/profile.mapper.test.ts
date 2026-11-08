@@ -62,6 +62,20 @@ describe('profile mapper', () => {
     expect(files[1]).toMatchObject({type: 'certification', issuer: 'BNSP', originalName: 'k3.pdf'});
   });
 
+  it('keeps skill entry ids separate from legacy dataset skill ids', () => {
+    const current = mapCandidateProfile({data: {job_seeker: {skills: [
+      {id: 9, pivot_id: 41, skill_id: 9, name: 'React', source: 'master'},
+      {id: 52, skill_id: null, custom_name: 'Prompt Engineering', source: 'custom'},
+    ]}}});
+    const legacy = mapCandidateProfile({data: {job_seeker: {skills: [
+      {id: 12, skill_id: 12, name: 'Figma', source: 'master'},
+    ]}}});
+
+    expect(current.skillItems[0]).toMatchObject({entryId: 41, skillId: 9, source: 'dataset'});
+    expect(current.skillItems[1]).toMatchObject({entryId: 52, skillId: null, source: 'custom'});
+    expect(legacy.skillItems[0]).toMatchObject({entryId: null, skillId: 12, source: 'dataset'});
+  });
+
   it('normalizes legacy work preference values', () => {
     const profile = mapCandidateProfile({data: {job_seeker: {
       job_type_expected: 'onsite',

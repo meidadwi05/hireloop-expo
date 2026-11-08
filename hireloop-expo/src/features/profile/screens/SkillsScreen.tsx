@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, {useEffect, useMemo, useState} from 'react';
-import {Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
@@ -11,6 +11,7 @@ import {PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, pro
 
 type EditorMode = 'skill' | 'tool' | 'language' | null;
 type MasterItem = {id: number; name: string};
+type DeleteRequest = {title: string; message: string; action: () => Promise<unknown>};
 
 function EditorModal({mode, tool, existingLanguageIds, onClose}: {mode: EditorMode; tool: ProfileSkillTool | null; existingLanguageIds: number[]; onClose: () => void}) {
   const [value, setValue] = useState(() => mode === 'tool' ? tool?.name ?? '' : '');
@@ -82,13 +83,41 @@ function SectionHeader({icon, title, action}: {icon: React.ComponentProps<typeof
   return <View style={styles.sectionHeader}><Ionicons name={icon} size={22} color={profileColors.blue} /><Text style={styles.sectionTitle}>{title}</Text><Pressable accessibilityRole="button" onPress={action} style={styles.addButton}><Ionicons name="add" size={18} color={profileColors.blue} /><Text style={styles.addText}>Tambah</Text></Pressable></View>;
 }
 
+function DeleteConfirmationModal({request, pending, error, onCancel, onConfirm}: {request: DeleteRequest | null; pending: boolean; error: string; onCancel: () => void; onConfirm: () => void}) {
+  return (
+    <Modal animationType="fade" transparent visible={Boolean(request)} onRequestClose={() => !pending && onCancel()}>
+      <Pressable accessibilityRole="button" onPress={() => !pending && onCancel()} style={styles.confirmBackdrop}>
+        <Pressable accessibilityRole="none" onPress={() => undefined} style={styles.confirmCard}>
+          <View style={styles.confirmIcon}><Ionicons name="trash-outline" size={28} color={profileColors.red} /></View>
+          <Text style={styles.confirmTitle}>{request?.title}</Text>
+          <Text style={styles.confirmMessage}>{request?.message}</Text>
+          {error ? <Text style={styles.confirmError}>{error}</Text> : null}
+          <View style={styles.confirmActions}>
+            <Pressable accessibilityLabel="Batal hapus" disabled={pending} onPress={onCancel} style={styles.confirmCancel}><Text style={styles.confirmCancelText}>Batal</Text></Pressable>
+            <Pressable accessibilityLabel="Konfirmasi hapus" disabled={pending} onPress={onConfirm} style={[styles.confirmDelete, pending && styles.confirmDisabled]}>
+              {pending ? <ActivityIndicator size="small" color="white" /> : <Ionicons name="trash-outline" size={18} color="white" />}
+              <Text style={styles.confirmDeleteText}>{pending ? 'Menghapus...' : 'Hapus'}</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export function SkillsScreen() {
   const profile = useProfile();
   const tools = useSkillTools();
   const languages = useLanguages();
   const [mode, setMode] = useState<EditorMode>(null);
   const [selectedTool, setSelectedTool] = useState<ProfileSkillTool | null>(null);
-  const removeSkill = useProfileMutation(profileApi.deleteSkillEntry);
+  const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
+  const [deleteError, setDeleteError] = useState('');
+  const removeSkill = useProfileMutation(async (item: ProfileSkill) => {
+    if (item.entryId) return profileApi.deleteSkillEntry(item.entryId);
+    if (item.skillId) return profileApi.deleteDatasetSkill(item.skillId);
+    throw new Error('ID keahlian tidak tersedia. Muat ulang profil lalu coba lagi.');
+  });
   const removeTool = useProfileMutation(profileApi.deleteSkillTool, {refreshTools: true});
   const removeLanguage = useProfileMutation(profileApi.deleteLanguage, {refreshLanguages: true});
   const skills = profile.data?.skillItems ?? [];
@@ -97,7 +126,26 @@ export function SkillsScreen() {
   const loading = profile.isLoading || tools.isLoading || languages.isLoading;
   const error = profile.error ?? tools.error ?? languages.error;
 
-  const confirmDelete = (title: string, message: string, action: () => Promise<unknown>) => Alert.alert(title, message, [{text: 'Batal', style: 'cancel'}, {text: 'Hapus', style: 'destructive', onPress: async () => { try { await action(); } catch (cause) { Alert.alert('Gagal menghapus', toAppApiError(cause).message); } }}]);
+  const removing = removeSkill.isPending || removeTool.isPending || removeLanguage.isPending;
+  const requestDelete = (title: string, message: string, action: () => Promise<unknown>) => {
+    setDeleteError('');
+    setDeleteRequest({title, message, action});
+  };
+  const cancelDelete = () => {
+    if (removing) return;
+    setDeleteRequest(null);
+    setDeleteError('');
+  };
+  const confirmDelete = async () => {
+    if (!deleteRequest || removing) return;
+    setDeleteError('');
+    try {
+      await deleteRequest.action();
+      setDeleteRequest(null);
+    } catch (cause) {
+      setDeleteError(toAppApiError(cause).message);
+    }
+  };
   const openTool = (item: ProfileSkillTool | null) => { setSelectedTool(item); setMode('tool'); };
   const existingLanguageIds = useMemo(() => languageItems.map(item => item.id), [languageItems]);
 
@@ -108,19 +156,20 @@ export function SkillsScreen() {
         <ProfilePage>
           <ProfileCard>
             <SectionHeader icon="sparkles-outline" title="Keahlian" action={() => setMode('skill')} />
-            <View style={styles.chips}>{skills.length ? skills.map((item: ProfileSkill) => <View key={`${item.source}:${item.entryId}`} style={styles.chip}><Text style={styles.chipText}>{item.name}</Text><Pressable accessibilityLabel={`Hapus ${item.name}`} onPress={() => confirmDelete('Hapus keahlian?', `Keahlian ${item.name} akan dihapus.`, () => removeSkill.mutateAsync(item.entryId))} style={styles.chipAction}><Ionicons name="close" size={17} color="#B42318" /></Pressable></View>) : <Text style={styles.empty}>Belum ada keahlian ditambahkan.</Text>}</View>
+            <View style={styles.chips}>{skills.length ? skills.map((item: ProfileSkill) => <View key={`${item.source}:${item.entryId ?? item.skillId}:${item.name}`} style={styles.chip}><Text style={styles.chipText}>{item.name}</Text><Pressable accessibilityLabel={`Hapus ${item.name}`} onPress={() => requestDelete('Hapus keahlian?', `Keahlian ${item.name} akan dihapus.`, () => removeSkill.mutateAsync(item))} style={styles.chipAction}><Ionicons name="close" size={17} color="#B42318" /></Pressable></View>) : <Text style={styles.empty}>Belum ada keahlian ditambahkan.</Text>}</View>
           </ProfileCard>
           <ProfileCard>
             <SectionHeader icon="construct-outline" title="Tools" action={() => openTool(null)} />
-            {toolItems.length ? toolItems.map((item: ProfileSkillTool, index) => <View key={item.id} style={[styles.listRow, index === toolItems.length - 1 && styles.listRowLast]}><View style={styles.listIcon}><Ionicons name="hammer-outline" size={20} color={profileColors.blue} /></View><Text style={styles.listText}>{item.name}</Text><Pressable accessibilityLabel={`Ubah ${item.name}`} onPress={() => openTool(item)} style={styles.rowAction}><Ionicons name="pencil-outline" size={19} color={profileColors.blue} /></Pressable><Pressable accessibilityLabel={`Hapus ${item.name}`} onPress={() => confirmDelete('Hapus tool?', `Tool ${item.name} akan dihapus.`, () => removeTool.mutateAsync(item.id))} style={styles.rowAction}><Ionicons name="trash-outline" size={19} color={profileColors.red} /></Pressable></View>) : <Text style={styles.empty}>Belum ada tool ditambahkan.</Text>}
+            {toolItems.length ? toolItems.map((item: ProfileSkillTool, index) => <View key={item.id} style={[styles.listRow, index === toolItems.length - 1 && styles.listRowLast]}><View style={styles.listIcon}><Ionicons name="hammer-outline" size={20} color={profileColors.blue} /></View><Text style={styles.listText}>{item.name}</Text><Pressable accessibilityLabel={`Ubah ${item.name}`} onPress={() => openTool(item)} style={styles.rowAction}><Ionicons name="pencil-outline" size={19} color={profileColors.blue} /></Pressable><Pressable accessibilityLabel={`Hapus ${item.name}`} onPress={() => requestDelete('Hapus tool?', `Tool ${item.name} akan dihapus.`, () => removeTool.mutateAsync(item.id))} style={styles.rowAction}><Ionicons name="trash-outline" size={19} color={profileColors.red} /></Pressable></View>) : <Text style={styles.empty}>Belum ada tool ditambahkan.</Text>}
           </ProfileCard>
           <ProfileCard>
             <SectionHeader icon="language-outline" title="Bahasa" action={() => setMode('language')} />
-            <View style={styles.chips}>{languageItems.length ? languageItems.map((item: ProfileLanguage) => <View key={item.id} style={[styles.chip, styles.languageChip]}><Text style={styles.chipText}>{item.name}</Text><Pressable accessibilityLabel={`Hapus bahasa ${item.name}`} onPress={() => confirmDelete('Hapus bahasa?', `Bahasa ${item.name} akan dihapus.`, () => removeLanguage.mutateAsync(item.id))} style={styles.chipAction}><Ionicons name="close" size={17} color="#B42318" /></Pressable></View>) : <Text style={styles.empty}>Belum ada bahasa ditambahkan.</Text>}</View>
+            <View style={styles.chips}>{languageItems.length ? languageItems.map((item: ProfileLanguage) => <View key={item.id} style={[styles.chip, styles.languageChip]}><Text style={styles.chipText}>{item.name}</Text><Pressable accessibilityLabel={`Hapus bahasa ${item.name}`} onPress={() => requestDelete('Hapus bahasa?', `Bahasa ${item.name} akan dihapus.`, () => removeLanguage.mutateAsync(item.id))} style={styles.chipAction}><Ionicons name="close" size={17} color="#B42318" /></Pressable></View>) : <Text style={styles.empty}>Belum ada bahasa ditambahkan.</Text>}</View>
           </ProfileCard>
         </ProfilePage>
       )}
       {mode ? <EditorModal mode={mode} tool={selectedTool} existingLanguageIds={existingLanguageIds} onClose={() => {setMode(null); setSelectedTool(null);}} /> : null}
+      <DeleteConfirmationModal request={deleteRequest} pending={removing} error={deleteError} onCancel={cancelDelete} onConfirm={() => void confirmDelete()} />
     </View>
   );
 }
@@ -133,4 +182,16 @@ const styles = StyleSheet.create({
   sectionHeader: {flexDirection: 'row', alignItems: 'center', gap: 9, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: profileColors.border}, sectionTitle: {flex: 1, minWidth: 0, fontFamily: profileFonts.bold, fontSize: 15, color: profileColors.ink}, addButton: {minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6}, addText: {fontFamily: profileFonts.semibold, fontSize: 11, color: profileColors.blue},
   chips: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 14}, chip: {minHeight: 38, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 19, borderWidth: 1, borderColor: '#CFE0FF', backgroundColor: '#EEF5FF', paddingLeft: 12, paddingRight: 4}, languageChip: {backgroundColor: '#F1EDFF', borderColor: '#DCD2FF'}, chipText: {flexShrink: 1, fontFamily: profileFonts.medium, fontSize: 11, color: '#174EA6'}, chipAction: {width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center'}, empty: {width: '100%', fontFamily: profileFonts.regular, fontSize: 11, color: profileColors.muted, fontStyle: 'italic', paddingVertical: 18},
   listRow: {minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: profileColors.border}, listRowLast: {borderBottomWidth: 0}, listIcon: {width: 36, height: 36, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center'}, listText: {flex: 1, minWidth: 0, fontFamily: profileFonts.medium, fontSize: 12, color: profileColors.ink}, rowAction: {width: 40, height: 40, alignItems: 'center', justifyContent: 'center'},
+  confirmBackdrop: {flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,20,55,0.55)', padding: 20},
+  confirmCard: {width: '100%', maxWidth: 390, alignSelf: 'center', alignItems: 'center', borderRadius: 20, backgroundColor: 'white', padding: 22},
+  confirmIcon: {width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF0F2'},
+  confirmTitle: {fontFamily: profileFonts.bold, fontSize: 18, color: profileColors.ink, textAlign: 'center', marginTop: 14},
+  confirmMessage: {fontFamily: profileFonts.regular, fontSize: 12, lineHeight: 19, color: profileColors.muted, textAlign: 'center', marginTop: 7},
+  confirmError: {width: '100%', borderRadius: 10, backgroundColor: '#FEF3F2', padding: 10, fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 17, color: '#B42318', textAlign: 'center', marginTop: 12},
+  confirmActions: {width: '100%', flexDirection: 'row', gap: 10, marginTop: 20},
+  confirmCancel: {flex: 1, minHeight: 46, borderRadius: 11, borderWidth: 1.5, borderColor: '#CDD5DF', alignItems: 'center', justifyContent: 'center'},
+  confirmCancelText: {fontFamily: profileFonts.semibold, fontSize: 12, color: '#344054'},
+  confirmDelete: {flex: 1, minHeight: 46, borderRadius: 11, flexDirection: 'row', gap: 7, backgroundColor: profileColors.red, alignItems: 'center', justifyContent: 'center'},
+  confirmDisabled: {opacity: 0.65},
+  confirmDeleteText: {fontFamily: profileFonts.semibold, fontSize: 12, color: 'white'},
 });
