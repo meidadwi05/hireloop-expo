@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import React, {useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Modal,
   Platform,
@@ -16,7 +17,6 @@ import {
 } from 'react-native';
 
 import type {CandidateBlacklistInfo} from '../../features/auth/auth.types';
-import {useActionFeedback} from '../../shared/components/ActionFeedbackProvider';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -57,7 +57,6 @@ export function CandidateEvaluationNotice({
   onInitialOpenHandled?: () => void;
 }) {
   const {width: viewportWidth} = useWindowDimensions();
-  const actionFeedback = useActionFeedback();
   const compact = viewportWidth < 360;
   const [visible, setVisible] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -76,17 +75,10 @@ export function CandidateEvaluationNotice({
   const downloadEvidence = async () => {
     if (!fileUrl || downloading) return;
     setDownloading(true);
-    await actionFeedback.runAction({
-      loadingMessage: 'Menyiapkan bukti evaluasi...',
-      successTitle: 'Bukti Berhasil Dibuka',
-      successMessage: 'Bukti evaluasi sudah diteruskan ke penampil atau menu berbagi perangkat.',
-      errorTitle: 'PDF Belum Dapat Dibuka',
-      operation: async () => {
-        if (Platform.OS === 'web') {
-          await Linking.openURL(fileUrl);
-          return;
-        }
-
+    try {
+      if (Platform.OS === 'web') {
+        await Linking.openURL(fileUrl);
+      } else {
         const destination = new File(Paths.cache, fileName);
         const file = await File.downloadFileAsync(fileUrl, destination, {idempotent: true});
         if (await Sharing.isAvailableAsync()) {
@@ -94,10 +86,13 @@ export function CandidateEvaluationNotice({
         } else {
           await Linking.openURL(fileUrl);
         }
-      },
-      onSuccessExit: closeModal,
-    });
-    setDownloading(false);
+      }
+      closeModal();
+    } catch (error) {
+      Alert.alert('PDF Belum Dapat Dibuka', error instanceof Error ? error.message : 'Bukti evaluasi belum dapat dibuka.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (

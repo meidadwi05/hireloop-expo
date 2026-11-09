@@ -29,13 +29,13 @@ export function getIntroLayoutMetrics(width: number, height: number): IntroLayou
     bodyLineHeight: clamp(width * 0.064, compact ? 20 : 23, compact ? 23 : 28),
     contentMaxWidth: 480,
     horizontalPadding: clamp(width * 0.075, 22, 38),
-    heroCopyGap: short ? 14 : compact ? 18 : 26,
+    heroCopyGap: short ? 20 : compact ? 26 : 34,
     heroHeight: short
-      ? clamp(height * 0.37, 196, 220)
+      ? clamp(height * 0.4, 210, 238)
       : compact
-        ? clamp(height * 0.4, 224, 280)
-        : clamp(height * 0.46, 320, 460),
-    heroWidth: Math.min(width * 0.98, 520),
+        ? clamp(height * 0.44, 246, 306)
+        : clamp(height * 0.5, 348, 500),
+    heroWidth: Math.min(width * 1.04, 540),
     indicatorGap: compact ? 16 : 22,
     sectionGap: compact ? 10 : 16,
     titleFontSize: clamp(width * 0.076, compact ? 26 : 29, compact ? 30 : 36),

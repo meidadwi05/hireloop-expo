@@ -19,7 +19,6 @@ type BrandedHeaderPreset = {
   backgroundColor: string;
   minimumContentHeight: number;
   artworkTop: number;
-  fitArtworkToReferenceWidth?: boolean;
   maximumArtworkReferenceWidth?: number;
   resizeMode?: ImageResizeMode;
 };
@@ -46,8 +45,6 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#00419E',
     minimumContentHeight: 96,
     artworkTop: 0,
-    fitArtworkToReferenceWidth: true,
-    maximumArtworkReferenceWidth: 320,
   },
   notifications: {
     backgroundColor: '#003E9A',
@@ -58,8 +55,6 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#003E9A',
     minimumContentHeight: 88,
     artworkTop: 0,
-    fitArtworkToReferenceWidth: true,
-    maximumArtworkReferenceWidth: 320,
   },
 };
 
@@ -79,7 +74,7 @@ export function getBrandedHeaderLayout(
   const safeWidth = Math.max(1, containerWidth);
   const safeInset = Math.max(0, topInset);
   const artworkReferenceWidth = Math.min(safeWidth, preset.maximumArtworkReferenceWidth ?? safeWidth);
-  const artworkWidth = preset.fitArtworkToReferenceWidth ? artworkReferenceWidth : safeWidth;
+  const artworkWidth = safeWidth;
   const artworkHeight = artworkReferenceWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
   const height = Math.max(minimumContentHeight, preset.artworkTop + artworkHeight);
@@ -92,7 +87,7 @@ export function getBrandedHeaderLayout(
       width: artworkWidth,
       height: artworkHeight,
       top: preset.artworkTop,
-      left: preset.fitArtworkToReferenceWidth ? safeWidth - artworkWidth : 0,
+      left: 0,
     },
   };
 }

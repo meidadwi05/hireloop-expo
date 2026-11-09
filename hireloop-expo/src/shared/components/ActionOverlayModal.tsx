@@ -34,7 +34,7 @@ export function ActionOverlayModal({overlay, onClose}: {
           {loading ? (
             <>
               <View style={[styles.icon, styles.loadingIcon]}>
-                <ActivityIndicator size="large" color="#087BFF" />
+                <ActivityIndicator size="small" color="#087BFF" />
               </View>
               <Text style={[styles.title, styles.loadingTitle]}>Mohon tunggu</Text>
               <Text style={styles.message}>{overlay.message}</Text>
@@ -42,7 +42,7 @@ export function ActionOverlayModal({overlay, onClose}: {
           ) : (
             <>
               <View style={[styles.icon, {backgroundColor: success ? '#35C763' : '#EF3340'}]}>
-                <Ionicons name={success ? 'checkmark' : 'close'} size={52} color="white" />
+                <Ionicons name={success ? 'checkmark' : 'close'} size={34} color="white" />
               </View>
               <Text style={[styles.title, {color}]}>{overlay.title}</Text>
               <Text style={styles.message}>{overlay.message}</Text>
@@ -60,14 +60,14 @@ export function ActionOverlayModal({overlay, onClose}: {
 }
 
 const styles = StyleSheet.create({
-  overlay: {flex: 1, backgroundColor: 'rgba(1,5,20,0.82)', alignItems: 'center', justifyContent: 'center', padding: 16},
-  card: {width: '100%', maxWidth: 390, backgroundColor: 'white', borderRadius: 24, paddingHorizontal: 24, paddingVertical: 32, alignItems: 'center'},
-  icon: {width: 104, height: 104, borderRadius: 52, alignItems: 'center', justifyContent: 'center'},
+  overlay: {flex: 1, backgroundColor: 'rgba(1,5,20,0.78)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28},
+  card: {width: '100%', maxWidth: 320, backgroundColor: 'white', borderRadius: 18, paddingHorizontal: 20, paddingVertical: 22, alignItems: 'center'},
+  icon: {width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center'},
   loadingIcon: {backgroundColor: '#EEF5FF'},
-  title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 29, lineHeight: 37, marginTop: 18, textAlign: 'center'},
+  title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 20, lineHeight: 27, marginTop: 14, textAlign: 'center'},
   loadingTitle: {color: '#087BFF'},
-  message: {fontFamily: 'PlusJakartaSans_400Regular', color: '#222', fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 10},
-  button: {height: 48, minWidth: 170, borderRadius: 12, overflow: 'hidden', marginTop: 24},
+  message: {fontFamily: 'PlusJakartaSans_400Regular', color: '#475467', fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 7},
+  button: {height: 42, minWidth: 140, borderRadius: 10, overflow: 'hidden', marginTop: 18},
   buttonGradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   buttonText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 14},
 });

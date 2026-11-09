@@ -57,23 +57,16 @@ export default function LoginRoute() {
     googleSubmittingRef.current = true;
     setGoogleLoading(true);
     setNotice('');
-    const result = await feedback.runAction({
-      loadingMessage: 'Menghubungkan akun Google dan menyiapkan halaman Anda...',
-      successTitle: 'Login Berhasil',
-      successMessage: 'Anda akan diarahkan ke halaman berikutnya.',
-      errorTitle: 'Login Google Gagal',
-      minimumLoadingDuration: 2000,
-      skipSuccessStatus: true,
-      operation: async () => {
-        const completed = await loginWithGoogle();
-        if (!completed) throw new Error('Login Google dibatalkan atau belum selesai.');
-        return completed;
-      },
-      onSuccessExit: () => router.replace('/'),
-    });
-    if (!result.ok) setNotice(getGoogleLoginErrorMessage(result.error, {apiUrl: env.apiUrl, isDevelopment: __DEV__}));
-    googleSubmittingRef.current = false;
-    setGoogleLoading(false);
+    try {
+      const completed = await loginWithGoogle();
+      if (!completed) throw new Error('Login Google dibatalkan atau belum selesai.');
+      router.replace('/');
+    } catch (error) {
+      setNotice(getGoogleLoginErrorMessage(error, {apiUrl: env.apiUrl, isDevelopment: __DEV__}));
+    } finally {
+      googleSubmittingRef.current = false;
+      setGoogleLoading(false);
+    }
   };
 
   return (

@@ -4,6 +4,7 @@ import {StatusBar} from 'expo-status-bar';
 import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   SectionList,
@@ -15,7 +16,6 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
-import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {useNotifications} from '../hooks/use-notifications';
 import {resolveNotificationDestination} from '../notifications.navigation';
@@ -82,7 +82,6 @@ function EmptyState({filter}: {filter: NotificationFilter}) {
 }
 
 export function NotificationsScreen() {
-  const feedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width: viewportWidth} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
@@ -102,18 +101,18 @@ export function NotificationsScreen() {
       if (destination) router.push(destination as never);
       return;
     }
-    void feedback.runAction({
-      loadingMessage: 'Memperbarui notifikasi...', successTitle: 'Notifikasi Dibaca',
-      successMessage: 'Notifikasi berhasil ditandai sebagai dibaca.', errorTitle: 'Gagal Memperbarui Notifikasi',
-      operation: () => notifications.markReadAsync(item.id),
-      onSuccessExit: () => { if (destination) router.push(destination as never); },
-    });
+    void (async () => {
+      try {
+        await notifications.markReadAsync(item.id);
+        if (destination) router.push(destination as never);
+      } catch (error) {
+        Alert.alert('Gagal Memperbarui Notifikasi', toAppApiError(error).message);
+      }
+    })();
   };
 
-  const markAllRead = () => void feedback.runAction({
-    loadingMessage: 'Memperbarui semua notifikasi...', successTitle: 'Semua Notifikasi Dibaca',
-    successMessage: 'Semua notifikasi berhasil ditandai sebagai dibaca.', errorTitle: 'Gagal Memperbarui Notifikasi',
-    operation: () => notifications.markAllReadAsync(),
+  const markAllRead = () => void notifications.markAllReadAsync().catch(error => {
+    Alert.alert('Gagal Memperbarui Notifikasi', toAppApiError(error).message);
   });
 
   const header = (

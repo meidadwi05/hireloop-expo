@@ -92,18 +92,13 @@ export function ProfileScreen() {
       Alert.alert('CV tidak dapat dibuka', 'URL CV tidak tersedia dari server.');
       return;
     }
-    await feedback.runAction({
-      loadingMessage: 'Menyiapkan CV...',
-      successTitle: 'CV Siap Dibuka',
-      successMessage: 'CV akan dibuka setelah popup ini ditutup.',
-      errorTitle: 'CV Tidak Dapat Dibuka',
-      operation: async () => {
-        const supported = await Linking.canOpenURL(url);
-        if (!supported) throw new Error('Perangkat tidak dapat membuka URL CV dari server.');
-        return url;
-      },
-      onSuccessExit: nextUrl => Linking.openURL(nextUrl),
-    });
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) throw new Error('Perangkat tidak dapat membuka URL CV dari server.');
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('CV Tidak Dapat Dibuka', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+    }
   };
 
   const openAbout = () => {

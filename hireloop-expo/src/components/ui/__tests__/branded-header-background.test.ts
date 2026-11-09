@@ -60,14 +60,14 @@ describe('getBrandedHeaderLayout', () => {
   });
 
   it.each(['jobs-list', 'saved-list'] satisfies BrandedHeaderVariant[])(
-    '%s uses a shorter right-anchored artwork without cropping it',
+    '%s restores the full-width artwork to its original left position',
     variant => {
       const layout = getBrandedHeaderLayout(variant, 390, 24);
 
-      expect(layout.height).toBeCloseTo(320 / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
-      expect(layout.artworkStyle.left).toBe(70);
-      expect(layout.artworkStyle.width).toBe(320);
-      expect(layout.artworkStyle.height).toBeCloseTo(320 / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
+      expect(layout.height).toBeCloseTo(390 / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
+      expect(layout.artworkStyle.left).toBe(0);
+      expect(layout.artworkStyle.width).toBe(390);
+      expect(layout.artworkStyle.height).toBeCloseTo(390 / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
       expect(layout.resizeMode).toBe('contain');
     },
   );

@@ -3,6 +3,7 @@ import {StatusBar} from 'expo-status-bar';
 import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Share,
   StyleSheet,
@@ -11,7 +12,6 @@ import {
 } from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
-import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {useCandidateJobs} from '../hooks/use-candidate-jobs';
 import {getJobsIconLayout} from '../jobs-header.layout';
@@ -29,7 +29,6 @@ import {JOBS_COLORS} from './jobs.ui';
 type Priority = NonNullable<CandidateJobQuery['priority']>;
 
 export function JobsScreen() {
-  const feedback = useActionFeedback();
   const {width} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const [priority, setPriority] = useState<Priority>('all');
@@ -92,8 +91,10 @@ export function JobsScreen() {
               applyBlocked={applyAccess.isTier2Banned}
               onApply={() => openJob(item, 'apply')}
               onOpen={() => openJob(item)}
-              onShare={() => void feedback.runAction({loadingMessage: 'Menyiapkan lowongan...', successTitle: 'Lowongan Siap Dibagikan', successMessage: 'Dialog berbagi berhasil dibuka.', errorTitle: 'Gagal Membagikan Lowongan', operation: () => Share.share({message: `${item.title} di ${item.company} - ${item.location}`})})}
-              onToggleSaved={() => { const saved = isSaved(item.key); void feedback.runAction({loadingMessage: saved ? 'Menghapus lowongan tersimpan...' : 'Menyimpan lowongan...', successTitle: saved ? 'Lowongan Dihapus' : 'Lowongan Tersimpan', successMessage: saved ? 'Lowongan dihapus dari daftar tersimpan.' : 'Lowongan ditambahkan ke daftar tersimpan.', errorTitle: 'Gagal Memperbarui Lowongan', operation: async () => toggleSaved(item)}); }}
+              onShare={() => void Share.share({message: `${item.title} di ${item.company} - ${item.location}`}).catch(error => {
+                Alert.alert('Gagal Membagikan Lowongan', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+              })}
+              onToggleSaved={() => void toggleSaved(item)}
             />
           </View>
         )}

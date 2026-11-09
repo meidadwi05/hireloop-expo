@@ -5,6 +5,7 @@ import {StatusBar} from 'expo-status-bar';
 import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   Share,
@@ -17,7 +18,6 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {toAppApiError} from '../../../core/api/api-error';
-import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {dashboardKeys} from '../../dashboard/dashboard.keys';
 import {jobsApi} from '../../jobs/api/jobs.api';
@@ -101,7 +101,6 @@ function statusHeroCopy(application: CandidateApplication) {
 }
 
 export function ApplicationDetailScreen({source, id}: {source: CandidateJobSource; id: number}) {
-  const actionFeedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
@@ -145,29 +144,27 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 
   const cancelApplication = () => {
     setCancelOpen(false);
-    void actionFeedback.runAction({
-      loadingMessage: 'Membatalkan lamaran...', successTitle: 'Lamaran Dibatalkan',
-      successMessage: 'Lamaran berhasil dibatalkan.', errorTitle: 'Gagal Membatalkan Lamaran',
-      operation: async () => {
-        const response = await cancelMutation.mutateAsync({applicationId: application!.applicationId, storageKind: application!.storageKind});
+    void (async () => {
+      try {
+        await cancelMutation.mutateAsync({applicationId: application!.applicationId, storageKind: application!.storageKind});
         await Promise.all([queryClient.invalidateQueries({queryKey: applicationsKeys.all}), queryClient.invalidateQueries({queryKey: dashboardKeys.home()}), refreshUser()]);
-        return response;
-      },
-      onSuccessExit: () => router.replace('/(candidate)/(tabs)/career'),
-    });
+        router.replace('/(candidate)/(tabs)/career');
+      } catch (error) {
+        Alert.alert('Gagal Membatalkan Lamaran', toAppApiError(error).message);
+      }
+    })();
   };
 
   const completeRequirements = (input: Parameters<typeof completeMutation.mutateAsync>[0]) => {
-    setRequirementsOpen(false);
-    void actionFeedback.runAction({
-      loadingMessage: 'Mengirim persyaratan...', successTitle: 'Persyaratan Terkirim',
-      successMessage: 'Persyaratan berhasil dikirim dan lamaran Anda sekarang aktif.', errorTitle: 'Gagal Mengirim Persyaratan',
-      operation: async () => {
-        const response = await completeMutation.mutateAsync(input);
+    void (async () => {
+      try {
+        await completeMutation.mutateAsync(input);
         await Promise.all([queryClient.invalidateQueries({queryKey: applicationsKeys.all}), queryClient.invalidateQueries({queryKey: applicationsKeys.process(baseApplication?.applicationId ?? 0)}), queryClient.invalidateQueries({queryKey: dashboardKeys.home()}), queryClient.invalidateQueries({queryKey: jobsKeys.detail(source, id)}), refreshUser()]);
-        return response;
-      },
-    });
+        setRequirementsOpen(false);
+      } catch (error) {
+        Alert.alert('Gagal Mengirim Persyaratan', toAppApiError(error).message);
+      }
+    })();
   };
 
   if (applicationsQuery.isPending && !application) {
@@ -238,7 +235,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
                 <Pressable
                   accessibilityLabel={saved ? 'Hapus dari lowongan disimpan' : 'Simpan lowongan'}
                   accessibilityRole="button"
-                  onPress={() => void actionFeedback.runAction({loadingMessage: saved ? 'Menghapus lowongan tersimpan...' : 'Menyimpan lowongan...', successTitle: saved ? 'Lowongan Dihapus' : 'Lowongan Tersimpan', successMessage: saved ? 'Lowongan dihapus dari daftar tersimpan.' : 'Lowongan ditambahkan ke daftar tersimpan.', errorTitle: 'Gagal Memperbarui Lowongan', operation: async () => toggleSaved(job)})}
+                  onPress={() => void toggleSaved(job)}
                   style={[styles.bookmarkButton, saved && styles.bookmarkButtonActive]}
                 >
                   <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={APPLICATION_COLORS.blue} />
@@ -247,7 +244,9 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
                   accessibilityLabel="Bagikan lowongan"
                   accessibilityRole="button"
                   onPress={() => {
-                    void actionFeedback.runAction({loadingMessage: 'Menyiapkan lowongan...', successTitle: 'Lowongan Siap Dibagikan', successMessage: 'Dialog berbagi berhasil dibuka.', errorTitle: 'Gagal Membagikan Lowongan', operation: () => Share.share({message: `${job.title} di ${job.company} - ${job.location}`})});
+                    void Share.share({message: `${job.title} di ${job.company} - ${job.location}`}).catch(error => {
+                      Alert.alert('Gagal Membagikan Lowongan', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+                    });
                   }}
                   style={styles.shareButton}
                 >

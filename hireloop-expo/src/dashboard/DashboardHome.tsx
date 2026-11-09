@@ -579,7 +579,6 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
         <Text style={styles.timestampDot}>{'\u2022'}</Text>
         <Text style={styles.timestamp}>{job.updatedLabel}</Text>
       </View>
-      <View style={styles.jobDivider} />
 
       <View style={[styles.jobButtons, compact && styles.jobButtonsCompact]}>
         <Pressable

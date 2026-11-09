@@ -28,7 +28,18 @@ import {saveRegisterContactDraft} from '../../features/auth/register-draft.stora
 import {withMinimumDelay} from '../../shared/utils/with-minimum-delay';
 
 type FieldErrors = RegisterFormErrors & {otp?: string};
-type Dialog = 'registerLoading' | 'registerSuccess' | 'otp' | 'verifyLoading' | 'resendLoading' | 'verifySuccess' | null;
+type Dialog =
+  | 'registerLoading'
+  | 'registerSuccess'
+  | 'registerError'
+  | 'otp'
+  | 'verifyLoading'
+  | 'verifySuccess'
+  | 'verifyError'
+  | 'resendLoading'
+  | 'resendSuccess'
+  | 'resendError'
+  | null;
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const OTP_RESEND_SECONDS = 120;
@@ -57,12 +68,24 @@ export default function RegisterRoute() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
   const [countdown, setCountdown] = useState(OTP_RESEND_SECONDS);
 
   useEffect(() => {
     if (dialog !== 'registerSuccess') return;
     const timer = setTimeout(() => setDialog('otp'), 1400);
     return () => clearTimeout(timer);
+  }, [dialog]);
+
+  useEffect(() => {
+    if (dialog === 'verifySuccess') {
+      const timer = setTimeout(() => router.replace('/'), 1400);
+      return () => clearTimeout(timer);
+    }
+    if (dialog === 'resendSuccess') {
+      const timer = setTimeout(() => setDialog('otp'), 1400);
+      return () => clearTimeout(timer);
+    }
   }, [dialog]);
 
   useEffect(() => {
@@ -93,7 +116,6 @@ export default function RegisterRoute() {
       setCountdown(OTP_RESEND_SECONDS);
       setDialog('registerSuccess');
     } catch (error) {
-      setDialog(null);
       const apiError = toAppApiError(error);
       const validation = apiError.validationErrors;
       setErrors({
@@ -103,6 +125,8 @@ export default function RegisterRoute() {
         password: validation.password?.[0],
       });
       setNotice(apiError.message);
+      setFeedbackMessage(apiError.message);
+      setDialog('registerError');
     } finally {
       setLoading(false);
     }
@@ -123,10 +147,11 @@ export default function RegisterRoute() {
       if (!user) throw new Error('Akun berhasil dibuat, tetapi sesi login gagal dimuat. Silakan masuk kembali.');
       setDialog('verifySuccess');
     } catch (error) {
-      setDialog('otp');
       const apiError = toAppApiError(error);
       setErrors((current) => ({...current, otp: apiError.validationErrors.code?.[0]}));
       setNotice(apiError.message);
+      setFeedbackMessage(apiError.message);
+      setDialog('verifyError');
     } finally {
       setLoading(false);
     }
@@ -140,13 +165,22 @@ export default function RegisterRoute() {
       setDialog('resendLoading');
       const message = await withMinimumDelay(() => authApi.resendRegistrationOtp(email));
       setNotice(message ?? 'Kode OTP baru sudah dikirim.');
+      setFeedbackMessage(message ?? 'Kode OTP baru sudah dikirim.');
       setCountdown(OTP_RESEND_SECONDS);
+      setDialog('resendSuccess');
     } catch (error) {
-      setNotice(toAppApiError(error).message);
+      const message = toAppApiError(error).message;
+      setNotice(message);
+      setFeedbackMessage(message);
+      setDialog('resendError');
     } finally {
-      setDialog('otp');
       setResending(false);
     }
+  };
+
+  const closeFeedback = () => {
+    if (dialog === 'registerError') setDialog(null);
+    else if (dialog === 'verifyError' || dialog === 'resendError' || dialog === 'resendSuccess') setDialog('otp');
   };
 
   const closeOtp = () => {
@@ -204,12 +238,12 @@ export default function RegisterRoute() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal animationType="fade" onRequestClose={dialog === 'verifySuccess' ? () => router.replace('/') : dialog === 'otp' ? closeOtp : undefined} transparent visible={dialog !== null}>
+      <Modal animationType="fade" onRequestClose={dialog === 'verifySuccess' ? () => router.replace('/') : dialog === 'otp' ? closeOtp : dialog?.endsWith('Error') || dialog === 'resendSuccess' ? closeFeedback : undefined} transparent visible={dialog !== null}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
           {dialog === 'registerLoading' && <LoadingDialog message="Membuat akun dan mengirim OTP..." />}
 
           {dialog === 'registerSuccess' && (
-            <View accessibilityRole="alert" style={styles.modalCard}>
+            <View accessibilityRole="alert" style={[styles.modalCard, styles.feedbackCard]}>
               <View style={styles.mailIllustration}>
                 <Ionicons name="mail" size={65} color="#0865FF" />
                 <Ionicons name="checkmark-circle" size={35} color="#22CC70" style={styles.mailCheck} />
@@ -222,6 +256,11 @@ export default function RegisterRoute() {
 
           {dialog === 'verifyLoading' && <LoadingDialog message="Memverifikasi kode OTP..." />}
           {dialog === 'resendLoading' && <LoadingDialog message="Mengirim ulang kode OTP..." />}
+
+          {dialog === 'registerError' && <StatusDialog kind="error" message={feedbackMessage} onClose={closeFeedback} title="Registrasi Gagal" />}
+          {dialog === 'verifyError' && <StatusDialog kind="error" message={feedbackMessage} onClose={closeFeedback} title="Verifikasi Gagal" />}
+          {dialog === 'resendSuccess' && <StatusDialog kind="success" message={feedbackMessage} onClose={closeFeedback} title="OTP Terkirim" />}
+          {dialog === 'resendError' && <StatusDialog kind="error" message={feedbackMessage} onClose={closeFeedback} title="OTP Gagal Dikirim" />}
 
           {dialog === 'otp' && (
             <View style={styles.modalCard}>
@@ -253,8 +292,8 @@ export default function RegisterRoute() {
           )}
 
           {dialog === 'verifySuccess' && (
-            <View accessibilityRole="alert" style={styles.modalCard}>
-              <Ionicons name="checkmark-circle" size={98} color="#22CC70" />
+            <View accessibilityRole="alert" style={[styles.modalCard, styles.feedbackCard]}>
+              <Ionicons name="checkmark-circle" size={62} color="#22CC70" />
               <Text style={styles.modalTitle}>Verifikasi Berhasil!</Text>
               <Text style={styles.modalBody}>Akun Anda berhasil diverifikasi. Anda akan segera dialihkan ke halaman berikutnya.</Text>
               <PrimaryButton label="OK" loading={false} onPress={() => router.replace('/')} compact />
@@ -268,10 +307,22 @@ export default function RegisterRoute() {
 
 function LoadingDialog({message}: {message: string}) {
   return (
-    <View accessibilityRole="alert" accessibilityLiveRegion="assertive" accessibilityState={{busy: true}} style={styles.modalCard}>
-      <View style={styles.loadingIcon}><ActivityIndicator size="large" color="#0865FF" /></View>
+    <View accessibilityRole="alert" accessibilityLiveRegion="assertive" accessibilityState={{busy: true}} style={[styles.modalCard, styles.feedbackCard]}>
+      <View style={styles.loadingIcon}><ActivityIndicator size="small" color="#0865FF" /></View>
       <Text style={styles.modalTitle}>Mohon tunggu</Text>
       <Text style={styles.modalBody}>{message}</Text>
+    </View>
+  );
+}
+
+function StatusDialog({kind, title, message, onClose}: {kind: 'success' | 'error'; title: string; message: string; onClose: () => void}) {
+  const success = kind === 'success';
+  return (
+    <View accessibilityRole="alert" style={[styles.modalCard, styles.feedbackCard]}>
+      <Ionicons name={success ? 'checkmark-circle' : 'close-circle'} size={62} color={success ? '#22CC70' : '#D92D20'} />
+      <Text style={[styles.modalTitle, !success && styles.errorTitle]}>{title}</Text>
+      <Text style={styles.modalBody}>{message}</Text>
+      <PrimaryButton compact label="OK" loading={false} onPress={onClose} />
     </View>
   );
 }
@@ -359,11 +410,13 @@ const styles = StyleSheet.create({
   loginText: {fontFamily: 'PlusJakartaSans_700Bold', color: '#0B63FF', fontSize: 12},
   modalOverlay: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(1, 7, 31, 0.82)', padding: 28},
   modalCard: {width: '100%', maxWidth: 390, borderRadius: 24, backgroundColor: 'white', paddingHorizontal: 22, paddingTop: 30, paddingBottom: 26, alignItems: 'center'},
-  mailIllustration: {width: 130, height: 130, borderRadius: 65, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center', marginBottom: 14},
+  feedbackCard: {maxWidth: 320, borderRadius: 18, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20},
+  mailIllustration: {width: 88, height: 88, borderRadius: 44, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center', marginBottom: 10},
   mailCheck: {position: 'absolute', right: 13, bottom: 18, backgroundColor: 'white', borderRadius: 18},
-  loadingIcon: {width: 112, height: 112, borderRadius: 56, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center', marginBottom: 8},
-  modalTitle: {fontFamily: 'PlusJakartaSans_700Bold', color: '#0878FF', fontSize: 25, lineHeight: 33, textAlign: 'center', marginTop: 8},
-  modalBody: {fontFamily: 'PlusJakartaSans_400Regular', color: '#1B1C20', fontSize: 14, lineHeight: 22, textAlign: 'center', marginTop: 10},
+  loadingIcon: {width: 68, height: 68, borderRadius: 34, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center', marginBottom: 6},
+  modalTitle: {fontFamily: 'PlusJakartaSans_700Bold', color: '#0878FF', fontSize: 20, lineHeight: 27, textAlign: 'center', marginTop: 8},
+  errorTitle: {color: '#D92D20'},
+  modalBody: {fontFamily: 'PlusJakartaSans_400Regular', color: '#475467', fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 7},
   modalEmail: {fontFamily: 'PlusJakartaSans_500Medium', color: '#1359D5', fontSize: 15, lineHeight: 23, textAlign: 'center', marginTop: 6},
   hiddenOtpInput: {position: 'absolute', width: 1, height: 1, opacity: 0},
   otpBoxes: {width: '100%', flexDirection: 'row', justifyContent: 'space-between', gap: 7, marginTop: 28, marginBottom: 12, padding: 4, borderRadius: 15, borderWidth: 2, borderColor: 'transparent'},

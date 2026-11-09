@@ -151,7 +151,6 @@ async function downloadItem(item: ProfileFileItem, mediaIndex = 0) {
 }
 
 function FileCard({item, onMenu, onDeleteMedia}: {item: ProfileFileItem; onMenu: () => void; onDeleteMedia: (index: number) => void}) {
-  const feedback = useActionFeedback();
   const certification = item.type === 'certification';
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const description = certification
@@ -162,22 +161,17 @@ function FileCard({item, onMenu, onDeleteMedia}: {item: ProfileFileItem; onMenu:
     const actionKey = `${action}:${mediaIndex}`;
     if (busyAction) return;
     setBusyAction(actionKey);
-    await feedback.runAction({
-      loadingMessage: action === 'view' ? 'Membuka dokumen...' : 'Mengunduh dokumen...',
-      successTitle: action === 'view' ? 'Dokumen Dibuka' : 'Unduhan Berhasil',
-      successMessage: action === 'view' ? 'Dokumen berhasil disiapkan.' : 'Dokumen berhasil diunduh.',
-      errorTitle: action === 'view' ? 'File Tidak Dapat Dibuka' : 'File Tidak Dapat Diunduh',
-      operation: async () => {
-        try {
-          if (action === 'view') await openItem(item, mediaIndex);
-          else await downloadItem(item, mediaIndex);
-        } catch (error) {
-          throw new Error(fileActionErrorMessage(error, action));
-        }
-      },
-      onSuccessExit: () => setBusyAction(null),
-    });
-    setBusyAction(null);
+    try {
+      if (action === 'view') await openItem(item, mediaIndex);
+      else await downloadItem(item, mediaIndex);
+    } catch (error) {
+      Alert.alert(
+        action === 'view' ? 'File Tidak Dapat Dibuka' : 'File Tidak Dapat Diunduh',
+        fileActionErrorMessage(error, action),
+      );
+    } finally {
+      setBusyAction(null);
+    }
   };
 
   return (

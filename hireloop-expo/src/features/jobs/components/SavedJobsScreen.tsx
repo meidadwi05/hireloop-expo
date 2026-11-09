@@ -2,11 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
 import React, {useMemo, useRef, useState} from 'react';
-import {FlatList, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {Alert, FlatList, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
-import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {
@@ -75,7 +74,6 @@ function DropdownMenu({visible, anchor, options, title, value, viewportWidth, on
 }
 
 export function SavedJobsScreen() {
-  const feedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const {hydrated, isSaved, savedJobs, toggleSaved} = useSavedJobs();
@@ -203,8 +201,10 @@ export function SavedJobsScreen() {
               applyBlocked={applyAccess.isTier2Banned}
               onApply={() => openJob(item, 'apply')}
               onOpen={() => openJob(item)}
-              onShare={() => void feedback.runAction({loadingMessage: 'Menyiapkan lowongan...', successTitle: 'Lowongan Siap Dibagikan', successMessage: 'Dialog berbagi berhasil dibuka.', errorTitle: 'Gagal Membagikan Lowongan', operation: () => Share.share({message: `${item.title} di ${item.company} - ${item.location}`})})}
-              onToggleSaved={() => void feedback.runAction({loadingMessage: 'Menghapus lowongan tersimpan...', successTitle: 'Lowongan Dihapus', successMessage: 'Lowongan dihapus dari daftar tersimpan.', errorTitle: 'Gagal Menghapus Lowongan', operation: async () => toggleSaved(item)})}
+              onShare={() => void Share.share({message: `${item.title} di ${item.company} - ${item.location}`}).catch(error => {
+                Alert.alert('Gagal Membagikan Lowongan', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+              })}
+              onToggleSaved={() => void toggleSaved(item)}
             />
           </View>
         )}

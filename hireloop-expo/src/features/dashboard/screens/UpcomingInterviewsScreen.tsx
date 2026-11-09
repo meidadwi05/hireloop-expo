@@ -20,7 +20,6 @@ import {
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
-import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {dashboardApi} from '../api/dashboard.api';
 import {
   interviewClock,
@@ -196,7 +195,6 @@ function EmptyState() {
 
 function DetailSheet({interview, onClose}: {interview: DashboardInterview | null; onClose: () => void}) {
   const insets = useSafeAreaInsets();
-  const actionFeedback = useActionFeedback();
   const [opening, setOpening] = useState(false);
   if (!interview) return null;
 
@@ -221,21 +219,16 @@ function DetailSheet({interview, onClose}: {interview: DashboardInterview | null
         {text: 'Batal', style: 'cancel'},
         {text: 'Lanjutkan', onPress: () => void (async () => {
           setOpening(true);
-          await actionFeedback.runAction({
-            loadingMessage: online ? 'Membuka ruang interview...' : 'Membuka lokasi interview...',
-            successTitle: online ? 'Ruang Interview Dibuka' : 'Lokasi Interview Dibuka',
-            successMessage: online
-              ? 'Tautan interview berhasil diteruskan ke aplikasi atau browser.'
-              : 'Lokasi interview berhasil diteruskan ke aplikasi peta atau browser.',
-            errorTitle: 'Tautan Tidak Dapat Dibuka',
-            operation: async () => {
-              const supported = await Linking.canOpenURL(destination);
-              if (!supported) throw new Error('Periksa kembali tautan interview atau coba dari perangkat lain.');
-              await Linking.openURL(destination);
-            },
-            onSuccessExit: onClose,
-          });
-          setOpening(false);
+          try {
+            const supported = await Linking.canOpenURL(destination);
+            if (!supported) throw new Error('Periksa kembali tautan interview atau coba dari perangkat lain.');
+            await Linking.openURL(destination);
+            onClose();
+          } catch (error) {
+            Alert.alert('Tautan Tidak Dapat Dibuka', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+          } finally {
+            setOpening(false);
+          }
         })()},
       ],
     );
