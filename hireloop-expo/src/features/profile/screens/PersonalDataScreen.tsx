@@ -4,6 +4,7 @@ import React, {useMemo, useState} from 'react';
 import {Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {masterDataApi} from '../../master-data/api/master-data.api';
 import {AddressFields} from '../../onboarding/components/AddressFields';
 import {DateField, isoToLocalDate} from '../../onboarding/components/DateField';
@@ -78,6 +79,7 @@ type PersonalDraft = {
 };
 
 function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfile; visible: boolean; onClose: () => void}) {
+  const feedback = useActionFeedback();
   const [draft, setDraft] = useState<PersonalDraft>(() => ({
     nik: profile.nik,
     fullName: profile.fullName,
@@ -103,18 +105,19 @@ function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfi
     if (!profile.nik && !/^\d{16}$/.test(draft.nik)) return Alert.alert('NIK tidak valid', 'NIK harus tepat 16 digit angka.');
     const requiredAddress = (value: AddressDetail) => value.addressLine && value.provinceCode && value.regencyCode && value.districtCode && value.villageCode;
     if (!requiredAddress(draft.ktpAddress) || (!draft.sameAsKtp && !requiredAddress(draft.domicileAddress))) return Alert.alert('Alamat belum lengkap', 'Lengkapi seluruh wilayah dan detail alamat.');
-    try {
-      if (!profile.nik) await profileApi.updateNik(draft.nik);
-      await mutation.mutateAsync({
-        ...(!profile.nik ? {nik: draft.nik} : {}), full_name: draft.fullName.trim(), gender: draft.gender,
-        birth_place: draft.birthPlace.trim(), birth_date: draft.birthDate || null, phone: draft.phone.trim(), marital_status: draft.maritalStatus,
-        same_as_ktp: draft.sameAsKtp, ktp_address_detail: addressPayload(draft.ktpAddress), domicile_address_detail: draft.sameAsKtp ? null : addressPayload(draft.domicileAddress),
-      });
-      onClose();
-      Alert.alert('Berhasil', 'Data diri berhasil diperbarui.');
-    } catch (error) {
-      Alert.alert('Gagal menyimpan', toAppApiError(error).message);
-    }
+    await feedback.runAction({
+      loadingMessage: 'Menyimpan data diri...', successTitle: 'Data Diri Tersimpan',
+      successMessage: 'Informasi pribadi Anda berhasil diperbarui.', errorTitle: 'Gagal Menyimpan Data Diri',
+      operation: async () => {
+        if (!profile.nik) await profileApi.updateNik(draft.nik);
+        return mutation.mutateAsync({
+          ...(!profile.nik ? {nik: draft.nik} : {}), full_name: draft.fullName.trim(), gender: draft.gender,
+          birth_place: draft.birthPlace.trim(), birth_date: draft.birthDate || null, phone: draft.phone.trim(), marital_status: draft.maritalStatus,
+          same_as_ktp: draft.sameAsKtp, ktp_address_detail: addressPayload(draft.ktpAddress), domicile_address_detail: draft.sameAsKtp ? null : addressPayload(draft.domicileAddress),
+        });
+      },
+      onSuccessExit: onClose,
+    });
   };
 
   return (
@@ -143,6 +146,7 @@ function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfi
 type EducationDraft = {level: string; school: string; majorId: string; startDate: string; endDate: string; info: string; ongoing: boolean};
 
 function EducationModal({item, visible, onClose}: {item: ProfileEducation | null; visible: boolean; onClose: () => void}) {
+  const feedback = useActionFeedback();
   const [draft, setDraft] = useState<EducationDraft>(() => ({level: item?.educationLevel ?? '', school: item?.schoolName ?? '', majorId: item?.majorId ? String(item.majorId) : '', startDate: item?.startDate ?? '', endDate: item?.endDate ?? '', info: item?.additionalInfo ?? '', ongoing: Boolean(item?.startDate && !item?.endDate)}));
   const majors = useQuery({queryKey: ['master-data', 'majors'], queryFn: () => masterDataApi.list('majors'), staleTime: 30 * 60 * 1000});
   const majorOptions = useMemo(() => normalizeMasterOptions(majors.data), [majors.data]);
@@ -155,15 +159,16 @@ function EducationModal({item, visible, onClose}: {item: ProfileEducation | null
   const save = async () => {
     if (!draft.level) return Alert.alert('Pendidikan wajib diisi', 'Pilih tingkat pendidikan terakhir.');
     if (!draft.ongoing && draft.startDate && draft.endDate && draft.endDate < draft.startDate) return Alert.alert('Tanggal tidak valid', 'Tanggal selesai harus setelah tanggal mulai.');
-    try {
-      await saveMutation.mutateAsync({education_level: draft.level, school_name: draft.school.trim() || null, major_id: draft.majorId ? Number(draft.majorId) : null, start_date: draft.startDate || null, end_date: draft.ongoing ? null : draft.endDate || null, additional_info: draft.info.trim() || null});
-      onClose();
-      Alert.alert('Berhasil', item ? 'Pendidikan berhasil diperbarui.' : 'Pendidikan berhasil ditambahkan.');
-    } catch (error) {
-      Alert.alert('Gagal menyimpan pendidikan', toAppApiError(error).message);
-    }
+    await feedback.runAction({
+      loadingMessage: item ? 'Memperbarui pendidikan...' : 'Menambahkan pendidikan...',
+      successTitle: item ? 'Pendidikan Diperbarui' : 'Pendidikan Ditambahkan',
+      successMessage: item ? 'Riwayat pendidikan berhasil diperbarui.' : 'Riwayat pendidikan berhasil ditambahkan.',
+      errorTitle: 'Gagal Menyimpan Pendidikan',
+      operation: () => saveMutation.mutateAsync({education_level: draft.level, school_name: draft.school.trim() || null, major_id: draft.majorId ? Number(draft.majorId) : null, start_date: draft.startDate || null, end_date: draft.ongoing ? null : draft.endDate || null, additional_info: draft.info.trim() || null}),
+      onSuccessExit: onClose,
+    });
   };
-  const remove = () => item && Alert.alert('Hapus pendidikan?', `${item.educationLevel} di ${item.schoolName || 'institusi ini'} akan dihapus.`, [{text: 'Batal', style: 'cancel'}, {text: 'Hapus', style: 'destructive', onPress: async () => { try { await deleteMutation.mutateAsync(item.id); onClose(); } catch (error) { Alert.alert('Gagal menghapus', toAppApiError(error).message); } }}]);
+  const remove = () => item && Alert.alert('Hapus pendidikan?', `${item.educationLevel} di ${item.schoolName || 'institusi ini'} akan dihapus.`, [{text: 'Batal', style: 'cancel'}, {text: 'Hapus', style: 'destructive', onPress: () => void feedback.runAction({loadingMessage: 'Menghapus pendidikan...', successTitle: 'Pendidikan Dihapus', successMessage: 'Riwayat pendidikan berhasil dihapus.', errorTitle: 'Gagal Menghapus Pendidikan', operation: () => deleteMutation.mutateAsync(item.id), onSuccessExit: onClose})}]);
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>

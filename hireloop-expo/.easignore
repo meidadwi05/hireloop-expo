@@ -19,10 +19,17 @@ ios/
 *.mobileprovision
 
 # Local caches and logs
+.tmp/
+.cache/
+.jest-cache/
+coverage/
+test-results/
+playwright-report/
 .metro-health-check*
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 *.tsbuildinfo
 .DS_Store
 *.pem

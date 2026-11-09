@@ -7,16 +7,13 @@ import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackg
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {JOBS_FONTS} from './jobs.ui';
-import {JobsSearchField} from './JobsSearchField';
 
 type JobsHeaderProps = {
   containerWidth: number;
   horizontalPadding: number;
-  search: string;
-  onChangeSearch: (value: string) => void;
 };
 
-export function JobsHeader({containerWidth, horizontalPadding, search, onChangeSearch}: JobsHeaderProps) {
+export function JobsHeader({containerWidth, horizontalPadding}: JobsHeaderProps) {
   const insets = useSafeAreaInsets();
   const iconLayout = getJobsIconLayout(containerWidth);
 
@@ -51,25 +48,15 @@ export function JobsHeader({containerWidth, horizontalPadding, search, onChangeS
           <Text style={styles.subtitle}>Temukan peluang yang sesuai untukmu</Text>
         </View>
       </View>
-      <View style={styles.searchOffset}>
-        <JobsSearchField
-          value={search}
-          iconSize={iconLayout.searchIconSize}
-          iconSlotSize={iconLayout.iconSlotSize}
-          height={iconLayout.searchFieldHeight}
-          onChangeText={onChangeSearch}
-        />
-      </View>
     </BrandedHeaderBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {paddingBottom: 10, gap: 10},
+  content: {paddingBottom: 10},
   titleRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 11},
   iconButton: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   copy: {flex: 1, minWidth: 0},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},
   subtitle: {fontFamily: JOBS_FONTS.regular, fontSize: 12.5, lineHeight: 18, color: 'rgba(255,255,255,0.88)', marginTop: 2},
-  searchOffset: {marginTop: 8},
 });

@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {router} from 'expo-router';
 import React, {useState} from 'react';
-import {Alert, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 
-import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {useAuth} from '../../auth/auth-provider';
 import {ProfileCard, ProfileHeader, ProfilePage, profileColors, profileFonts} from '../../profile/components/profile-ui';
 import {accountApi} from '../api/account.api';
@@ -11,6 +11,7 @@ import {accountApi} from '../api/account.api';
 const PHRASE = 'hapus akun hireloop';
 
 export function DeleteAccountScreen() {
+  const feedback = useActionFeedback();
   const {user, logout} = useAuth();
   const [understood, setUnderstood] = useState(false);
   const [phrase, setPhrase] = useState('');
@@ -20,13 +21,13 @@ export function DeleteAccountScreen() {
   const submit = async () => {
     if (!valid || submitting) return;
     setSubmitting(true);
-    try {
-      await accountApi.confirmDeleteAccount(phrase);
-      Alert.alert('Akun berhasil dihapus', 'Seluruh sesi HireLoop telah diakhiri.', [{text: 'Selesai', onPress: async () => {await logout(); router.replace('/(public)/login');}}]);
-    } catch (cause) {
-      Alert.alert('Akun belum dapat dihapus', toAppApiError(cause).message);
-      setSubmitting(false);
-    }
+    await feedback.runAction({
+      loadingMessage: 'Menghapus akun HireLoop...', successTitle: 'Akun Berhasil Dihapus',
+      successMessage: 'Seluruh sesi HireLoop telah diakhiri.', errorTitle: 'Akun Belum Dapat Dihapus',
+      operation: () => accountApi.confirmDeleteAccount(phrase),
+      onSuccessExit: async () => { await logout(); router.replace('/(public)/login'); },
+    });
+    setSubmitting(false);
   };
 
   return <View style={styles.screen}><ProfileHeader title="Hapus Akun" fallback="/profile" /><ProfilePage>

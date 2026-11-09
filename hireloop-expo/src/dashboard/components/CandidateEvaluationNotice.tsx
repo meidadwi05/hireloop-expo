@@ -4,7 +4,6 @@ import * as Sharing from 'expo-sharing';
 import React, {useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Modal,
   Platform,
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 
 import type {CandidateBlacklistInfo} from '../../features/auth/auth.types';
+import {useActionFeedback} from '../../shared/components/ActionFeedbackProvider';
 
 const F = {
   regular: 'PlusJakartaSans_400Regular',
@@ -57,6 +57,7 @@ export function CandidateEvaluationNotice({
   onInitialOpenHandled?: () => void;
 }) {
   const {width: viewportWidth} = useWindowDimensions();
+  const actionFeedback = useActionFeedback();
   const compact = viewportWidth < 360;
   const [visible, setVisible] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -75,24 +76,28 @@ export function CandidateEvaluationNotice({
   const downloadEvidence = async () => {
     if (!fileUrl || downloading) return;
     setDownloading(true);
-    try {
-      if (Platform.OS === 'web') {
-        await Linking.openURL(fileUrl);
-        return;
-      }
+    await actionFeedback.runAction({
+      loadingMessage: 'Menyiapkan bukti evaluasi...',
+      successTitle: 'Bukti Berhasil Dibuka',
+      successMessage: 'Bukti evaluasi sudah diteruskan ke penampil atau menu berbagi perangkat.',
+      errorTitle: 'PDF Belum Dapat Dibuka',
+      operation: async () => {
+        if (Platform.OS === 'web') {
+          await Linking.openURL(fileUrl);
+          return;
+        }
 
-      const destination = new File(Paths.cache, fileName);
-      const file = await File.downloadFileAsync(fileUrl, destination, {idempotent: true});
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, {dialogTitle: 'Buka atau simpan bukti pelanggaran', mimeType: 'application/pdf'});
-      } else {
-        await Linking.openURL(fileUrl);
-      }
-    } catch {
-      Alert.alert('PDF belum dapat dibuka', 'Periksa koneksi Anda lalu coba unduh kembali.');
-    } finally {
-      setDownloading(false);
-    }
+        const destination = new File(Paths.cache, fileName);
+        const file = await File.downloadFileAsync(fileUrl, destination, {idempotent: true});
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(file.uri, {dialogTitle: 'Buka atau simpan bukti pelanggaran', mimeType: 'application/pdf'});
+        } else {
+          await Linking.openURL(fileUrl);
+        }
+      },
+      onSuccessExit: closeModal,
+    });
+    setDownloading(false);
   };
 
   return (

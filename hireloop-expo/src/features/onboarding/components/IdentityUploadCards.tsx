@@ -1,9 +1,10 @@
 import {Ionicons} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, {useState} from 'react';
-import {ActivityIndicator, Alert, Image, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {ActivityIndicator, Image, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {ActionOverlayModal, type ActionOverlay} from '../../../shared/components/ActionOverlayModal';
 import {onboardingApi, type KtpExtractedData} from '../api/onboarding.api';
 
 const COLORS = {blue: '#087BFF', cyan: '#00D8F4', card: '#061D52', muted: '#B7C2D9', white: '#FFFFFF'} as const;
@@ -36,12 +37,16 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
   const [uploading, setUploading] = useState<UploadTarget | null>(null);
   const [sourceTarget, setSourceTarget] = useState<UploadTarget | null>(null);
   const [ktpFeedback, setKtpFeedback] = useState('');
+  const [overlay, setOverlay] = useState<ActionOverlay | null>(null);
 
   const selectImage = async (target: UploadTarget, source: 'camera' | 'library') => {
     try {
       if (source === 'camera' && Platform.OS !== 'web') {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) return Alert.alert('Izin kamera diperlukan', 'Aktifkan izin kamera untuk mengambil foto langsung.');
+        if (!permission.granted) {
+          setOverlay({kind: 'error', title: 'Izin Kamera Diperlukan', message: 'Aktifkan izin kamera pada pengaturan perangkat untuk mengambil foto langsung.'});
+          return;
+        }
       }
       const options: ImagePicker.ImagePickerOptions = {
         mediaTypes: ['images'],
@@ -56,20 +61,24 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
       const asset = result.assets[0];
       const limit = target === 'ktp' ? KTP_MAX_SIZE : AVATAR_MAX_SIZE;
       if (asset.fileSize && asset.fileSize > limit) {
-        return Alert.alert('File terlalu besar', `Ukuran foto ${target === 'ktp' ? 'KTP maksimal 5 MB' : 'profil maksimal 2 MB'}.`);
+        setOverlay({kind: 'error', title: 'File Terlalu Besar', message: `Ukuran foto ${target === 'ktp' ? 'KTP maksimal 5 MB' : 'profil maksimal 2 MB'}.`});
+        return;
       }
       const input = {uri: asset.uri, name: imageName(asset, target), mimeType: asset.mimeType || 'image/jpeg', file: asset.file ?? undefined};
       if (target === 'ktp') setKtpFeedback('');
       setUploading(target);
+      setOverlay({kind: 'loading', message: target === 'ktp' ? 'Membaca dan memverifikasi data KTP...' : 'Mengunggah foto profil...'});
       if (target === 'ktp') {
         const uploaded = await onboardingApi.uploadKtp(input, ktpPath);
         onKtpUploaded(uploaded);
         setKtpFeedback('Data KTP berhasil dibaca. Silakan periksa dan edit data yang terisi.');
+        setOverlay({kind: 'success', title: 'KTP Berhasil Dibaca', message: 'Data KTP sudah diisi otomatis. Periksa kembali dan edit bila diperlukan.'});
       } else {
         onAvatarUploaded(await onboardingApi.uploadAvatar(input));
+        setOverlay({kind: 'success', title: 'Foto Profil Tersimpan', message: 'Foto profil berhasil diunggah.'});
       }
     } catch (error) {
-      Alert.alert('Gagal mengunggah foto', toAppApiError(error).message);
+      setOverlay({kind: 'error', title: target === 'ktp' ? 'OCR KTP Gagal' : 'Unggah Foto Gagal', message: toAppApiError(error).message});
     } finally {
       setUploading(null);
     }
@@ -133,10 +142,16 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
         <View style={styles.singleAction}><CameraAction disabled={Boolean(uploading)} label="Ambil Foto Profil" onPress={() => void selectImage('avatar', 'camera')} /></View>
       </View>
 
-      <Modal animationType="fade" onRequestClose={() => setSourceTarget(null)} transparent visible={sourceTarget !== null}>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setSourceTarget(null)}
+        presentationStyle="overFullScreen"
+        transparent
+        visible={sourceTarget !== null}
+      >
         <View style={styles.modalRoot}>
           <Pressable accessibilityLabel="Batal memilih foto" onPress={() => setSourceTarget(null)} style={StyleSheet.absoluteFill} />
-          <View style={styles.sourceSheet}>
+          <View accessibilityViewIsModal style={styles.sourceModalCard} testID="photo-source-modal-card">
             <Text style={styles.sourceTitle}>{sourceTarget === 'ktp' ? 'Unggah Foto KTP' : 'Unggah Foto Profil'}</Text>
             <Pressable accessibilityRole="button" onPress={chooseFromGallery} style={({pressed}) => [styles.sourceOption, pressed && styles.pressed]}>
               <Ionicons name="images-outline" size={21} color="#087BFF" /><Text style={styles.sourceOptionText}>Galeri</Text>
@@ -147,6 +162,7 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
           </View>
         </View>
       </Modal>
+      {overlay ? <ActionOverlayModal overlay={overlay} onClose={() => setOverlay(null)} /> : null}
     </View>
   );
 }
@@ -175,9 +191,9 @@ const styles = StyleSheet.create({
   editBadge: {position: 'absolute', right: 1, bottom: 1, width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.blue, borderWidth: 2, borderColor: COLORS.white, alignItems: 'center', justifyContent: 'center'},
   successMessage: {marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: '#073B45', flexDirection: 'row', alignItems: 'flex-start', gap: 8},
   successText: {flex: 1, fontFamily: 'PlusJakartaSans_400Regular', color: '#B9F6DE', fontSize: 10, lineHeight: 15},
-  modalRoot: {flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end'},
-  sourceSheet: {backgroundColor: COLORS.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 28, gap: 12},
-  sourceTitle: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#101828', fontSize: 17, marginBottom: 2},
+  modalRoot: {flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 20},
+  sourceModalCard: {width: '100%', maxWidth: 420, alignSelf: 'center', backgroundColor: COLORS.white, borderRadius: 22, padding: 20, gap: 12},
+  sourceTitle: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#101828', fontSize: 17, marginBottom: 2, textAlign: 'center'},
   sourceOption: {minHeight: 52, borderRadius: 12, backgroundColor: '#EDF5FF', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12},
   sourceOptionText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#0A58C7', fontSize: 14},
   cancelOption: {minHeight: 50, borderRadius: 12, borderWidth: 1, borderColor: '#D8DEE9', alignItems: 'center', justifyContent: 'center'},

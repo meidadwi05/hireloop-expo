@@ -1,19 +1,25 @@
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
 import React, {useState} from 'react';
-import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
-import type {CertificationDraft, ExperienceDraft, OnboardingAction, OnboardingDraft, RunOnboardingAction, SkillOption} from '../onboarding.types';
+import type {CertificationDraft, ExperienceDraft, ExperienceOption, OnboardingAction, OnboardingDraft, RunOnboardingAction, SkillOption} from '../onboarding.types';
 import {CertificationModal} from './CertificationModal';
 import {ExperienceModal} from './ExperienceModal';
 import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
 import {SkillMultiSelect} from './SkillMultiSelect';
 import {availabilityOptions} from '../onboarding.options';
+import {ConfirmActionModal} from './ConfirmActionModal';
 
-export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack, onFinish, runAction, onNotify}: {
+export function WorkExperienceStep({draft, dispatch, skills, experienceOptions, experienceLoading, experienceError, onRetryExperiences, errors = {}, submitting, onBack, onFinish, runAction, onNotify}: {
   draft: OnboardingDraft;
   dispatch: React.Dispatch<OnboardingAction>;
   skills: SkillOption[];
+  experienceOptions: ExperienceOption[];
+  experienceLoading?: boolean;
+  experienceError?: boolean;
+  onRetryExperiences?: () => void;
+  errors?: Record<string, string>;
   submitting: boolean;
   onBack: () => void;
   onFinish: () => void;
@@ -25,6 +31,7 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
   const [editingExperience, setEditingExperience] = useState<ExperienceDraft | null>(null);
   const [certificationOpen, setCertificationOpen] = useState(false);
   const [editingCertification, setEditingCertification] = useState<CertificationDraft | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{kind: 'experience' | 'certification'; id: string; title: string} | null>(null);
   const setField = <K extends keyof OnboardingDraft>(field: K, value: OnboardingDraft[K]) => dispatch({type: 'set-field', field, value});
 
   const openExperience = (item: ExperienceDraft | null = null) => { setEditingExperience(item); setExperienceOpen(true); };
@@ -45,36 +52,37 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
     setCertificationOpen(false);
     onNotify('success', 'Berhasil!', 'Sertifikasi berhasil disimpan.');
   };
-  const confirmRemove = (title: string, onPress: () => void) => Alert.alert(title, 'Data yang dihapus tidak dapat dikembalikan.', [{text: 'Batal', style: 'cancel'}, {text: 'Hapus', style: 'destructive', onPress}]);
+  const confirmRemove = (kind: 'experience' | 'certification', id: string, title: string) => setRemoveTarget({kind, id, title});
 
   return (
     <View style={[styles.card, width < 390 && styles.cardNarrow]}>
       <View style={styles.sectionTitle}><Ionicons name="briefcase-outline" size={27} color="#2F7FFF" /><Text style={styles.sectionTitleText}>Pengalaman Kerja</Text></View>
 
       <AddField label="Pengalaman Kerja" required placeholder={draft.experiences.length ? 'Tambah pengalaman lainnya' : 'Belum ada pengalaman ditambahkan'} onPress={() => openExperience()} />
+      {errors.experiences ? <Text style={styles.inlineError}>{errors.experiences}</Text> : null}
       {draft.experiences.map(item => (
         <View key={item.id} style={styles.itemCard}>
           <View style={styles.itemIcon}><Ionicons name="briefcase" size={16} color="#0B66EE" /></View>
           <View style={styles.itemCopy}><Text style={styles.itemTitle}>{item.position}</Text><Text style={styles.itemMeta}>{item.companyName}</Text><Text style={styles.itemMeta}>{item.startDate} - {item.current ? 'Sekarang' : item.endDate}</Text></View>
           <View style={styles.itemActions}>
             <Pressable accessibilityLabel="Edit pengalaman" onPress={() => openExperience(item)} style={styles.itemAction}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
-            <Pressable accessibilityLabel="Hapus pengalaman" onPress={() => confirmRemove('Hapus pengalaman?', () => dispatch({type: 'remove-experience', id: item.id}))} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+            <Pressable accessibilityLabel="Hapus pengalaman" onPress={() => confirmRemove('experience', item.id, 'Hapus pengalaman?')} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
           </View>
         </View>
       ))}
       <View style={styles.compactCheckbox}><CheckboxField label="Belum memiliki pengalaman kerja" checked={draft.hasNoExperience} onChange={value => setField('hasNoExperience', value)} /></View>
 
-      <SkillMultiSelect options={skills} selected={draft.skills} onToggle={skill => dispatch({type: 'toggle-skill', skill})} onToggleCustom={name => dispatch({type: 'toggle-custom-skill', name})} />
-      <TextField label="Pengalaman mesin / tools" value={draft.tools} onChangeText={value => setField('tools', value)} placeholder="Opsional, contoh: Mesin CNC, Forklift" />
+      <SkillMultiSelect options={skills} selected={draft.skills} onToggle={skill => dispatch({type: 'toggle-skill', skill})} onToggleCustom={name => dispatch({type: 'toggle-custom-skill', name})} error={errors.skills} />
+      <TextField label="Pengalaman mesin / tools (Opsional)" value={draft.tools} onChangeText={value => setField('tools', value)} placeholder="Contoh: Mesin CNC, Forklift" />
 
-      <AddField label="Dokumen & Sertifikasi" placeholder={draft.certifications.length ? 'Tambah berkas lainnya' : 'Opsional'} onPress={() => openCertification()} />
+      <AddField label="Dokumen & Sertifikasi (Opsional)" placeholder={draft.certifications.length ? 'Tambah berkas lainnya' : 'Belum ada berkas ditambahkan'} onPress={() => openCertification()} />
       {draft.certifications.map(item => (
         <View key={item.id} style={styles.itemCard}>
           <View style={styles.itemIcon}><Ionicons name={item.type === 'document' ? 'document-text' : 'ribbon'} size={17} color="#0B66EE" /></View>
           <View style={styles.itemCopy}><Text style={styles.itemTitle}>{item.name}</Text><Text style={styles.itemMeta}>{item.type === 'document' ? 'Dokumen' : item.issuer}</Text><Text style={styles.itemMeta}>{item.originalName}</Text></View>
           <View style={styles.itemActions}>
             <Pressable accessibilityLabel="Edit sertifikasi" onPress={() => openCertification(item)} style={styles.itemAction}><Ionicons name="create-outline" size={20} color="#087BFF" /></Pressable>
-            <Pressable accessibilityLabel="Hapus sertifikasi" onPress={() => confirmRemove('Hapus sertifikasi?', () => dispatch({type: 'remove-certification', id: item.id}))} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
+            <Pressable accessibilityLabel="Hapus sertifikasi" onPress={() => confirmRemove('certification', item.id, 'Hapus sertifikasi?')} style={styles.itemAction}><Ionicons name="trash-outline" size={20} color="#FF3347" /></Pressable>
           </View>
         </View>
       ))}
@@ -91,15 +99,27 @@ export function WorkExperienceStep({draft, dispatch, skills, submitting, onBack,
         </Pressable>
       </View>
 
-      {experienceOpen ? <ExperienceModal visible initialValue={editingExperience} onCancel={() => setExperienceOpen(false)} onSave={saveExperience} /> : null}
+      {experienceOpen ? <ExperienceModal visible initialValue={editingExperience} experienceOptions={experienceOptions} experienceLoading={experienceLoading} experienceError={experienceError} onRetryExperiences={onRetryExperiences} onCancel={() => setExperienceOpen(false)} onSave={saveExperience} /> : null}
       {certificationOpen ? <CertificationModal visible initialValue={editingCertification} onCancel={() => setCertificationOpen(false)} onSave={saveCertification} /> : null}
+      <ConfirmActionModal
+        visible={Boolean(removeTarget)}
+        destructive
+        title={removeTarget?.title ?? 'Hapus data?'}
+        message="Data yang dihapus tidak dapat dikembalikan."
+        onCancel={() => setRemoveTarget(null)}
+        onConfirm={() => {
+          if (removeTarget?.kind === 'experience') dispatch({type: 'remove-experience', id: removeTarget.id});
+          if (removeTarget?.kind === 'certification') dispatch({type: 'remove-certification', id: removeTarget.id});
+          setRemoveTarget(null);
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: '#061D52', borderRadius: 34, paddingHorizontal: 24, paddingTop: 31, paddingBottom: 30},
-  cardNarrow: {borderRadius: 26, paddingHorizontal: 16, paddingTop: 25},
+  card: {width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: '#061D52', borderRadius: 22, paddingHorizontal: 24, paddingTop: 31, paddingBottom: 30},
+  cardNarrow: {borderRadius: 18, paddingHorizontal: 16, paddingTop: 25},
   sectionTitle: {flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 31},
   sectionTitleText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 19},
   itemCard: {backgroundColor: 'white', borderRadius: 11, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
@@ -117,4 +137,5 @@ const styles = StyleSheet.create({
   finishButton: {flex: 1, height: 55, borderRadius: 11, overflow: 'hidden'},
   gradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   finishText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 14},
+  inlineError: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FF8B93', fontSize: 11, marginTop: -14, marginBottom: 14},
 });

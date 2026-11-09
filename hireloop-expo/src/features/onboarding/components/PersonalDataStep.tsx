@@ -1,7 +1,7 @@
 import {Ionicons} from '@expo/vector-icons';
 import {LinearGradient} from 'expo-linear-gradient';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
 import {calculateAge} from '../onboarding.schemas';
 import {toAppApiError} from '../../../core/api/api-error';
@@ -13,11 +13,13 @@ import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
 import {IdentityUploadCards} from './IdentityUploadCards';
 import {onboardingApi, type KtpExtractedData} from '../api/onboarding.api';
 import {resolveKtpAddress} from '../ktp-ocr';
+import {ConfirmActionModal} from './ConfirmActionModal';
+import {ActionOverlayModal, type ActionOverlay} from '../../../shared/components/ActionOverlayModal';
 
 const genderOptions: MasterOption[] = [{value: 'male', label: 'Laki-laki'}, {value: 'female', label: 'Perempuan'}];
 const maritalOptions: MasterOption[] = [{value: 'single', label: 'Belum Menikah'}, {value: 'married', label: 'Menikah'}, {value: 'other', label: 'Lainnya'}];
 
-export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, majorError, onRetryMajors, onNext, runAction}: {
+export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, majorError, onRetryMajors, onNext, runAction, errors = {}}: {
   draft: OnboardingDraft;
   dispatch: React.Dispatch<OnboardingAction>;
   majorOptions: MasterOption[];
@@ -26,10 +28,13 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
   onRetryMajors?: () => void;
   onNext: () => void;
   runAction: RunOnboardingAction;
+  errors?: Record<string, string>;
 }) {
   const {width} = useWindowDimensions();
   const [educationOpen, setEducationOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<EducationDraft | null>(null);
+  const [educationToRemove, setEducationToRemove] = useState<EducationDraft | null>(null);
+  const [localOverlay, setLocalOverlay] = useState<ActionOverlay | null>(null);
   const [nikCheck, setNikCheck] = useState<{status: 'idle' | 'checking' | 'valid' | 'warning' | 'invalid' | 'error'; message: string}>({status: 'idle', message: ''});
   const nikRequestId = useRef(0);
   const age = useMemo(() => calculateAge(draft.birthDate), [draft.birthDate]);
@@ -61,10 +66,10 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
     const nik = draft.nik.replace(/\D/g, '');
     const requestId = ++nikRequestId.current;
     if (nik.length !== 16) {
-      setNikCheck({status: 'idle', message: ''});
-      return;
+      const idleTimer = setTimeout(() => setNikCheck({status: 'idle', message: ''}), 0);
+      return () => clearTimeout(idleTimer);
     }
-    setNikCheck({status: 'checking', message: 'Memeriksa ketersediaan NIK...'});
+    const checkingTimer = setTimeout(() => setNikCheck({status: 'checking', message: 'Memeriksa ketersediaan NIK...'}), 0);
     const timer = setTimeout(() => {
       void onboardingApi.checkNik(nik).then(result => {
         if (requestId !== nikRequestId.current) return;
@@ -80,13 +85,20 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
         setNikCheck({status: 'error', message: toAppApiError(error).message});
       });
     }, 450);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(checkingTimer);
+      clearTimeout(timer);
+    };
   }, [draft.nik]);
 
   const continueWhenNikValid = () => {
-    if (nikCheck.status === 'checking') return Alert.alert('NIK sedang diperiksa', 'Tunggu hingga pemeriksaan NIK selesai.');
+    if (nikCheck.status === 'checking') {
+      setLocalOverlay({kind: 'error', title: 'NIK Sedang Diperiksa', message: 'Tunggu hingga pemeriksaan NIK selesai.'});
+      return;
+    }
     if (nikCheck.status === 'invalid' || nikCheck.status === 'error') {
-      return Alert.alert('NIK belum dapat digunakan', nikCheck.message || 'Periksa kembali NIK Anda.');
+      setLocalOverlay({kind: 'error', title: 'NIK Belum Dapat Digunakan', message: nikCheck.message || 'Periksa kembali NIK Anda.'});
+      return;
     }
     onNext();
   };
@@ -103,10 +115,7 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
       successMessage: 'Data pendidikan berhasil disimpan ke profil.',
     }, () => dispatch({type: 'set-education', education}));
   };
-  const removeEducation = (item: EducationDraft) => Alert.alert('Hapus pendidikan?', `${item.educationLevel} - ${item.schoolName}`, [
-    {text: 'Batal', style: 'cancel'},
-    {text: 'Hapus', style: 'destructive', onPress: () => dispatch({type: 'remove-education', id: item.id})},
-  ]);
+  const removeEducation = (item: EducationDraft) => setEducationToRemove(item);
 
   return (
     <View testID="personal-data-step" style={styles.stepContent}>
@@ -134,6 +143,7 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
           keyboardType="number-pad"
           maxLength={16}
           placeholder="Contoh: 3275010101900001"
+          error={errors.nik}
         />
         {nikCheck.status !== 'idle' ? (
           <View style={[styles.nikStatus, nikCheck.status === 'invalid' || nikCheck.status === 'error' ? styles.nikStatusError : nikCheck.status === 'warning' ? styles.nikStatusWarning : styles.nikStatusValid]}>
@@ -143,20 +153,22 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
             <Text style={styles.nikStatusText}>{nikCheck.message}</Text>
           </View>
         ) : null}
-        <TextField label="Nama Lengkap" required value={draft.fullName} onChangeText={value => setField('fullName', value)} placeholder="Contoh: Andi Permana" />
-      <SelectField label="Jenis Kelamin" required value={draft.gender} onChange={value => setField('gender', value as OnboardingDraft['gender'])} options={genderOptions} placeholder="Pilih jenis kelamin" />
+        <TextField label="Nama Lengkap" required value={draft.fullName} onChangeText={value => setField('fullName', value)} placeholder="Contoh: Andi Permana" error={errors.fullName} />
+      <TextField label="Email" required disabled value={draft.email} placeholder="Email akun" />
+      <SelectField label="Jenis Kelamin" required value={draft.gender} onChange={value => setField('gender', value as OnboardingDraft['gender'])} options={genderOptions} placeholder="Pilih jenis kelamin" error={errors.gender} />
       <View style={[styles.columns, width < 390 && styles.columnsNarrow]}>
-        <View style={styles.column}><TextField label="Tempat Lahir" required value={draft.birthPlace} onChangeText={value => setField('birthPlace', value)} placeholder="Contoh: Jakarta" /></View>
-        <View style={styles.column}><DateField label="Tanggal Lahir" required value={draft.birthDate} onChange={value => setField('birthDate', value)} {...birthDateLimits} /></View>
+        <View style={styles.column}><TextField label="Tempat Lahir" required value={draft.birthPlace} onChangeText={value => setField('birthPlace', value)} placeholder="Contoh: Jakarta" error={errors.birthPlace} /></View>
+        <View style={styles.column}><DateField label="Tanggal Lahir" required value={draft.birthDate} onChange={value => setField('birthDate', value)} {...birthDateLimits} error={errors.birthDate} /></View>
       </View>
       <TextField label="Usia" disabled value={age === null ? '-' : String(age)} />
-      <SelectField label="Status Pernikahan" required value={draft.maritalStatus} onChange={value => setField('maritalStatus', value as OnboardingDraft['maritalStatus'])} options={maritalOptions} placeholder="Pilih status pernikahan" />
-      <TextField label="No. Handphone / WhatsApp" required value={draft.phone} onChangeText={value => setField('phone', value)} keyboardType="phone-pad" placeholder="628xxxxxxxxxx" />
-      <AddressFields label="Alamat KTP" value={draft.identityAddress} onChange={address => dispatch({type: 'set-address', target: 'identityAddress', address})} />
+      <SelectField label="Status Pernikahan" required value={draft.maritalStatus} onChange={value => setField('maritalStatus', value as OnboardingDraft['maritalStatus'])} options={maritalOptions} placeholder="Pilih status pernikahan" error={errors.maritalStatus} />
+      <TextField label="No. Handphone / WhatsApp" required value={draft.phone} onChangeText={value => setField('phone', value)} keyboardType="phone-pad" placeholder="628xxxxxxxxxx" error={errors.phone} />
+      <AddressFields label="Alamat KTP" value={draft.identityAddress} onChange={address => dispatch({type: 'set-address', target: 'identityAddress', address})} error={errors.identityAddress} />
       <AddressFields
         label="Alamat Domisili"
         disabled={draft.domicileSameAsIdentity}
         value={draft.domicileAddress}
+        error={errors.domicileAddress}
         onChange={address => dispatch({type: 'set-address', target: 'domicileAddress', address})}
         afterAddressLine={(
           <View style={styles.sameAddress} testID="same-address-after-domicile">
@@ -166,6 +178,7 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
       />
 
       <AddField label="Pendidikan Terakhir" required placeholder={draft.educations.length ? 'Tambah pendidikan lainnya' : 'Belum ada pendidikan ditambahkan'} onPress={() => openEducation()} />
+      {errors.educations ? <Text style={styles.inlineError}>{errors.educations}</Text> : null}
       {draft.educations.map(item => (
         <View key={item.id} style={styles.itemCard}>
           <View style={styles.itemIcon}><Ionicons name="school" size={17} color="#0B66EE" /></View>
@@ -187,6 +200,18 @@ export function PersonalDataStep({draft, dispatch, majorOptions, majorLoading, m
       </Pressable>
 
         {educationOpen ? <EducationModal visible initialValue={editingEducation} majorOptions={majorOptions} majorLoading={majorLoading} majorError={majorError} onRetryMajors={onRetryMajors} onCancel={() => setEducationOpen(false)} onSave={saveEducation} /> : null}
+        <ConfirmActionModal
+          visible={Boolean(educationToRemove)}
+          destructive
+          title="Hapus pendidikan?"
+          message={educationToRemove ? `${educationToRemove.educationLevel} - ${educationToRemove.schoolName}. Data yang dihapus tidak dapat dikembalikan.` : ''}
+          onCancel={() => setEducationToRemove(null)}
+          onConfirm={() => {
+            if (educationToRemove) dispatch({type: 'remove-education', id: educationToRemove.id});
+            setEducationToRemove(null);
+          }}
+        />
+        {localOverlay ? <ActionOverlayModal overlay={localOverlay} onClose={() => setLocalOverlay(null)} /> : null}
       </View>
     </View>
   );
@@ -219,4 +244,5 @@ const styles = StyleSheet.create({
   primaryButton: {height: 56, borderRadius: 11, overflow: 'hidden'},
   gradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   primaryText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 15},
+  inlineError: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FF8B93', fontSize: 11, marginTop: -14, marginBottom: 14},
 });

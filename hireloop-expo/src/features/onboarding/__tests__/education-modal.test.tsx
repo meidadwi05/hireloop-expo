@@ -28,8 +28,8 @@ describe('modal pendidikan onboarding', () => {
     expect(screen.getByTestId('inline-options-Tingkat Pendidikan')).toBeTruthy();
     fireEvent.press(screen.getByText('Sarjana (S1)'));
 
-    fireEvent.press(screen.getByLabelText('Jurusan'));
-    expect(screen.getByTestId('inline-options-Jurusan')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Jurusan (Opsional)'));
+    expect(screen.getByTestId('inline-options-Jurusan (Opsional)')).toBeTruthy();
     fireEvent.press(screen.getByText('Manajemen'));
     fireEvent.press(screen.getByText('Tambah'));
 

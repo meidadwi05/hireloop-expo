@@ -144,7 +144,6 @@ export function JobListingCard({
         <View style={styles.timestampDot} />
         <Text style={styles.timestamp}>{job.updatedLabel}</Text>
       </View>
-      <View style={styles.divider} />
 
       <View style={styles.buttons}>
         <Pressable

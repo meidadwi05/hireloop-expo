@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type {OnboardingDraft, OnboardingState} from './onboarding.types';
 
-const DRAFT_VERSION = 1;
+const DRAFT_VERSION = 2;
 const MAX_DRAFT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 type StoredOnboardingDraft = {

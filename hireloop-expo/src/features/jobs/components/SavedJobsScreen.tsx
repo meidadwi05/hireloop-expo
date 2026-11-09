@@ -6,6 +6,7 @@ import {FlatList, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View, u
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {
@@ -74,6 +75,7 @@ function DropdownMenu({visible, anchor, options, title, value, viewportWidth, on
 }
 
 export function SavedJobsScreen() {
+  const feedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const {hydrated, isSaved, savedJobs, toggleSaved} = useSavedJobs();
@@ -115,7 +117,7 @@ export function SavedJobsScreen() {
       <BrandedHeaderBackground
         containerWidth={containerWidth}
         topInset={insets.top}
-        variant="application-list"
+        variant="saved-list"
         contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
       >
         <Pressable accessibilityLabel="Kembali ke Lowongan" accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
@@ -181,15 +183,17 @@ export function SavedJobsScreen() {
             );
           })}
         </View>
-        <View style={styles.resultRow}>
-          <Text style={styles.resultText}>{visibleJobs.length} lowongan disimpan</Text>
-        </View>
       </View>
 
       <FlatList
         style={styles.list}
         data={hydrated ? visibleJobs : []}
         keyExtractor={item => item.key}
+        ListHeaderComponent={(
+          <View style={[styles.resultRow, styles.resultHeader, {paddingHorizontal: pagePadding}]}>
+            <Text style={styles.resultText}>{visibleJobs.length} lowongan disimpan</Text>
+          </View>
+        )}
         renderItem={({item}) => (
           <View style={{paddingHorizontal: pagePadding}}>
             <JobListingCard
@@ -199,8 +203,8 @@ export function SavedJobsScreen() {
               applyBlocked={applyAccess.isTier2Banned}
               onApply={() => openJob(item, 'apply')}
               onOpen={() => openJob(item)}
-              onShare={() => void Share.share({message: `${item.title} di ${item.company} - ${item.location}`})}
-              onToggleSaved={() => toggleSaved(item)}
+              onShare={() => void feedback.runAction({loadingMessage: 'Menyiapkan lowongan...', successTitle: 'Lowongan Siap Dibagikan', successMessage: 'Dialog berbagi berhasil dibuka.', errorTitle: 'Gagal Membagikan Lowongan', operation: () => Share.share({message: `${item.title} di ${item.company} - ${item.location}`})})}
+              onToggleSaved={() => void feedback.runAction({loadingMessage: 'Menghapus lowongan tersimpan...', successTitle: 'Lowongan Dihapus', successMessage: 'Lowongan dihapus dari daftar tersimpan.', errorTitle: 'Gagal Menghapus Lowongan', operation: async () => toggleSaved(item)})}
             />
           </View>
         )}
@@ -251,7 +255,7 @@ const styles = StyleSheet.create({
   headerCopy: {flex: 1, minWidth: 0},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 22, lineHeight: 29, color: 'white'},
   subtitle: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 17, color: 'rgba(255,255,255,0.86)', marginTop: 1},
-  controlsSheet: {position: 'relative', zIndex: 2, marginTop: -16, borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: JOBS_COLORS.background, paddingTop: 20, paddingBottom: 17, gap: 13},
+  controlsSheet: {position: 'relative', zIndex: 2, backgroundColor: JOBS_COLORS.background, paddingTop: 14, paddingBottom: 14, gap: 12},
   filterRow: {width: '100%', minHeight: 52, flexDirection: 'row', alignItems: 'stretch', gap: 9},
   searchAnchor: {flex: 1, minWidth: 0},
   sortAnchor: {width: 100, flexShrink: 0},
@@ -267,9 +271,10 @@ const styles = StyleSheet.create({
   statusTextCompact: {fontSize: 9},
   statusTextSelected: {color: 'white'},
   resultRow: {minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12},
+  resultHeader: {paddingTop: 8, paddingBottom: 8},
   resultText: {flex: 1, fontFamily: JOBS_FONTS.bold, color: JOBS_COLORS.navy, fontSize: 13},
   separator: {height: 16},
-  empty: {flex: 1, minHeight: 420, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34},
+  empty: {flex: 1, minHeight: 280, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34},
   emptyTitle: {fontFamily: JOBS_FONTS.bold, fontSize: 16, color: JOBS_COLORS.navy, textAlign: 'center', marginTop: 13},
   emptyText: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 18, color: JOBS_COLORS.body, textAlign: 'center', marginTop: 6},
   findButton: {minHeight: 46, borderRadius: 11, backgroundColor: JOBS_COLORS.blue, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, marginTop: 18},

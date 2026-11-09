@@ -24,6 +24,7 @@ import {goBackOrReplace} from '../../core/navigation/go-back-or-replace';
 import {authApi} from '../../features/auth/api/auth.api';
 import {useAuth} from '../../features/auth/auth-provider';
 import {type RegisterFormErrors, validateRegisterForm} from '../../features/auth/register-validation';
+import {saveRegisterContactDraft} from '../../features/auth/register-draft.storage';
 import {withMinimumDelay} from '../../shared/utils/with-minimum-delay';
 
 type FieldErrors = RegisterFormErrors & {otp?: string};
@@ -86,6 +87,7 @@ export default function RegisterRoute() {
           password,
           passwordConfirmation: confirmation,
         }));
+      await saveRegisterContactDraft(email, phone);
       setNotice(message ?? 'OTP telah dikirimkan ke email kamu.');
       setOtp('');
       setCountdown(OTP_RESEND_SECONDS);

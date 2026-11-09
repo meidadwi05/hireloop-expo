@@ -1,4 +1,5 @@
 import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import React, {useState} from 'react';
 import {ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
@@ -105,7 +106,7 @@ export function CertificationModal({visible, initialValue, onCancel, onSave}: {
                 <View style={[styles.loadingIcon, styles.errorIcon]}><Ionicons name="close" size={52} color="white" /></View>
                 <Text style={[styles.loadingTitle, styles.errorTitle]}>Gagal Mengunggah</Text>
                 <Text style={styles.loadingMessage}>{uploadError}</Text>
-                <Pressable onPress={() => setUploadError('')} style={styles.errorButton}><Text style={styles.errorButtonText}>OK</Text></Pressable>
+                <Pressable onPress={() => setUploadError('')} style={styles.errorButton}><LinearGradient colors={['#E5313D', '#B31222']} end={{x: 1, y: 0}} start={{x: 0, y: 0}} style={styles.errorButtonGradient}><Text style={styles.errorButtonText}>OK</Text></LinearGradient></Pressable>
               </View>
             ) : (
               <>
@@ -119,9 +120,9 @@ export function CertificationModal({visible, initialValue, onCancel, onSave}: {
               {value.type === 'certification' ? <>
                 <TextField tone="light" label="Penerbit" required value={value.issuer} onChangeText={next => update('issuer', next)} placeholder="Nama lembaga penerbit" />
                 <DateField tone="light" label="Tanggal Terbit" required value={value.issuedDate} onChange={next => update('issuedDate', next)} maximumDate={new Date()} />
-                <DateField tone="light" label="Tanggal Kedaluwarsa" disabled={value.noExpiry} value={value.expiredDate} onChange={next => update('expiredDate', next)} minimumDate={isoToLocalDate(value.issuedDate) ?? undefined} />
+                <DateField tone="light" label="Tanggal Kedaluwarsa (Opsional)" disabled={value.noExpiry} value={value.expiredDate} onChange={next => update('expiredDate', next)} minimumDate={isoToLocalDate(value.issuedDate) ?? undefined} />
                 <CheckboxField tone="light" label="Tidak memiliki tanggal kedaluwarsa" checked={value.noExpiry} onChange={next => { update('noExpiry', next); if (next) update('expiredDate', ''); }} />
-                <TextField tone="light" label="ID Kredensial" value={value.credentialId} onChangeText={next => update('credentialId', next)} placeholder="Opsional" />
+                <TextField tone="light" label="ID Kredensial (Opsional)" value={value.credentialId} onChangeText={next => update('credentialId', next)} placeholder="ID kredensial" />
               </> : null}
               <FormFieldPressable accessibilityRole="button" accessibilityLabel="Pilih dokumen sertifikat" containerStyle={styles.fileButton} onPress={pickFile}>
                 <Ionicons name="cloud-upload-outline" size={23} color="#087BFF" />
@@ -131,7 +132,7 @@ export function CertificationModal({visible, initialValue, onCancel, onSave}: {
             </ScrollView>
             <View style={styles.actions}>
               <Pressable onPress={onCancel} style={styles.cancel}><Text style={styles.cancelText}>Batal</Text></Pressable>
-              <Pressable onPress={save} style={styles.save}><Text style={styles.saveText}>{initialValue ? 'Simpan' : 'Tambah'}</Text></Pressable>
+              <Pressable onPress={save} style={styles.save}><LinearGradient colors={['#0B5CFF', '#00D8F4']} end={{x: 1, y: 0}} start={{x: 0, y: 0}} style={styles.saveGradient}><Text style={styles.saveText}>{initialValue ? 'Simpan' : 'Tambah'}</Text></LinearGradient></Pressable>
             </View>
               </>
             )}
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
   loadingMessage: {fontFamily: 'PlusJakartaSans_400Regular', color: '#222', fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 10},
   errorIcon: {backgroundColor: '#EF3340'},
   errorTitle: {color: '#D91E2B'},
-  errorButton: {height: 48, minWidth: 170, borderRadius: 12, backgroundColor: '#D91E2B', alignItems: 'center', justifyContent: 'center', marginTop: 24},
+  errorButton: {height: 48, minWidth: 170, borderRadius: 12, overflow: 'hidden', marginTop: 24},
   errorButtonText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 14},
   header: {paddingHorizontal: 18, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: '#E7E9ED', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'},
   title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 21, color: '#111'},
@@ -172,6 +173,8 @@ const styles = StyleSheet.create({
   actions: {flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingBottom: 18},
   cancel: {flex: 1, height: 50, borderRadius: 10, borderWidth: 1, borderColor: '#AEB4BE', alignItems: 'center', justifyContent: 'center'},
   cancelText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14},
-  save: {flex: 1, height: 50, borderRadius: 10, backgroundColor: '#087BFF', alignItems: 'center', justifyContent: 'center'},
+  save: {flex: 1, height: 50, borderRadius: 10, overflow: 'hidden'},
+  saveGradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   saveText: {fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14, color: 'white'},
+  errorButtonGradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
 });

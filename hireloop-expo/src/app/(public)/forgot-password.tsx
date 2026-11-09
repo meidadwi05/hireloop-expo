@@ -5,10 +5,12 @@ import {toAppApiError} from '../../core/api/api-error';
 import {goBackOrReplace} from '../../core/navigation/go-back-or-replace';
 import {authApi} from '../../features/auth/api/auth.api';
 import ForgotPasswordPage from '../../login_page/forgotpassword';
+import {useActionFeedback} from '../../shared/components/ActionFeedbackProvider';
 
 const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 export default function ForgotPasswordRoute() {
+  const feedback = useActionFeedback();
   const params = useLocalSearchParams<{email?: string}>();
   const [email, setEmail] = useState(params.email ?? '');
   const [error, setError] = useState<string>();
@@ -25,14 +27,14 @@ export default function ForgotPasswordRoute() {
 
     setError(undefined);
     setIsSubmitting(true);
-    try {
-      await authApi.forgotPassword(email);
-      setSuccessVisible(true);
-    } catch (submitError) {
-      setError(toAppApiError(submitError).message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    const result = await feedback.runAction({
+      loadingMessage: 'Mengirim tautan reset password...', successTitle: 'Email Reset Terkirim',
+      successMessage: 'Periksa kotak masuk email Anda untuk melanjutkan reset password.', errorTitle: 'Gagal Mengirim Email',
+      operation: () => authApi.forgotPassword(email),
+      onSuccessExit: () => router.replace('/(public)/login'),
+    });
+    if (!result.ok) setError(toAppApiError(result.error).message);
+    setIsSubmitting(false);
   };
 
   return (

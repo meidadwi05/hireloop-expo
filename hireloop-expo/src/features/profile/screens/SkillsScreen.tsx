@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, {useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {profileApi} from '../api/profile.api';
 import {useLanguages, useProfile, useProfileMutation, useSkillTools} from '../hooks/use-profile';
 import type {ProfileLanguage, ProfileSkill, ProfileSkillTool} from '../profile.types';
@@ -14,6 +15,7 @@ type MasterItem = {id: number; name: string};
 type DeleteRequest = {title: string; message: string; action: () => Promise<unknown>};
 
 function EditorModal({mode, tool, existingLanguageIds, onClose}: {mode: EditorMode; tool: ProfileSkillTool | null; existingLanguageIds: number[]; onClose: () => void}) {
+  const feedback = useActionFeedback();
   const [value, setValue] = useState(() => mode === 'tool' ? tool?.name ?? '' : '');
   const [results, setResults] = useState<MasterItem[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
@@ -40,19 +42,18 @@ function EditorModal({mode, tool, existingLanguageIds, onClose}: {mode: EditorMo
     return () => { active = false; clearTimeout(timer); };
   }, [existingLanguageIds, mode, value]);
 
-  const complete = (message: string) => { onClose(); Alert.alert('Berhasil', message); };
   const addSkill = async (item?: MasterItem) => {
     const custom = value.trim().replace(/\s+/g, ' ');
     if (!item && custom.length < 2) return setError('Masukkan minimal 2 karakter.');
-    try { await skillMutation.mutateAsync(item ? {skill_id: item.id} : {custom_name: custom}); complete('Keahlian berhasil ditambahkan.'); } catch (cause) { setError(toAppApiError(cause).message); }
+    await feedback.runAction({loadingMessage: 'Menambahkan keahlian...', successTitle: 'Keahlian Ditambahkan', successMessage: 'Keahlian berhasil ditambahkan ke profil.', errorTitle: 'Gagal Menambahkan Keahlian', operation: () => skillMutation.mutateAsync(item ? {skill_id: item.id} : {custom_name: custom}), onSuccessExit: onClose});
   };
   const saveTool = async () => {
     const name = value.trim().replace(/\s+/g, ' ');
     if (!name) return setError('Nama tool wajib diisi.');
-    try { await toolMutation.mutateAsync(name); complete(tool ? 'Tool berhasil diperbarui.' : 'Tool berhasil ditambahkan.'); } catch (cause) { setError(toAppApiError(cause).message); }
+    await feedback.runAction({loadingMessage: tool ? 'Memperbarui tool...' : 'Menambahkan tool...', successTitle: tool ? 'Tool Diperbarui' : 'Tool Ditambahkan', successMessage: tool ? 'Tool berhasil diperbarui.' : 'Tool berhasil ditambahkan.', errorTitle: 'Gagal Menyimpan Tool', operation: () => toolMutation.mutateAsync(name), onSuccessExit: onClose});
   };
   const addLanguage = async (item: MasterItem) => {
-    try { await languageMutation.mutateAsync(item.id); complete('Bahasa berhasil ditambahkan.'); } catch (cause) { setError(toAppApiError(cause).message); }
+    await feedback.runAction({loadingMessage: 'Menambahkan bahasa...', successTitle: 'Bahasa Ditambahkan', successMessage: 'Bahasa berhasil ditambahkan ke profil.', errorTitle: 'Gagal Menambahkan Bahasa', operation: () => languageMutation.mutateAsync(item.id), onSuccessExit: onClose});
   };
 
   const title = mode === 'skill' ? 'Tambah Keahlian' : mode === 'language' ? 'Tambah Bahasa' : tool ? 'Ubah Tool' : 'Tambah Tool';
@@ -106,6 +107,7 @@ function DeleteConfirmationModal({request, pending, error, onCancel, onConfirm}:
 }
 
 export function SkillsScreen() {
+  const feedback = useActionFeedback();
   const profile = useProfile();
   const tools = useSkillTools();
   const languages = useLanguages();
@@ -139,12 +141,13 @@ export function SkillsScreen() {
   const confirmDelete = async () => {
     if (!deleteRequest || removing) return;
     setDeleteError('');
-    try {
-      await deleteRequest.action();
-      setDeleteRequest(null);
-    } catch (cause) {
-      setDeleteError(toAppApiError(cause).message);
-    }
+    const request = deleteRequest;
+    setDeleteRequest(null);
+    await feedback.runAction({
+      loadingMessage: 'Menghapus data keahlian...', successTitle: 'Data Dihapus',
+      successMessage: 'Data keahlian berhasil dihapus dari profil.', errorTitle: 'Gagal Menghapus Data',
+      operation: request.action,
+    });
   };
   const openTool = (item: ProfileSkillTool | null) => { setSelectedTool(item); setMode('tool'); };
   const existingLanguageIds = useMemo(() => languageItems.map(item => item.id), [languageItems]);

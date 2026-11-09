@@ -7,6 +7,12 @@ hireloop-expo/node_modules/
 
 # Expo/Metro caches and generated output.
 hireloop-expo/.expo/
+hireloop-expo/.tmp/
+hireloop-expo/.cache/
+hireloop-expo/.jest-cache/
+hireloop-expo/coverage/
+hireloop-expo/test-results/
+hireloop-expo/playwright-report/
 hireloop-expo/expo-env.d.ts
 hireloop-expo/.metro-health-check*
 hireloop-expo/dist/
@@ -41,6 +47,7 @@ hireloop-expo/.env.production.example
 hireloop-expo/npm-debug.*
 hireloop-expo/yarn-debug.*
 hireloop-expo/yarn-error.*
+hireloop-expo/*.log
 hireloop-expo/*.tsbuildinfo
 hireloop-expo/.DS_Store
 

@@ -5,7 +5,9 @@ export type IntroLayoutMetrics = {
   bodyLineHeight: number;
   contentMaxWidth: number;
   horizontalPadding: number;
+  heroCopyGap: number;
   heroHeight: number;
+  heroWidth: number;
   indicatorGap: number;
   sectionGap: number;
   titleFontSize: number;
@@ -27,11 +29,13 @@ export function getIntroLayoutMetrics(width: number, height: number): IntroLayou
     bodyLineHeight: clamp(width * 0.064, compact ? 20 : 23, compact ? 23 : 28),
     contentMaxWidth: 480,
     horizontalPadding: clamp(width * 0.075, 22, 38),
+    heroCopyGap: short ? 14 : compact ? 18 : 26,
     heroHeight: short
-      ? clamp(height * 0.3, 166, 194)
+      ? clamp(height * 0.37, 196, 220)
       : compact
-        ? clamp(height * 0.34, 194, 250)
-        : clamp(height * 0.42, 280, 430),
+        ? clamp(height * 0.4, 224, 280)
+        : clamp(height * 0.46, 320, 460),
+    heroWidth: Math.min(width * 0.98, 520),
     indicatorGap: compact ? 16 : 22,
     sectionGap: compact ? 10 : 16,
     titleFontSize: clamp(width * 0.076, compact ? 26 : 29, compact ? 30 : 36),

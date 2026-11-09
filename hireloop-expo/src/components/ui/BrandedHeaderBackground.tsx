@@ -13,12 +13,13 @@ const headerBackground = require('../../assets/up_background.png');
 
 export const BRANDED_HEADER_ARTWORK_ASPECT_RATIO = 1983 / 793;
 
-export type BrandedHeaderVariant = 'account' | 'application-list' | 'compact-detail' | 'jobs-list' | 'notifications';
+export type BrandedHeaderVariant = 'account' | 'application-list' | 'compact-detail' | 'jobs-list' | 'notifications' | 'saved-list';
 
 type BrandedHeaderPreset = {
   backgroundColor: string;
   minimumContentHeight: number;
   artworkTop: number;
+  fitArtworkToReferenceWidth?: boolean;
   maximumArtworkReferenceWidth?: number;
   resizeMode?: ImageResizeMode;
 };
@@ -43,13 +44,22 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
   },
   'jobs-list': {
     backgroundColor: '#00419E',
-    minimumContentHeight: 141,
+    minimumContentHeight: 96,
     artworkTop: 0,
+    fitArtworkToReferenceWidth: true,
+    maximumArtworkReferenceWidth: 320,
   },
   notifications: {
     backgroundColor: '#003E9A',
     minimumContentHeight: 112,
     artworkTop: 0,
+  },
+  'saved-list': {
+    backgroundColor: '#003E9A',
+    minimumContentHeight: 88,
+    artworkTop: 0,
+    fitArtworkToReferenceWidth: true,
+    maximumArtworkReferenceWidth: 320,
   },
 };
 
@@ -69,7 +79,7 @@ export function getBrandedHeaderLayout(
   const safeWidth = Math.max(1, containerWidth);
   const safeInset = Math.max(0, topInset);
   const artworkReferenceWidth = Math.min(safeWidth, preset.maximumArtworkReferenceWidth ?? safeWidth);
-  const artworkWidth = safeWidth;
+  const artworkWidth = preset.fitArtworkToReferenceWidth ? artworkReferenceWidth : safeWidth;
   const artworkHeight = artworkReferenceWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
   const height = Math.max(minimumContentHeight, preset.artworkTop + artworkHeight);
@@ -82,7 +92,7 @@ export function getBrandedHeaderLayout(
       width: artworkWidth,
       height: artworkHeight,
       top: preset.artworkTop,
-      left: 0,
+      left: preset.fitArtworkToReferenceWidth ? safeWidth - artworkWidth : 0,
     },
   };
 }

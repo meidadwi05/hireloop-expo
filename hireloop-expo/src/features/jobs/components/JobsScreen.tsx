@@ -3,7 +3,6 @@ import {StatusBar} from 'expo-status-bar';
 import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Share,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {useCandidateJobs} from '../hooks/use-candidate-jobs';
 import {getJobsIconLayout} from '../jobs-header.layout';
@@ -23,11 +23,13 @@ import {JobsEmptyState} from './JobsEmptyState';
 import {JobsHeader} from './JobsHeader';
 import {JobsListSkeleton} from './JobsListSkeleton';
 import {JobsResultHeader} from './JobsResultHeader';
+import {JobsSearchField} from './JobsSearchField';
 import {JOBS_COLORS} from './jobs.ui';
 
 type Priority = NonNullable<CandidateJobQuery['priority']>;
 
 export function JobsScreen() {
+  const feedback = useActionFeedback();
   const {width} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
   const [priority, setPriority] = useState<Priority>('all');
@@ -66,12 +68,16 @@ export function JobsScreen() {
       <JobsHeader
         containerWidth={containerWidth}
         horizontalPadding={pagePadding}
-        search={jobs.search}
-        onChangeSearch={jobs.setSearch}
       />
-      <View style={[styles.controls, {paddingHorizontal: pagePadding}]}>
+      <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
+        <JobsSearchField
+          value={jobs.search}
+          iconSize={iconLayout.searchIconSize}
+          iconSlotSize={iconLayout.iconSlotSize}
+          height={iconLayout.searchFieldHeight}
+          onChangeText={jobs.setSearch}
+        />
         <JobsCategoryTabs value={priority} onChange={setPriority} />
-        <JobsResultHeader total={jobs.total} />
       </View>
       <FlatList
         style={styles.list}
@@ -86,12 +92,14 @@ export function JobsScreen() {
               applyBlocked={applyAccess.isTier2Banned}
               onApply={() => openJob(item, 'apply')}
               onOpen={() => openJob(item)}
-              onShare={() => {
-                void Share.share({message: `${item.title} di ${item.company} - ${item.location}`})
-                  .catch(() => Alert.alert('Bagikan lowongan', `${item.title} di ${item.company}`));
-              }}
-              onToggleSaved={() => toggleSaved(item)}
+              onShare={() => void feedback.runAction({loadingMessage: 'Menyiapkan lowongan...', successTitle: 'Lowongan Siap Dibagikan', successMessage: 'Dialog berbagi berhasil dibuka.', errorTitle: 'Gagal Membagikan Lowongan', operation: () => Share.share({message: `${item.title} di ${item.company} - ${item.location}`})})}
+              onToggleSaved={() => { const saved = isSaved(item.key); void feedback.runAction({loadingMessage: saved ? 'Menghapus lowongan tersimpan...' : 'Menyimpan lowongan...', successTitle: saved ? 'Lowongan Dihapus' : 'Lowongan Tersimpan', successMessage: saved ? 'Lowongan dihapus dari daftar tersimpan.' : 'Lowongan ditambahkan ke daftar tersimpan.', errorTitle: 'Gagal Memperbarui Lowongan', operation: async () => toggleSaved(item)}); }}
             />
+          </View>
+        )}
+        ListHeaderComponent={(
+          <View style={[styles.resultHeader, {paddingHorizontal: pagePadding}]}>
+            <JobsResultHeader total={jobs.total} />
           </View>
         )}
         ListEmptyComponent={jobs.isPending
@@ -119,7 +127,8 @@ const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   list: {flex: 1},
   content: {flexGrow: 1, paddingBottom: 22},
-  controls: {gap: 18, paddingTop: 18, paddingBottom: 18},
+  controlsSheet: {zIndex: 2, gap: 12, backgroundColor: JOBS_COLORS.background, paddingTop: 14, paddingBottom: 14},
+  resultHeader: {minHeight: 42, justifyContent: 'center', paddingTop: 8, paddingBottom: 8},
   separator: {height: 16},
   footerLoader: {paddingVertical: 24},
   footerSpace: {height: 10},

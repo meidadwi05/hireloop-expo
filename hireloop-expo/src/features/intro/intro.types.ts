@@ -4,6 +4,7 @@ export type IntroSlide = {
   id: 'discover' | 'tracking' | 'multi-apply' | 'recommendation';
   image: ImageSourcePropType;
   theme: 'light' | 'dark';
+  titleScale?: number;
   titleVariant: 'gradient' | 'solid';
   title: string;
   body: string;

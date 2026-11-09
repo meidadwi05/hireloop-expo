@@ -5,6 +5,7 @@ import {StyleSheet} from 'react-native';
 import {useNotifications} from '../hooks/use-notifications';
 import {NotificationRow, NotificationsScreen} from '../screens/NotificationsScreen';
 import type {CandidateNotification} from '../notifications.types';
+import {ActionFeedbackProvider} from '../../../shared/components/ActionFeedbackProvider';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('expo-router', () => ({router: {push: jest.fn()}}));
@@ -53,13 +54,15 @@ describe('NotificationRow', () => {
   });
 
   it('renders a white responsive header without the branded artwork overlay', () => {
-    const markAllRead = jest.fn();
+    const markAllReadAsync = jest.fn().mockResolvedValue(undefined);
     mockedUseNotifications.mockReturnValue({
       items: [],
       unreadCount: 2,
       mutationError: null,
       markingAllRead: false,
-      markAllRead,
+      markAllRead: jest.fn(),
+      markAllReadAsync,
+      markReadAsync: jest.fn().mockResolvedValue(undefined),
       markRead: jest.fn(),
       isLoading: false,
       isError: false,
@@ -71,7 +74,7 @@ describe('NotificationRow', () => {
       refresh: jest.fn(),
     });
 
-    const screen = render(<NotificationsScreen />);
+    const screen = render(<ActionFeedbackProvider><NotificationsScreen /></ActionFeedbackProvider>);
     const screenStyle = StyleSheet.flatten(screen.getByTestId('notifications-screen').props.style);
     const headerStyle = StyleSheet.flatten(screen.getByTestId('notifications-header').props.style);
     const filterRowStyle = StyleSheet.flatten(screen.getByTestId('notifications-filter-row').props.style);
@@ -82,10 +85,10 @@ describe('NotificationRow', () => {
     expect(screenStyle.maxWidth).toBe(440);
     expect(headerStyle.backgroundColor).toBe('white');
     expect(headerStyle.height).toBeUndefined();
-    expect(filterRowStyle.flexWrap).toBe('wrap');
+    expect(filterRowStyle.flexWrap).toBe('nowrap');
     expect(allFilterStyle.flex).toBeUndefined();
-    expect(allFilterStyle.minWidth).toBe(92);
-    expect(unreadFilterStyle.minWidth).toBe(134);
+    expect(allFilterStyle.minWidth).toBe(68);
+    expect(unreadFilterStyle.width).toBe(108);
     expect(screen.queryByTestId('notifications-header-artwork')).toBeNull();
     expect(screen.getByText('Notifikasi')).toBeTruthy();
     expect(screen.getByText('Belum Dibaca (2)')).toBeTruthy();
@@ -94,6 +97,6 @@ describe('NotificationRow', () => {
     fireEvent.press(screen.getByLabelText('Kembali ke Beranda'));
     expect(mockGoBackOrReplace).toHaveBeenCalledWith('/(candidate)/(tabs)/home');
     fireEvent.press(screen.getByText('Tandai dibaca'));
-    expect(markAllRead).toHaveBeenCalledTimes(1);
+    expect(markAllReadAsync).toHaveBeenCalledTimes(1);
   });
 });

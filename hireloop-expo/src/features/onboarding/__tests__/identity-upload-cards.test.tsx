@@ -75,6 +75,13 @@ describe('card upload identitas onboarding', () => {
 
     fireEvent.press(screen.getByTestId('ktp-photo-trigger'));
 
+    const modalCardStyle = StyleSheet.flatten(screen.getByTestId('photo-source-modal-card').props.style);
+    expect(modalCardStyle).toMatchObject({
+      alignSelf: 'center',
+      borderRadius: 22,
+      maxWidth: 420,
+      width: '100%',
+    });
     expect(screen.getByText('Galeri')).toBeTruthy();
     expect(screen.getByText('Batal')).toBeTruthy();
     fireEvent.press(screen.getByText('Batal'));

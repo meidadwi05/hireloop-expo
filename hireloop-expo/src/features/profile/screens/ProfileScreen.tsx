@@ -27,6 +27,7 @@ import {
   profileColors,
   profileFonts,
 } from '../components/profile-ui';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 
 const menuItems = [
   {label: 'Data Diri', subtitle: 'Identitas, kontak & pendidikan', icon: 'id-card-outline' as const, route: '/(candidate)/profile/personal-data'},
@@ -42,6 +43,7 @@ function initials(name: string) {
 }
 
 export function ProfileScreen() {
+  const feedback = useActionFeedback();
   const profile = useProfile();
   const profileFiles = useProfileFiles();
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -59,18 +61,19 @@ export function ProfileScreen() {
       Alert.alert('File terlalu besar', 'Foto profil maksimal 2 MB.');
       return;
     }
-    try {
-      await uploadAvatar.mutateAsync({
+    await feedback.runAction({
+      loadingMessage: 'Mengunggah foto profil...',
+      successTitle: 'Foto Profil Diperbarui',
+      successMessage: 'Foto profil Anda berhasil diperbarui.',
+      errorTitle: 'Gagal Memperbarui Foto',
+      operation: () => uploadAvatar.mutateAsync({
         uri: asset.uri,
         name: asset.name,
         mimeType: asset.mimeType ?? 'image/jpeg',
         size: asset.size,
         file: asset.file,
-      });
-      Alert.alert('Berhasil', 'Foto profil berhasil diperbarui.');
-    } catch (error) {
-      Alert.alert('Gagal memperbarui foto', toAppApiError(error).message);
-    }
+      }),
+    });
   };
 
   const openCv = async () => {
@@ -89,11 +92,18 @@ export function ProfileScreen() {
       Alert.alert('CV tidak dapat dibuka', 'URL CV tidak tersedia dari server.');
       return;
     }
-    try {
-      await Linking.openURL(url);
-    } catch (error) {
-      Alert.alert('CV tidak dapat dibuka', toAppApiError(error).message);
-    }
+    await feedback.runAction({
+      loadingMessage: 'Menyiapkan CV...',
+      successTitle: 'CV Siap Dibuka',
+      successMessage: 'CV akan dibuka setelah popup ini ditutup.',
+      errorTitle: 'CV Tidak Dapat Dibuka',
+      operation: async () => {
+        const supported = await Linking.canOpenURL(url);
+        if (!supported) throw new Error('Perangkat tidak dapat membuka URL CV dari server.');
+        return url;
+      },
+      onSuccessExit: nextUrl => Linking.openURL(nextUrl),
+    });
   };
 
   const openAbout = () => {
@@ -102,13 +112,14 @@ export function ProfileScreen() {
   };
 
   const saveAbout = async () => {
-    try {
-      await updateDescription.mutateAsync(about.trim());
-      setAboutOpen(false);
-      Alert.alert('Berhasil', 'Tentang Saya berhasil diperbarui.');
-    } catch (error) {
-      Alert.alert('Gagal menyimpan', toAppApiError(error).message);
-    }
+    await feedback.runAction({
+      loadingMessage: 'Menyimpan deskripsi profil...',
+      successTitle: 'Profil Diperbarui',
+      successMessage: 'Tentang Saya berhasil diperbarui.',
+      errorTitle: 'Gagal Menyimpan Profil',
+      operation: () => updateDescription.mutateAsync(about.trim()),
+      onSuccessExit: () => setAboutOpen(false),
+    });
   };
 
   return (

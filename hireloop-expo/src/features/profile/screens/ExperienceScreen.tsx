@@ -4,6 +4,7 @@ import {Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Sty
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {DateField} from '../../onboarding/components/DateField';
 import {CheckboxField, SelectField, TextField} from '../../onboarding/components/FormControls';
 import {employmentStatusOptions, workSystemOptions} from '../../onboarding/onboarding.options';
@@ -36,6 +37,7 @@ function monthYear(value: string | null) {
 }
 
 function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | null; visible: boolean; onClose: () => void}) {
+  const feedback = useActionFeedback();
   const [draft, setDraft] = useState<Draft>(() => item ? {
     position: item.position,
     company: item.companyName,
@@ -62,9 +64,13 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
       return;
     }
     const position = draft.position.trim();
-    try {
-      setError('');
-      await mutation.mutateAsync({
+    setError('');
+    await feedback.runAction({
+      loadingMessage: item ? 'Memperbarui pengalaman...' : 'Menambahkan pengalaman...',
+      successTitle: item ? 'Pengalaman Diperbarui' : 'Pengalaman Ditambahkan',
+      successMessage: item ? 'Riwayat pengalaman berhasil diperbarui.' : 'Riwayat pengalaman berhasil ditambahkan.',
+      errorTitle: 'Gagal Menyimpan Pengalaman',
+      operation: () => mutation.mutateAsync({
         experience_list_id: item?.experienceListId ?? null,
         position,
         posisi: position,
@@ -76,12 +82,9 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
         job_type_expected: draft.workSetting,
         work_type: draft.workType,
         skill_ids: [],
-      });
-      onClose();
-      Alert.alert('Berhasil', item ? 'Pengalaman berhasil diperbarui.' : 'Pengalaman berhasil ditambahkan.');
-    } catch (cause) {
-      setError(toAppApiError(cause).message);
-    }
+      }),
+      onSuccessExit: onClose,
+    });
   };
 
   return (
@@ -111,6 +114,7 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
 }
 
 export function ExperienceScreen() {
+  const feedback = useActionFeedback();
   const query = useExperiences();
   const [selected, setSelected] = useState<ProfileExperience | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -126,9 +130,11 @@ export function ExperienceScreen() {
   const openForm = (item: ProfileExperience | null) => { setSelected(item); setFormOpen(true); };
   const remove = (item: ProfileExperience) => Alert.alert('Hapus pengalaman?', `${item.position} di ${item.companyName} akan dihapus.`, [
     {text: 'Batal', style: 'cancel'},
-    {text: 'Hapus', style: 'destructive', onPress: async () => {
-      try { await removeMutation.mutateAsync(item.id); } catch (cause) { Alert.alert('Gagal menghapus', toAppApiError(cause).message); }
-    }},
+    {text: 'Hapus', style: 'destructive', onPress: () => void feedback.runAction({
+      loadingMessage: 'Menghapus pengalaman...', successTitle: 'Pengalaman Dihapus',
+      successMessage: 'Riwayat pengalaman berhasil dihapus.', errorTitle: 'Gagal Menghapus Pengalaman',
+      operation: () => removeMutation.mutateAsync(item.id),
+    })},
   ]);
 
   return (

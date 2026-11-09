@@ -23,8 +23,6 @@ describe('JobsHeader', () => {
       <JobsHeader
         containerWidth={390}
         horizontalPadding={20}
-        search=""
-        onChangeSearch={jest.fn()}
       />,
     );
 
@@ -37,13 +35,13 @@ describe('JobsHeader', () => {
 
     expect(artwork.props.resizeMode).toBe('contain');
     expect(headerStyle.backgroundColor).toBe('#00419E');
-    expect(headerStyle.height).toBe(165);
+    expect(headerStyle.height).toBeCloseTo(128, 1);
     expect(contentStyle.paddingHorizontal).toBe(20);
     expect(artworkStyle.top).toBe(0);
-    expect(artworkStyle.left).toBe(0);
-    expect(artworkStyle.width).toBe(390);
-    expect(artworkStyle.height).toBeLessThanOrEqual(165);
+    expect(artworkStyle.left).toBe(70);
+    expect(artworkStyle.width).toBe(320);
+    expect(artworkStyle.height).toBeLessThanOrEqual(129);
     expect(screen.queryByLabelText('Lowongan tersimpan')).toBeNull();
-    expect(screen.getByLabelText('Cari posisi, perusahaan, atau lokasi')).toBeTruthy();
+    expect(screen.queryByLabelText('Cari posisi, perusahaan, atau lokasi')).toBeNull();
   });
 });

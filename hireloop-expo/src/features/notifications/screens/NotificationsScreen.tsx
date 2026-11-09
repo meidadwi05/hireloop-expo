@@ -1,10 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   SectionList,
@@ -16,6 +15,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {useNotifications} from '../hooks/use-notifications';
 import {resolveNotificationDestination} from '../notifications.navigation';
@@ -82,6 +82,7 @@ function EmptyState({filter}: {filter: NotificationFilter}) {
 }
 
 export function NotificationsScreen() {
+  const feedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width: viewportWidth} = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
@@ -95,16 +96,25 @@ export function NotificationsScreen() {
   );
   const sections = useMemo(() => groupNotifications(visibleItems), [visibleItems]);
 
-  useEffect(() => {
-    if (!notifications.mutationError) return;
-    Alert.alert('Perubahan belum tersimpan', 'Periksa koneksi Anda lalu coba lagi.');
-  }, [notifications.mutationError]);
-
   const openNotification = (item: CandidateNotification) => {
-    if (!item.isRead) notifications.markRead(item.id);
     const destination = resolveNotificationDestination(item);
-    if (destination) router.push(destination as never);
+    if (item.isRead) {
+      if (destination) router.push(destination as never);
+      return;
+    }
+    void feedback.runAction({
+      loadingMessage: 'Memperbarui notifikasi...', successTitle: 'Notifikasi Dibaca',
+      successMessage: 'Notifikasi berhasil ditandai sebagai dibaca.', errorTitle: 'Gagal Memperbarui Notifikasi',
+      operation: () => notifications.markReadAsync(item.id),
+      onSuccessExit: () => { if (destination) router.push(destination as never); },
+    });
   };
+
+  const markAllRead = () => void feedback.runAction({
+    loadingMessage: 'Memperbarui semua notifikasi...', successTitle: 'Semua Notifikasi Dibaca',
+    successMessage: 'Semua notifikasi berhasil ditandai sebagai dibaca.', errorTitle: 'Gagal Memperbarui Notifikasi',
+    operation: () => notifications.markAllReadAsync(),
+  });
 
   const header = (
     <View
@@ -153,7 +163,7 @@ export function NotificationsScreen() {
           accessibilityRole="button"
           accessibilityState={{disabled: notifications.unreadCount === 0 || notifications.markingAllRead}}
           disabled={notifications.unreadCount === 0 || notifications.markingAllRead}
-          onPress={() => notifications.markAllRead()}
+          onPress={markAllRead}
           style={({pressed}) => [
             styles.markAllButton,
             notifications.unreadCount === 0 && styles.markAllDisabled,
@@ -162,7 +172,7 @@ export function NotificationsScreen() {
         >
           {notifications.markingAllRead
             ? <ActivityIndicator size="small" color="#1267E8" />
-            : <Ionicons name="checkmark-done" size={18} color="#1267E8" />}
+            : <Ionicons name="checkmark-done" size={16} color="#1267E8" />}
           <Text numberOfLines={1} style={styles.markAllText}>Tandai dibaca</Text>
         </Pressable>
       </View>
@@ -246,22 +256,22 @@ const cardShadow = {
 const styles = StyleSheet.create({
   outer: {flex: 1, backgroundColor: '#EEF3FA', alignItems: 'center'},
   screen: {flex: 1, width: '100%', maxWidth: 440, backgroundColor: '#F7F9FC'},
-  header: {zIndex: 2, flexShrink: 0, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#E8EDF5', paddingBottom: 16},
-  titleRow: {minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10},
+  header: {zIndex: 2, flexShrink: 0, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#E8EDF5', paddingBottom: 10},
+  titleRow: {minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: 10},
   headerIconButton: {width: 42, height: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   headerTitle: {flex: 1, minWidth: 0, fontFamily: F.bold, fontSize: 26, lineHeight: 34, color: '#061A4D'},
   headerBell: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   headerUnreadDot: {position: 'absolute', top: 7, right: 7, width: 9, height: 9, borderRadius: 5, borderWidth: 1.5, borderColor: 'white', backgroundColor: '#1267E8'},
-  controlsRow: {width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingTop: 12},
-  markAllButton: {minHeight: 40, flexShrink: 0, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 5, marginLeft: 'auto'},
+  controlsRow: {width: '100%', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: 6, paddingTop: 6},
+  markAllButton: {maxWidth: 98, minHeight: 36, flexShrink: 0, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 2, marginLeft: 'auto'},
   markAllDisabled: {opacity: 0.48},
-  markAllText: {fontFamily: F.bold, fontSize: 11, lineHeight: 16, color: '#1267E8'},
+  markAllText: {flexShrink: 1, fontFamily: F.bold, fontSize: 10, lineHeight: 15, color: '#1267E8'},
   listContent: {paddingBottom: 26, flexGrow: 1},
-  filters: {flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 8},
-  filterPill: {minWidth: 92, minHeight: 42, borderRadius: 22, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20},
-  unreadFilterPill: {minWidth: 134},
+  filters: {flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 5},
+  filterPill: {minWidth: 68, minHeight: 36, borderRadius: 18, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
+  unreadFilterPill: {width: 108, maxWidth: 108},
   filterPillSelected: {borderColor: '#062A70', backgroundColor: '#062A70'},
-  filterText: {fontFamily: F.bold, fontSize: 11.5, color: '#283A5C'},
+  filterText: {fontFamily: F.bold, fontSize: 10.5, color: '#283A5C'},
   filterTextSelected: {color: 'white'},
   sectionHeader: {backgroundColor: '#F7F9FC', paddingTop: 18, paddingBottom: 9},
   sectionTitle: {fontFamily: F.bold, fontSize: 13, lineHeight: 19, color: '#6E7A90'},

@@ -63,6 +63,14 @@ export type SkillOption = {
   type?: string | null;
 };
 
+export type ExperienceOption = {
+  id: number;
+  name: string;
+  categoryId?: number | null;
+  categoryName?: string | null;
+  similar?: string[];
+};
+
 export type SelectedSkill = {
   skillId: number | null;
   customName: string | null;
@@ -75,6 +83,7 @@ export type MasterOption = {
 };
 
 export type OnboardingDraft = {
+  email: string;
   nik: string;
   ktpPath: string;
   ktpUrl: string;
@@ -179,6 +188,7 @@ export function emptyAddress(): AddressDetail {
 
 export function createEmptyOnboardingDraft(fullName = ''): OnboardingDraft {
   return {
+    email: '',
     nik: '',
     ktpPath: '',
     ktpUrl: '',

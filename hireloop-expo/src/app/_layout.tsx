@@ -15,6 +15,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {queryClient} from '../core/query/query-client';
 import {AuthProvider} from '../features/auth/auth-provider';
 import {FullScreenLoader} from '../shared/components/FullScreenLoader';
+import {ActionFeedbackProvider} from '../shared/components/ActionFeedbackProvider';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -37,12 +38,14 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <View style={styles.desktop}>
-            <View style={styles.app}>
-              <StatusBar style="auto" />
-              <Stack screenOptions={{headerShown: false, animation: 'fade'}} />
+          <ActionFeedbackProvider>
+            <View style={styles.desktop}>
+              <View style={styles.app}>
+                <StatusBar style="auto" />
+                <Stack screenOptions={{headerShown: false, animation: 'fade'}} />
+              </View>
             </View>
-          </View>
+          </ActionFeedbackProvider>
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

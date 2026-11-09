@@ -8,6 +8,9 @@ import WelcomeRoute from '../../../app/(public)/welcome';
 import {
   ONBOARDING_SPLASH_DURATION_MS,
   ONBOARDING_SPLASH_LINE_DURATION_MS,
+  ONBOARDING_SPLASH_LOGO_DURATION_MS,
+  ONBOARDING_SPLASH_TAGLINE_DURATION_MS,
+  ONBOARDING_SPLASH_TAGLINE_STAGGER_MS,
 } from '../components/OnboardingSplash';
 
 jest.mock('expo-router', () => ({router: {replace: jest.fn()}}));
@@ -55,6 +58,9 @@ describe('alur onboarding intro', () => {
 
     expect(ONBOARDING_SPLASH_DURATION_MS).toBe(3500);
     expect(ONBOARDING_SPLASH_LINE_DURATION_MS).toBe(3500);
+    expect(ONBOARDING_SPLASH_LOGO_DURATION_MS).toBe(900);
+    expect(ONBOARDING_SPLASH_TAGLINE_DURATION_MS).toBe(720);
+    expect(ONBOARDING_SPLASH_TAGLINE_STAGGER_MS).toBe(220);
     expect(screen.getByTestId('splash-logo')).toBeTruthy();
     expect(screen.getByTestId('splash-gradient-line')).toBeTruthy();
     expect(screen.getByTestId('splash-tagline-one')).toBeTruthy();
@@ -68,7 +74,7 @@ describe('alur onboarding intro', () => {
     expect(screen.getByTestId('onboarding-splash')).toBeTruthy();
     await finishSplash();
     expect(screen.getByTestId('intro-screen')).toBeTruthy();
-  });
+  }, 10000);
 
   it('menempatkan seluruh kontrol di dalam setiap halaman pager', async () => {
     const screen = render(<WelcomeRoute />);
@@ -84,6 +90,18 @@ describe('alur onboarding intro', () => {
     }
 
     expect(screen.queryByTestId('intro-footer-controls')).toBeNull();
+  });
+
+  it('menjaga label CTA tepat di tengah', async () => {
+    const screen = render(<WelcomeRoute />);
+    await finishSplash();
+
+    const slide = activeSlide(screen, 0);
+    const rowStyle = StyleSheet.flatten(slide.getByTestId('intro-next-label-row').props.style);
+    const labelStyle = StyleSheet.flatten(slide.getByTestId('intro-next-label').props.style);
+
+    expect(rowStyle.justifyContent).toBe('center');
+    expect(labelStyle.textAlign).toBe('center');
   });
 
   it('memakai judul gradient hanya pada halaman pertama dan ketiga', async () => {

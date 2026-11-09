@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {DateField} from '../../onboarding/components/DateField';
 import {profileApi} from '../api/profile.api';
 import type {ProfileFileItem, UploadInput, UploadedProfileFile} from '../profile.types';
@@ -150,6 +151,7 @@ async function downloadItem(item: ProfileFileItem, mediaIndex = 0) {
 }
 
 function FileCard({item, onMenu, onDeleteMedia}: {item: ProfileFileItem; onMenu: () => void; onDeleteMedia: (index: number) => void}) {
+  const feedback = useActionFeedback();
   const certification = item.type === 'certification';
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const description = certification
@@ -160,14 +162,22 @@ function FileCard({item, onMenu, onDeleteMedia}: {item: ProfileFileItem; onMenu:
     const actionKey = `${action}:${mediaIndex}`;
     if (busyAction) return;
     setBusyAction(actionKey);
-    try {
-      if (action === 'view') await openItem(item, mediaIndex);
-      else await downloadItem(item, mediaIndex);
-    } catch (error) {
-      Alert.alert(action === 'view' ? 'File tidak dapat dibuka' : 'File tidak dapat diunduh', fileActionErrorMessage(error, action));
-    } finally {
-      setBusyAction(null);
-    }
+    await feedback.runAction({
+      loadingMessage: action === 'view' ? 'Membuka dokumen...' : 'Mengunduh dokumen...',
+      successTitle: action === 'view' ? 'Dokumen Dibuka' : 'Unduhan Berhasil',
+      successMessage: action === 'view' ? 'Dokumen berhasil disiapkan.' : 'Dokumen berhasil diunduh.',
+      errorTitle: action === 'view' ? 'File Tidak Dapat Dibuka' : 'File Tidak Dapat Diunduh',
+      operation: async () => {
+        try {
+          if (action === 'view') await openItem(item, mediaIndex);
+          else await downloadItem(item, mediaIndex);
+        } catch (error) {
+          throw new Error(fileActionErrorMessage(error, action));
+        }
+      },
+      onSuccessExit: () => setBusyAction(null),
+    });
+    setBusyAction(null);
   };
 
   return (
@@ -220,6 +230,7 @@ function FileCard({item, onMenu, onDeleteMedia}: {item: ProfileFileItem; onMenu:
 }
 
 function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; visible: boolean; onClose: () => void}) {
+  const feedback = useActionFeedback();
   const [draft, setDraft] = useState<Draft>(() => ({
     type: item?.type ?? 'document', name: item?.name ?? '', issuer: item?.issuer ?? '',
     issuedDate: item?.issuedDate ?? '', expiredDate: item?.expiredDate ?? '', credentialId: item?.credentialId ?? '',
@@ -260,13 +271,12 @@ function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; 
   const save = async () => {
     if (!draft.name.trim()) return Alert.alert('Nama wajib diisi', 'Masukkan nama dokumen atau sertifikat.');
     if (draft.type === 'certification' && (!draft.issuer.trim() || !draft.issuedDate.trim())) return Alert.alert('Data sertifikat belum lengkap', 'Penerbit dan tanggal terbit wajib diisi.');
-    try {
-      await saveMutation.mutateAsync();
-      onClose();
-      Alert.alert('Berhasil', `${draft.type === 'document' ? 'Dokumen' : 'Sertifikat'} berhasil disimpan.`);
-    } catch (error) {
-      Alert.alert('Gagal menyimpan', toAppApiError(error).message);
-    }
+    const label = draft.type === 'document' ? 'Dokumen' : 'Sertifikat';
+    await feedback.runAction({
+      loadingMessage: `Mengunggah ${label.toLowerCase()}...`, successTitle: `${label} Tersimpan`,
+      successMessage: `${label} berhasil disimpan.`, errorTitle: `Gagal Menyimpan ${label}`,
+      operation: () => saveMutation.mutateAsync(), onSuccessExit: onClose,
+    });
   };
 
   return (
@@ -297,6 +307,7 @@ function FormField({label, ...props}: React.ComponentProps<typeof TextInput> & {
 }
 
 function ActionModal({item, visible, onClose, onEdit}: {item: ProfileFileItem | null; visible: boolean; onClose: () => void; onEdit: () => void}) {
+  const feedback = useActionFeedback();
   const itemLabel = item?.type === 'certification' ? 'Sertifikasi' : 'Dokumen';
   const remove = useProfileMutation(async () => {
     if (!item) return;
@@ -305,8 +316,9 @@ function ActionModal({item, visible, onClose, onEdit}: {item: ProfileFileItem | 
   }, {refreshFiles: true});
   const confirm = () => item && Alert.alert(`Hapus ${itemLabel.toLowerCase()}?`, `${item.name} akan dihapus permanen.`, [
     {text: 'Batal', style: 'cancel'},
-    {text: 'Hapus', style: 'destructive', onPress: async () => {
-      try { await remove.mutateAsync(); onClose(); } catch (error) { Alert.alert('Gagal menghapus', toAppApiError(error).message); }
+    {text: 'Hapus', style: 'destructive', onPress: () => {
+      onClose();
+      void feedback.runAction({loadingMessage: `Menghapus ${itemLabel.toLowerCase()}...`, successTitle: `${itemLabel} Dihapus`, successMessage: `${itemLabel} berhasil dihapus.`, errorTitle: `Gagal Menghapus ${itemLabel}`, operation: () => remove.mutateAsync()});
     }},
   ]);
   return <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}><Pressable onPress={onClose} style={styles.actionBackdrop}><Pressable style={styles.actionSheet}>
@@ -317,6 +329,7 @@ function ActionModal({item, visible, onClose, onEdit}: {item: ProfileFileItem | 
 }
 
 export function DocumentsScreen() {
+  const feedback = useActionFeedback();
   const query = useProfileFiles();
   const [filter, setFilter] = useState<Filter>('all');
   const [selected, setSelected] = useState<ProfileFileItem | null>(null);
@@ -343,7 +356,7 @@ export function DocumentsScreen() {
   const edit = () => { setActionOpen(false); setFormOpen(true); };
   const confirmDeleteMedia = (item: ProfileFileItem, index: number) => Alert.alert('Hapus file sertifikat?', `${item.media[index]?.originalName ?? 'File'} akan dihapus dari sertifikat ini.`, [
     {text: 'Batal', style: 'cancel'},
-    {text: 'Hapus', style: 'destructive', onPress: async () => { try { await removeMedia.mutateAsync({item, index}); } catch (error) { Alert.alert('Gagal menghapus file', toAppApiError(error).message); } }},
+    {text: 'Hapus', style: 'destructive', onPress: () => void feedback.runAction({loadingMessage: 'Menghapus berkas sertifikat...', successTitle: 'Berkas Dihapus', successMessage: 'Berkas sertifikat berhasil dihapus.', errorTitle: 'Gagal Menghapus Berkas', operation: () => removeMedia.mutateAsync({item, index})})},
   ]);
 
   return (

@@ -10,7 +10,10 @@ export function OnboardingProgress({step}: {step: 1 | 2}) {
       <View style={[styles.node, narrow && styles.nodeNarrow, step === 2 && styles.complete]}>
         {step === 2 ? <Ionicons name="checkmark" size={narrow ? 25 : 30} color="white" /> : <Text style={styles.nodeText}>01</Text>}
       </View>
-      <View style={styles.track}><View style={[styles.fill, {width: step === 2 ? '100%' : '45%'}]} /></View>
+      <View style={styles.track}>
+        <View style={[styles.fill, step === 2 && styles.completedFill, {width: step === 2 ? '50%' : '45%'}]} />
+        {step === 2 ? <View style={styles.activeFill} /> : null}
+      </View>
       <View style={[styles.node, narrow && styles.nodeNarrow, step === 1 ? styles.inactive : null]}><Text style={styles.nodeText}>02</Text></View>
     </View>
   );
@@ -24,6 +27,8 @@ const styles = StyleSheet.create({
   inactive: {backgroundColor: '#B9B9BB'},
   complete: {backgroundColor: '#35C763'},
   nodeText: {fontFamily: 'PlusJakartaSans_500Medium', color: 'white', fontSize: 16},
-  track: {height: 3, flex: 1, backgroundColor: '#E9EDF4'},
+  track: {height: 3, flex: 1, backgroundColor: '#E9EDF4', flexDirection: 'row'},
   fill: {height: '100%', backgroundColor: '#0865DF'},
+  completedFill: {backgroundColor: '#35C763'},
+  activeFill: {height: '100%', flex: 1, backgroundColor: '#0865DF'},
 });

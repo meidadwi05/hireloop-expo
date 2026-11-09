@@ -1,4 +1,5 @@
 import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
 import React from 'react';
 import {ActivityIndicator, Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 
@@ -45,8 +46,10 @@ export function ActionOverlayModal({overlay, onClose}: {
               </View>
               <Text style={[styles.title, {color}]}>{overlay.title}</Text>
               <Text style={styles.message}>{overlay.message}</Text>
-              <Pressable accessibilityRole="button" onPress={onClose} style={[styles.button, {backgroundColor: color}]}>
-                <Text style={styles.buttonText}>OK</Text>
+              <Pressable accessibilityRole="button" onPress={onClose} style={styles.button}>
+                <LinearGradient colors={success ? ['#0051FD', '#00DAFD'] : ['#E5313D', '#B31222']} end={{x: 1, y: 0}} start={{x: 0, y: 0}} style={styles.buttonGradient}>
+                  <Text style={styles.buttonText}>OK</Text>
+                </LinearGradient>
               </Pressable>
             </>
           )}
@@ -64,6 +67,7 @@ const styles = StyleSheet.create({
   title: {fontFamily: 'PlusJakartaSans_700Bold', fontSize: 29, lineHeight: 37, marginTop: 18, textAlign: 'center'},
   loadingTitle: {color: '#087BFF'},
   message: {fontFamily: 'PlusJakartaSans_400Regular', color: '#222', fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 10},
-  button: {height: 48, minWidth: 170, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 24},
+  button: {height: 48, minWidth: 170, borderRadius: 12, overflow: 'hidden', marginTop: 24},
+  buttonGradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   buttonText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: 'white', fontSize: 14},
 });

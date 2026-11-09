@@ -8,6 +8,7 @@ import {router} from 'expo-router';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {applicationsKeys} from '../../applications/applications.keys';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
@@ -25,6 +26,7 @@ type JobDetailScreenProps = {
 };
 
 export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProps) {
+  const actionFeedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
@@ -37,25 +39,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
     queryKey: jobsKeys.detail(source, id),
     queryFn: () => jobsApi.detail(source, id),
   });
-  const apply = useMutation({
-    mutationFn: jobsApi.apply,
-    onSuccess: async () => {
-      setConfirmVisible(false);
-      setRequiresNik(false);
-      setFeedback('Lamaran berhasil dikirim. Anda dapat memantau prosesnya dari menu Lamaran.');
-      await Promise.all([
-        queryClient.invalidateQueries({queryKey: jobsKeys.all}),
-        queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
-      ]);
-    },
-    onError: error => {
-      const apiError = toAppApiError(error);
-      setConfirmVisible(false);
-      setRequiresNik(apiError.status === 422 && /nik|nomor induk/i.test(apiError.message));
-      setFeedback(apiError.message);
-      if (apiError.status === 403) void applyAccess.refetch();
-    },
-  });
+  const apply = useMutation({mutationFn: jobsApi.apply});
 
   const job = detail.data;
   const error = detail.isError ? toAppApiError(detail.error).message : '';
@@ -170,14 +154,25 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
               return;
             }
             setFeedback('');
-            apply.mutate({
-              job_reference_type: job.source,
-              job_reference_id: job.id,
-              job_title: job.title,
-              company_name: job.company,
-              location: job.location,
-              agreed: true,
-            });
+            setConfirmVisible(false);
+            void (async () => {
+              const result = await actionFeedback.runAction({
+                loadingMessage: 'Mengirim lamaran...', successTitle: 'Lamaran Berhasil Dikirim',
+                successMessage: 'Anda dapat memantau prosesnya dari menu Lamaran.', errorTitle: 'Gagal Mengirim Lamaran',
+                operation: async () => {
+                  const response = await apply.mutateAsync({job_reference_type: job.source, job_reference_id: job.id, job_title: job.title, company_name: job.company, location: job.location, agreed: true});
+                  await Promise.all([queryClient.invalidateQueries({queryKey: jobsKeys.all}), queryClient.invalidateQueries({queryKey: applicationsKeys.all})]);
+                  return response;
+                },
+                onSuccessExit: () => router.replace('/(candidate)/(tabs)/career'),
+              });
+              if (!result.ok) {
+                const apiError = toAppApiError(result.error);
+                setRequiresNik(apiError.status === 422 && /nik|nomor induk/i.test(apiError.message));
+                setFeedback(apiError.message);
+                if (apiError.status === 403) void applyAccess.refetch();
+              }
+            })();
           }}
         />
       )}

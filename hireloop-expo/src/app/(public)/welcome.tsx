@@ -18,6 +18,7 @@ const slides: IntroSlide[] = [
     id: 'tracking',
     image: require('../../assets/Onboarding2.png'),
     theme: 'dark',
+    titleScale: 0.84,
     titleVariant: 'solid',
     title: 'Pantau Proses Lamaran\nSecara Real-Time',
     body: 'Dapatkan update setiap tahap seleksi\nlamaran pekerjaan langsung di genggaman.',

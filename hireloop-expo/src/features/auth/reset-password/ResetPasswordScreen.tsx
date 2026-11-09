@@ -19,6 +19,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {authApi} from '../api/auth.api';
 import {getResetPasswordLayout} from './reset-password.layout';
 import {
@@ -148,6 +149,7 @@ function Criterion({met, children}: {met: boolean; children: React.ReactNode}) {
 }
 
 export default function ResetPasswordScreen({email, token}: ResetPasswordScreenProps) {
+  const feedback = useActionFeedback();
   const {height, width} = useWindowDimensions();
   const layout = getResetPasswordLayout(width, height);
   const hasRequiredParams = token.trim().length > 0 && EMAIL_PATTERN.test(email.trim());
@@ -196,19 +198,23 @@ export default function ResetPasswordScreen({email, token}: ResetPasswordScreenP
 
     setSubmitting(true);
     setFormError(undefined);
-    try {
-      await authApi.resetPassword({
+    const result = await feedback.runAction({
+      loadingMessage: 'Memperbarui kata sandi...', successTitle: 'Password Berhasil Diubah',
+      successMessage: 'Kata sandi baru sudah aktif. Anda akan diarahkan kembali ke HireLoop.',
+      errorTitle: 'Gagal Mengubah Password',
+      operation: () => authApi.resetPassword({
         email,
         token,
         password,
         passwordConfirmation: confirmation,
-      });
-      setCountdown(3);
-      setShowFallback(false);
-      setStatus('success');
-      router.setParams({email: '', token: ''});
-    } catch (error) {
-      const apiError = toAppApiError(error);
+      }),
+      onSuccessExit: async () => {
+        router.setParams({email: '', token: ''});
+        await openHireLoop();
+      },
+    });
+    if (!result.ok) {
+      const apiError = toAppApiError(result.error);
       const message = apiError.message.toLowerCase();
 
       if (message.includes('expired') || message.includes('kedaluwarsa')) {
@@ -218,9 +224,8 @@ export default function ResetPasswordScreen({email, token}: ResetPasswordScreenP
       } else {
         setFormError(apiError.message);
       }
-    } finally {
-      setSubmitting(false);
     }
+    setSubmitting(false);
   };
 
   const requestAnotherLink = () => {

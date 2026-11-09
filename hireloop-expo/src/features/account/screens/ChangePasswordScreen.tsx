@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {router} from 'expo-router';
 import React, {useMemo, useState} from 'react';
-import {Alert, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {useAuth} from '../../auth/auth-provider';
 import {ProfileCard, ProfileHeader, ProfilePage, PrimaryButton, profileColors, profileFonts} from '../../profile/components/profile-ui';
 import {accountApi} from '../api/account.api';
@@ -14,6 +15,7 @@ function PasswordField({label, value, onChange}: {label: string; value: string; 
 }
 
 export function ChangePasswordScreen() {
+  const feedback = useActionFeedback();
   const {logout} = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -26,13 +28,14 @@ export function ChangePasswordScreen() {
   const submit = async () => {
     if (!valid || submitting) return;
     setSubmitting(true); setError('');
-    try {
-      await accountApi.changePassword({current_password: currentPassword, new_password: newPassword, new_password_confirmation: confirmation});
-      Alert.alert('Kata sandi diperbarui', 'Silakan masuk kembali menggunakan kata sandi baru.', [{text: 'Masuk kembali', onPress: async () => {await logout(); router.replace('/(public)/login');}}]);
-    } catch (cause) {
-      setError(toAppApiError(cause).message);
-      setSubmitting(false);
-    }
+    const result = await feedback.runAction({
+      loadingMessage: 'Memperbarui kata sandi...', successTitle: 'Kata Sandi Diperbarui',
+      successMessage: 'Silakan masuk kembali menggunakan kata sandi baru.', errorTitle: 'Gagal Memperbarui Kata Sandi',
+      operation: () => accountApi.changePassword({current_password: currentPassword, new_password: newPassword, new_password_confirmation: confirmation}),
+      onSuccessExit: async () => { await logout(); router.replace('/(public)/login'); },
+    });
+    if (!result.ok) setError(toAppApiError(result.error).message);
+    setSubmitting(false);
   };
 
   return <View style={styles.screen}><ProfileHeader title="Ubah Kata Sandi" fallback="/profile" /><ProfilePage>

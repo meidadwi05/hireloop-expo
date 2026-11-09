@@ -3,6 +3,7 @@ import React from 'react';
 
 import type {CandidateBlacklistInfo} from '../../features/auth/auth.types';
 import {CandidateEvaluationNotice} from '../components/CandidateEvaluationNotice';
+import {ActionFeedbackProvider} from '../../shared/components/ActionFeedbackProvider';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('expo-file-system', () => ({File: jest.fn(), Paths: {cache: 'cache'}}));
@@ -24,14 +25,22 @@ const baseNotice: CandidateBlacklistInfo = {
   supervisor_notes: null,
 };
 
+function renderNotice(notice: CandidateBlacklistInfo, initiallyVisible = false) {
+  return render(
+    <ActionFeedbackProvider>
+      <CandidateEvaluationNotice initiallyVisible={initiallyVisible} notice={notice} />
+    </ActionFeedbackProvider>,
+  );
+}
+
 describe('CandidateEvaluationNotice', () => {
   it('tidak ditampilkan untuk catatan yang belum aktif', () => {
-    const screen = render(<CandidateEvaluationNotice notice={{...baseNotice, status: 'pending_supervisor'}} />);
+    const screen = renderNotice({...baseNotice, status: 'pending_supervisor'});
     expect(screen.queryByTestId('candidate-evaluation-alert')).toBeNull();
   });
 
   it('membuka detail tier 1 sebagai modal dan menampilkan file PDF', () => {
-    const screen = render(<CandidateEvaluationNotice notice={baseNotice} />);
+    const screen = renderNotice(baseNotice);
 
     expect(screen.getByText('Catatan Evaluasi')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Lihat catatan evaluasi'));
@@ -44,7 +53,7 @@ describe('CandidateEvaluationNotice', () => {
   });
 
   it('membedakan pesan blacklist tier 2', () => {
-    const screen = render(<CandidateEvaluationNotice notice={{...baseNotice, tier: 'tier_2'}} />);
+    const screen = renderNotice({...baseNotice, tier: 'tier_2'});
 
     expect(screen.getByText('Blacklist')).toBeTruthy();
     expect(screen.getByText(/tidak dapat melamar di seluruh proyek/i)).toBeTruthy();
@@ -53,7 +62,7 @@ describe('CandidateEvaluationNotice', () => {
   });
 
   it('dapat langsung membuka modal dari deep-link notifikasi', () => {
-    const screen = render(<CandidateEvaluationNotice initiallyVisible notice={baseNotice} />);
+    const screen = renderNotice(baseNotice, true);
     expect(screen.getByText('Detail Catatan Evaluasi')).toBeTruthy();
   });
 });

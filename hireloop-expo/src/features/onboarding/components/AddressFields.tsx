@@ -1,6 +1,6 @@
 import {useQuery} from '@tanstack/react-query';
 import React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {masterDataApi} from '../../master-data/api/master-data.api';
 import {onboardingKeys} from '../onboarding.keys';
@@ -34,6 +34,7 @@ export function AddressFields({label, value, onChange, disabled, error, afterAdd
   const setOption = (field: keyof AddressDetail, nameField: keyof AddressDetail, options: MasterOption[], next: string, reset: Partial<AddressDetail>) => {
     onChange({...value, ...reset, [field]: next, [nameField]: options.find(option => option.value === next)?.label ?? ''});
   };
+  const failedQuery = [provinces, regencies, districts, villages].find(query => query.isError);
 
   return (
     <View>
@@ -44,10 +45,17 @@ export function AddressFields({label, value, onChange, disabled, error, afterAdd
       <SelectField tone={tone} label="Kecamatan" required searchable disabled={disabled || !value.regencyCode || districts.isLoading} value={value.districtCode} options={districts.data ?? []} onChange={next => setOption('districtCode', 'districtName', districts.data ?? [], next, {villageCode: '', villageName: '', postalCode: ''})} placeholder="Pilih kecamatan" />
       <SelectField tone={tone} label="Kelurahan / Desa" required searchable disabled={disabled || !value.districtCode || villages.isLoading} value={value.villageCode} options={villages.data ?? []} onChange={next => setOption('villageCode', 'villageName', villages.data ?? [], next, {})} placeholder="Pilih kelurahan / desa" />
       <TextField tone={tone} label="Kode Pos" disabled={disabled} value={value.postalCode} onChangeText={postalCode => onChange({...value, postalCode})} placeholder="Kode pos" keyboardType="number-pad" />
+      {failedQuery ? (
+        <Pressable accessibilityRole="button" onPress={() => { void failedQuery.refetch(); }} style={styles.retry}>
+          <Text style={styles.retryText}>Data wilayah gagal dimuat. Coba lagi</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   addressLineWithSlot: {marginBottom: 4},
+  retry: {minHeight: 42, borderRadius: 10, backgroundColor: '#4B1930', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, marginTop: -8, marginBottom: 18},
+  retryText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#FFB4BD', fontSize: 11},
 });

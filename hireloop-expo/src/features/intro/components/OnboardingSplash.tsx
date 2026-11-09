@@ -9,6 +9,11 @@ import {AnimatedTagline} from './AnimatedTagline';
 
 export const ONBOARDING_SPLASH_DURATION_MS = 3500;
 export const ONBOARDING_SPLASH_LINE_DURATION_MS = ONBOARDING_SPLASH_DURATION_MS;
+export const ONBOARDING_SPLASH_LOGO_DELAY_MS = 200;
+export const ONBOARDING_SPLASH_LOGO_DURATION_MS = 900;
+export const ONBOARDING_SPLASH_TAGLINE_DELAY_MS = 1050;
+export const ONBOARDING_SPLASH_TAGLINE_DURATION_MS = 720;
+export const ONBOARDING_SPLASH_TAGLINE_STAGGER_MS = 220;
 
 export function OnboardingSplash() {
   const {width} = useWindowDimensions();
@@ -49,14 +54,14 @@ export function OnboardingSplash() {
 
       revealAnimation = Animated.parallel([
         Animated.sequence([
-          Animated.delay(150),
-          reveal(logoProgress, 650),
+          Animated.delay(ONBOARDING_SPLASH_LOGO_DELAY_MS),
+          reveal(logoProgress, ONBOARDING_SPLASH_LOGO_DURATION_MS),
         ]),
         Animated.sequence([
-          Animated.delay(850),
-          Animated.stagger(140, [
-            reveal(taglineOneProgress, 520),
-            reveal(taglineTwoProgress, 520),
+          Animated.delay(ONBOARDING_SPLASH_TAGLINE_DELAY_MS),
+          Animated.stagger(ONBOARDING_SPLASH_TAGLINE_STAGGER_MS, [
+            reveal(taglineOneProgress, ONBOARDING_SPLASH_TAGLINE_DURATION_MS),
+            reveal(taglineTwoProgress, ONBOARDING_SPLASH_TAGLINE_DURATION_MS),
           ]),
         ]),
       ]);

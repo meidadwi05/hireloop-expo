@@ -15,8 +15,8 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterFormEr
   const normalizedPhone = values.phone.replace(/[\s-]/g, '');
 
   return {
-    firstName: values.firstName.trim() ? undefined : 'Nama depan wajib diisi.',
-    lastName: values.lastName.trim() ? undefined : 'Nama belakang wajib diisi.',
+    firstName: values.firstName.trim().length >= 2 ? undefined : 'Nama depan minimal 2 karakter.',
+    lastName: values.lastName.trim().length >= 2 ? undefined : 'Nama belakang minimal 2 karakter.',
     phone: !normalizedPhone
       ? 'Nomor handphone wajib diisi.'
       : /^(?:\+62|62|0)8\d{8,12}$/.test(normalizedPhone)

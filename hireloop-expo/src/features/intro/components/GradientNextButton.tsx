@@ -18,8 +18,8 @@ export function GradientNextButton({height, isLast, onPress, radius}: GradientNe
         start={{x: 0, y: 0.5}}
         style={styles.gradient}
       >
-        <View style={styles.labelRow}>
-          <Text style={styles.label}>{isLast ? 'Mulai Sekarang' : 'Selanjutnya'}</Text>
+        <View style={styles.labelRow} testID="intro-next-label-row">
+          <Text style={styles.label} testID="intro-next-label">{isLast ? 'Mulai Sekarang' : 'Selanjutnya'}</Text>
           <Text accessibilityElementsHidden style={styles.arrow}>→</Text>
         </View>
       </LinearGradient>
@@ -30,7 +30,7 @@ export function GradientNextButton({height, isLast, onPress, radius}: GradientNe
 const styles = StyleSheet.create({
   button: {width: '100%', overflow: 'hidden'},
   gradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-  labelRow: {width: '72%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  label: {color: '#FFFFFF', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16},
-  arrow: {color: '#FFFFFF', fontFamily: 'PlusJakartaSans_500Medium', fontSize: 28, lineHeight: 30},
+  labelRow: {flex: 1, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', position: 'relative'},
+  label: {width: '100%', color: '#FFFFFF', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16, textAlign: 'center'},
+  arrow: {position: 'absolute', right: '18%', color: '#FFFFFF', fontFamily: 'PlusJakartaSans_500Medium', fontSize: 28, lineHeight: 30},
 });

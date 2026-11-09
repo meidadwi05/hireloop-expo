@@ -17,7 +17,14 @@ export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, e
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const filtered = useMemo(() => options.filter(option => option.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 100), [options, query]);
+  const normalizedQuery = query.trim().toLowerCase();
+  const canAddCustom = query.trim().length >= 2
+    && !options.some(option => option.name.toLowerCase() === normalizedQuery)
+    && !selected.some(skill => skill.name.toLowerCase() === normalizedQuery);
+  const filtered = useMemo(() => options.filter(option => (
+    !selected.some(skill => skill.skillId === option.id)
+    && option.name.toLowerCase().includes(normalizedQuery)
+  )).slice(0, 100), [options, normalizedQuery, selected]);
   return (
     <View style={styles.group}>
       <FieldLabel label="Keahlian" required />
@@ -57,17 +64,14 @@ export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, e
               data={filtered}
               keyExtractor={item => String(item.id)}
               keyboardShouldPersistTaps="handled"
-              ListHeaderComponent={query.trim() && !options.some(option => option.name.toLowerCase() === query.trim().toLowerCase()) ? (
+              ListHeaderComponent={canAddCustom ? (
                 <Pressable accessibilityRole="button" onPress={() => { onToggleCustom(query); setQuery(''); }} style={styles.customOption}>
                   <Ionicons name="add-circle-outline" size={21} color="#087BFF" />
                   <View style={styles.customCopy}><Text style={styles.customTitle}>Tambahkan keahlian sendiri</Text><Text numberOfLines={1} style={styles.customName}>{query.trim()}</Text></View>
                 </Pressable>
               ) : null}
               ListEmptyComponent={<Text style={styles.empty}>Tidak ada skill master yang cocok. Anda tetap dapat menambahkan skill sendiri.</Text>}
-              renderItem={({item}) => {
-                const checked = selected.some(skill => skill.skillId === item.id);
-                return <Pressable accessibilityRole="checkbox" accessibilityState={{checked}} onPress={() => onToggle(item)} style={styles.option}><Text style={styles.optionText}>{item.name}</Text>{checked ? <Ionicons name="checkmark-circle" size={22} color="#087BFF" /> : null}</Pressable>;
-              }}
+              renderItem={({item}) => <Pressable accessibilityRole="button" onPress={() => onToggle(item)} style={styles.option}><Text style={styles.optionText}>{item.name}</Text><Ionicons name="add-circle-outline" size={22} color="#087BFF" /></Pressable>}
             />
             <Pressable onPress={() => setOpen(false)} style={styles.done}><Text style={styles.doneText}>Selesai</Text></Pressable>
           </View>

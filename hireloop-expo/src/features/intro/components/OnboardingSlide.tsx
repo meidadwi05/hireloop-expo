@@ -51,6 +51,9 @@ export function OnboardingSlide({
         ],
       };
   const isLast = index === slideCount - 1;
+  const titleScale = slide.titleScale ?? 1;
+  const titleFontSize = Math.round(metrics.titleFontSize * titleScale);
+  const titleLineHeight = Math.round(metrics.titleLineHeight * titleScale);
 
   return (
     <ResponsiveContainer pageWidth={pageWidth} testID={`intro-slide-${slide.id}`} theme={slide.theme}>
@@ -63,14 +66,20 @@ export function OnboardingSlide({
           <SkipButton onPress={onFinish} theme={slide.theme} />
         </View>
 
-        <Animated.View style={[styles.hero, heroMotion]}>
-          <HeroImage height={metrics.heroHeight} source={slide.image} />
+        <Animated.View
+          style={[
+            styles.hero,
+            {marginBottom: metrics.heroCopyGap, width: metrics.heroWidth},
+            heroMotion,
+          ]}
+        >
+          <HeroImage height={metrics.heroHeight} source={slide.image} width={metrics.heroWidth} />
         </Animated.View>
 
         <View style={[styles.copy, {gap: metrics.sectionGap}]}>
           <Animated.View style={reveal(16, 0.2)}>
             {slide.titleVariant === 'gradient' ? (
-              <GradientTitle fontSize={metrics.titleFontSize} lineHeight={metrics.titleLineHeight}>
+              <GradientTitle fontSize={titleFontSize} lineHeight={titleLineHeight}>
                 {slide.title}
               </GradientTitle>
             ) : (
@@ -79,8 +88,8 @@ export function OnboardingSlide({
                   styles.title,
                   {
                     color: '#FFFFFF',
-                    fontSize: metrics.titleFontSize,
-                    lineHeight: metrics.titleLineHeight,
+                    fontSize: titleFontSize,
+                    lineHeight: titleLineHeight,
                   },
                 ]}
               >
@@ -123,7 +132,7 @@ export function OnboardingSlide({
 const styles = StyleSheet.create({
   content: {alignSelf: 'center', flex: 1, width: '100%', paddingBottom: 8},
   header: {height: 48, alignItems: 'flex-end', justifyContent: 'center'},
-  hero: {alignItems: 'center', justifyContent: 'center', width: '100%'},
+  hero: {alignItems: 'center', alignSelf: 'center', justifyContent: 'center'},
   copy: {width: '100%'},
   title: {fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'left'},
   body: {fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'left'},

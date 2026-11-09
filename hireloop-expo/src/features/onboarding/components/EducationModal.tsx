@@ -1,4 +1,5 @@
 import {Ionicons} from '@expo/vector-icons';
+import {LinearGradient} from 'expo-linear-gradient';
 import React, {useState} from 'react';
 import {ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -78,30 +79,30 @@ export function EducationModal({visible, initialValue, majorOptions, majorLoadin
             </View>
             <ScrollView style={styles.body} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
               <SelectField presentation="inline" tone="light" label="Tingkat Pendidikan" required value={value.educationLevel} onChange={updateLevel} options={educationLevelOptions} placeholder="Pilih tingkat pendidikan" error={errors.educationLevel} />
-              <TextField disabled={noFormalEducation} tone="light" label="Nama Sekolah / Universitas / Instansi" value={value.schoolName} onChangeText={next => update('schoolName', next)} placeholder={noFormalEducation ? 'Tidak diperlukan' : 'Opsional'} error={errors.schoolName} />
+              <TextField disabled={noFormalEducation} tone="light" label="Nama Sekolah / Universitas / Instansi (Opsional)" value={value.schoolName} onChangeText={next => update('schoolName', next)} placeholder={noFormalEducation ? 'Tidak diperlukan' : 'Nama institusi'} error={errors.schoolName} />
               {!noFormalEducation && majorLoading ? (
                 <View style={styles.masterGroup}>
-                  <FieldLabel label="Jurusan" tone="light" />
+                  <FieldLabel label="Jurusan (Opsional)" tone="light" />
                   <View style={styles.masterState}><ActivityIndicator color="#1268FF" /><Text style={styles.masterStateText}>Memuat jurusan...</Text></View>
                 </View>
               ) : !noFormalEducation && majorError ? (
                 <View style={styles.masterGroup}>
-                  <FieldLabel label="Jurusan" tone="light" />
+                  <FieldLabel label="Jurusan (Opsional)" tone="light" />
                   <View style={styles.masterError}>
                     <Text style={styles.masterErrorText}>Jurusan belum dapat dimuat.</Text>
                     <Pressable accessibilityRole="button" onPress={onRetryMajors} style={styles.retryButton}><Text style={styles.retryText}>Coba lagi</Text></Pressable>
                   </View>
                 </View>
               ) : !noFormalEducation ? (
-                <SelectField presentation="inline" tone="light" label="Jurusan" searchable value={value.majorId ? String(value.majorId) : customMajorValue} onChange={updateMajor} options={selectableMajorOptions} placeholder={majorOptions.length ? 'Pilih jurusan (opsional)' : 'Jurusan belum tersedia'} error={errors.majorName} />
+                <SelectField presentation="inline" tone="light" label="Jurusan (Opsional)" searchable value={value.majorId ? String(value.majorId) : customMajorValue} onChange={updateMajor} options={selectableMajorOptions} placeholder={majorOptions.length ? 'Pilih jurusan' : 'Jurusan belum tersedia'} error={errors.majorName} />
               ) : null}
-              <DateField presentation="inline" tone="light" label="Mulai Pendidikan" disabled={noFormalEducation} value={value.startDate} onChange={next => update('startDate', next)} maximumDate={new Date()} error={errors.startDate} />
-              <DateField presentation="inline" tone="light" label="Selesai Pendidikan" disabled={noFormalEducation || value.ongoing} value={value.endDate} onChange={next => update('endDate', next)} minimumDate={isoToLocalDate(value.startDate) ?? undefined} maximumDate={new Date()} error={errors.endDate} />
+              <DateField presentation="inline" tone="light" label="Mulai Pendidikan (Opsional)" disabled={noFormalEducation} value={value.startDate} onChange={next => update('startDate', next)} maximumDate={new Date()} error={errors.startDate} />
+              <DateField presentation="inline" tone="light" label="Selesai Pendidikan (Opsional)" disabled={noFormalEducation || value.ongoing} value={value.endDate} onChange={next => update('endDate', next)} minimumDate={isoToLocalDate(value.startDate) ?? undefined} maximumDate={new Date()} error={errors.endDate} />
               {!noFormalEducation ? <CheckboxField tone="light" label="Sedang berlangsung" checked={value.ongoing} onChange={next => { update('ongoing', next); if (next) update('endDate', ''); }} /> : null}
             </ScrollView>
             <View style={styles.actions}>
               <Pressable accessibilityRole="button" onPress={onCancel} style={styles.cancel}><Text style={styles.cancelText}>Batal</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={save} style={styles.save}><Text style={styles.saveText}>{initialValue ? 'Simpan' : 'Tambah'}</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={save} style={styles.save}><LinearGradient colors={['#0B5CFF', '#00D8F4']} end={{x: 1, y: 0}} start={{x: 0, y: 0}} style={styles.saveGradient}><Text style={styles.saveText}>{initialValue ? 'Simpan' : 'Tambah'}</Text></LinearGradient></Pressable>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -130,6 +131,7 @@ const styles = StyleSheet.create({
   actions: {flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#E7E9ED', backgroundColor: 'white'},
   cancel: {flex: 1, height: 50, borderRadius: 10, borderWidth: 1, borderColor: '#AEB4BE', alignItems: 'center', justifyContent: 'center'},
   cancelText: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: '#111'},
-  save: {flex: 1, height: 50, borderRadius: 10, backgroundColor: '#087BFF', alignItems: 'center', justifyContent: 'center'},
+  save: {flex: 1, height: 50, borderRadius: 10, overflow: 'hidden'},
+  saveGradient: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   saveText: {fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14, color: 'white'},
 });

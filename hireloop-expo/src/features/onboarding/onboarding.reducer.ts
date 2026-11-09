@@ -56,14 +56,14 @@ export function onboardingReducer(state: OnboardingState, action: OnboardingActi
     }
     case 'toggle-custom-skill': {
       const name = action.name.trim();
-      if (!name) return state;
-      const exists = state.draft.skills.some(item => item.skillId === null && item.name.toLowerCase() === name.toLowerCase());
+      if (name.length < 2) return state;
+      const exists = state.draft.skills.some(item => item.name.toLowerCase() === name.toLowerCase());
       return {
         ...state,
         draft: {
           ...state.draft,
           skills: exists
-            ? state.draft.skills.filter(item => !(item.skillId === null && item.name.toLowerCase() === name.toLowerCase()))
+            ? state.draft.skills.filter(item => item.name.toLowerCase() !== name.toLowerCase())
             : [...state.draft.skills, {skillId: null, customName: name, name}],
         },
       };

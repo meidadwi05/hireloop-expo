@@ -5,6 +5,7 @@ import {ScrollView, StyleSheet, View, useWindowDimensions} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {useAuth} from '../auth/auth-provider';
+import {clearRegisterContactDraft, loadRegisterContactDraft} from '../auth/register-draft.storage';
 import {goBackOrReplace} from '../../core/navigation/go-back-or-replace';
 import {ActionOverlayModal, type ActionOverlay} from '../../shared/components/ActionOverlayModal';
 import {withMinimumDelay} from '../../shared/utils/with-minimum-delay';
@@ -13,7 +14,7 @@ import {OnboardingProgress} from './components/OnboardingProgress';
 import {PersonalDataStep} from './components/PersonalDataStep';
 import {WorkExperienceStep} from './components/WorkExperienceStep';
 import {useOnboarding} from './hooks/use-onboarding';
-import {mapCurrentOnboarding} from './onboarding.mapper';
+import {isProductionOnboarding, mapCurrentOnboarding} from './onboarding.mapper';
 import {onboardingReducer} from './onboarding.reducer';
 import {firstValidationMessage, validatePersonalStep, validateWorkStep} from './onboarding.schemas';
 import {createEmptyOnboardingDraft, type MasterOption, type OnboardingActionFeedback, type RunOnboardingAction} from './onboarding.types';
@@ -32,6 +33,51 @@ function normalizeMasterOptions(input: unknown): MasterOption[] {
 
 type PendingAction = 'step-2' | 'home' | null;
 
+const backendFieldMap: Record<string, string> = {
+  nik: 'nik',
+  full_name: 'fullName',
+  nama_lengkap: 'fullName',
+  gender: 'gender',
+  jenis_kelamin: 'gender',
+  birth_place: 'birthPlace',
+  tempat_lahir: 'birthPlace',
+  birth_date: 'birthDate',
+  tanggal_lahir: 'birthDate',
+  marital_status: 'maritalStatus',
+  status_pernikahan: 'maritalStatus',
+  phone: 'phone',
+  nomor_handphone: 'phone',
+  ktp_address: 'identityAddress',
+  alamat_ktp: 'identityAddress',
+  ktp_address_detail: 'identityAddress',
+  address: 'domicileAddress',
+  alamat_domisili: 'domicileAddress',
+  domicile_address_detail: 'domicileAddress',
+  education_level: 'educations',
+  pendidikan_terakhir: 'educations',
+  educations: 'educations',
+  pengalaman_kerja: 'experiences',
+  skills: 'skills',
+};
+
+function backendErrors(error: unknown): Record<string, string> {
+  if (!error || typeof error !== 'object') return {};
+  const validation = (error as {validationErrors?: Record<string, string[]>}).validationErrors ?? {};
+  const mapped: Record<string, string> = {};
+  Object.entries(validation).forEach(([path, messages]) => {
+    const root = path.split('.')[0];
+    const field = backendFieldMap[root] ?? root;
+    mapped[field] ??= messages[0] ?? 'Periksa kembali nilai ini.';
+  });
+  return mapped;
+}
+
+function actionErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && typeof (error as {message?: unknown}).message === 'string') return (error as {message: string}).message;
+  return 'Data belum dapat disimpan. Silakan coba lagi.';
+}
+
 export function OnboardingScreen() {
   const {width} = useWindowDimensions();
   const {user, refreshUser} = useAuth();
@@ -44,6 +90,7 @@ export function OnboardingScreen() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [overlay, setOverlay] = useState<ActionOverlay | null>(null);
   const [draftReady, setDraftReady] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [state, dispatch] = useReducer(onboardingReducer, {
     step: 1,
     draft: createEmptyOnboardingDraft(user?.full_name ?? ''),
@@ -65,14 +112,19 @@ export function OnboardingScreen() {
       const localDraft = user?.id ? await loadOnboardingDraft(user.id) : null;
       if (!mounted.current) return;
       if (localDraft) {
-        dispatch({type: 'hydrate', draft: localDraft.draft});
+        dispatch({type: 'hydrate', draft: {...localDraft.draft, email: localDraft.draft.email || user?.email || ''}});
         dispatch({type: 'set-step', step: localDraft.step});
       } else if (currentData) {
-        dispatch({type: 'hydrate', draft: mapCurrentOnboarding(currentData, user?.full_name ?? '')});
+        const serverDraft = mapCurrentOnboarding(currentData, user?.full_name ?? '');
+        const registerDraft = user?.email ? await loadRegisterContactDraft(user.email) : null;
+        dispatch({type: 'hydrate', draft: {...serverDraft, email: serverDraft.email || user?.email || '', phone: serverDraft.phone || registerDraft?.phone || ''}});
+      } else if (user?.email) {
+        const registerDraft = await loadRegisterContactDraft(user.email);
+        dispatch({type: 'hydrate', draft: {...createEmptyOnboardingDraft(user.full_name), email: user.email, phone: registerDraft?.phone || ''}});
       }
       setDraftReady(true);
     })();
-  }, [currentData, currentLoading, user?.full_name, user?.id]);
+  }, [currentData, currentLoading, user?.email, user?.full_name, user?.id]);
 
   useEffect(() => {
     if (!draftReady || !user?.id) return;
@@ -83,6 +135,7 @@ export function OnboardingScreen() {
   }, [draftReady, state.draft, state.step, user?.id]);
 
   const majors = useMemo(() => normalizeMasterOptions(onboarding.majors.data), [onboarding.majors.data]);
+  const production = useMemo(() => Boolean(user?.prod_candidate || isProductionOnboarding(currentData)), [currentData, user?.prod_candidate]);
   const notify = useCallback((status: 'success' | 'error', title: string, message: string) => {
     setPendingAction(null);
     setOverlay({kind: status, title, message});
@@ -98,15 +151,17 @@ export function OnboardingScreen() {
       } catch (error) {
         if (!mounted.current || currentActionId !== actionId.current) return;
         setPendingAction(null);
+        const nextErrors = backendErrors(error);
+        if (Object.keys(nextErrors).length) setFormErrors(current => ({...current, ...nextErrors}));
         setOverlay({
           kind: 'error',
           title: feedback.errorTitle ?? 'Gagal Menyimpan',
-          message: error instanceof Error ? error.message : 'Data belum dapat disimpan. Silakan coba lagi.',
+          message: actionErrorMessage(error),
         });
       }
     })();
   }, []);
-  const closeOverlay = () => {
+  const closeOverlay = useCallback(() => {
     const nextAction = pendingAction;
     setOverlay(null);
     setPendingAction(null);
@@ -129,7 +184,12 @@ export function OnboardingScreen() {
         }
       })();
     }
-  };
+  }, [onboarding, pendingAction, user]);
+  useEffect(() => {
+    if (overlay?.kind !== 'success') return;
+    const timer = setTimeout(closeOverlay, 1400);
+    return () => clearTimeout(timer);
+  }, [closeOverlay, overlay?.kind]);
   const goBack = () => {
     if (state.step === 2) dispatch({type: 'set-step', step: 1});
     else goBackOrReplace('/');
@@ -137,22 +197,33 @@ export function OnboardingScreen() {
   const continueToWork = () => {
     const result = validatePersonalStep(state.draft);
     if (!result.success) {
+      const nextErrors: Record<string, string> = {};
+      result.error.issues.forEach(issue => { nextErrors[String(issue.path[0])] ??= issue.message; });
+      setFormErrors(nextErrors);
       notify('error', 'Data Belum Lengkap', firstValidationMessage(result.error));
       return;
     }
+    setFormErrors({});
     setPendingAction('step-2');
     runAction({
-      loadingMessage: 'Memeriksa data diri...',
-      successTitle: 'Data Diri Lengkap!',
-      successMessage: 'Informasi pribadi berhasil divalidasi. Lanjutkan dengan pengalaman kerja.',
-    }, () => undefined);
+      loadingMessage: 'Menyimpan data diri...',
+      successTitle: 'Data Diri Tersimpan!',
+      successMessage: 'Informasi pribadi tersimpan. Lanjutkan dengan pengalaman kerja.',
+    }, async () => {
+      await onboarding.savePersonal(state.draft, production);
+      await clearRegisterContactDraft();
+    });
   };
   const finish = () => {
     const result = validateWorkStep(state.draft);
     if (!result.success) {
+      const nextErrors: Record<string, string> = {};
+      result.error.issues.forEach(issue => { nextErrors[String(issue.path[0])] ??= issue.message; });
+      setFormErrors(nextErrors);
       notify('error', 'Data Belum Lengkap', firstValidationMessage(result.error));
       return;
     }
+    setFormErrors({});
     setPendingAction('home');
     runAction({
       loadingMessage: 'Menyelesaikan onboarding...',
@@ -162,7 +233,7 @@ export function OnboardingScreen() {
     }, async () => {
       dispatch({type: 'submitting', value: true});
       try {
-        await onboarding.submit(state.draft);
+        await onboarding.submit(state.draft, production);
       } finally {
         dispatch({type: 'submitting', value: false});
       }
@@ -187,9 +258,24 @@ export function OnboardingScreen() {
                 onRetryMajors={() => { void onboarding.majors.refetch(); }}
                 onNext={continueToWork}
                 runAction={runAction}
+                errors={formErrors}
               />
             ) : (
-              <WorkExperienceStep draft={state.draft} dispatch={dispatch} skills={onboarding.skills.data ?? []} submitting={state.submitting || onboarding.submitting || overlay?.kind === 'loading'} onBack={() => dispatch({type: 'set-step', step: 1})} onFinish={finish} runAction={runAction} onNotify={notify} />
+              <WorkExperienceStep
+                draft={state.draft}
+                dispatch={dispatch}
+                skills={onboarding.skills.data ?? []}
+                experienceOptions={onboarding.experiences.data ?? []}
+                experienceLoading={onboarding.experiences.isFetching}
+                experienceError={onboarding.experiences.isError}
+                onRetryExperiences={() => { void onboarding.experiences.refetch(); }}
+                errors={formErrors}
+                submitting={state.submitting || onboarding.submitting || overlay?.kind === 'loading'}
+                onBack={() => dispatch({type: 'set-step', step: 1})}
+                onFinish={finish}
+                runAction={runAction}
+                onNotify={notify}
+              />
             )}
           </View>
         </View>

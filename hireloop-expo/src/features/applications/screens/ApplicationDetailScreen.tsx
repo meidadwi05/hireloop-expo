@@ -17,6 +17,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {dashboardKeys} from '../../dashboard/dashboard.keys';
 import {jobsApi} from '../../jobs/api/jobs.api';
@@ -100,6 +101,7 @@ function statusHeroCopy(application: CandidateApplication) {
 }
 
 export function ApplicationDetailScreen({source, id}: {source: CandidateJobSource; id: number}) {
+  const actionFeedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
@@ -111,8 +113,6 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   const applicationsQuery = useApplications();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
-  const [feedback, setFeedback] = useState('');
-  const [feedbackError, setFeedbackError] = useState(false);
 
   const baseApplication = useMemo(
     () => applicationsQuery.data?.find(item => item.source === source && item.referenceId === id) ?? null,
@@ -139,41 +139,36 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   }, [baseApplication, processQuery.data]);
   const job = application ? jobQuery.data ?? fallbackJob(application) : null;
 
-  const cancelMutation = useMutation({
-    mutationFn: applicationsApi.cancel,
-    onSuccess: async () => {
-      setCancelOpen(false);
-      setFeedback('Lamaran berhasil dibatalkan.');
-      setFeedbackError(false);
-      await Promise.all([
-        queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
-        queryClient.invalidateQueries({queryKey: dashboardKeys.home()}),
-        refreshUser(),
-      ]);
-    },
-    onError: error => {
-      setCancelOpen(false);
-      setFeedback(toAppApiError(error).message);
-      setFeedbackError(true);
-    },
-  });
+  const cancelMutation = useMutation({mutationFn: applicationsApi.cancel});
 
-  const completeMutation = useMutation({
-    mutationFn: applicationsApi.completeRequirements,
-    onSuccess: async () => {
-      setRequirementsOpen(false);
-      setFeedback('Persyaratan berhasil dikirim. Lamaran Anda sekarang aktif.');
-      setFeedbackError(false);
-      await Promise.all([
-        queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
-        queryClient.invalidateQueries({queryKey: applicationsKeys.process(baseApplication?.applicationId ?? 0)}),
-        queryClient.invalidateQueries({queryKey: dashboardKeys.home()}),
-        queryClient.invalidateQueries({queryKey: jobsKeys.detail(source, id)}),
-        refreshUser(),
-      ]);
-    },
-    onError: error => { setFeedback(toAppApiError(error).message); setFeedbackError(true); },
-  });
+  const completeMutation = useMutation({mutationFn: applicationsApi.completeRequirements});
+
+  const cancelApplication = () => {
+    setCancelOpen(false);
+    void actionFeedback.runAction({
+      loadingMessage: 'Membatalkan lamaran...', successTitle: 'Lamaran Dibatalkan',
+      successMessage: 'Lamaran berhasil dibatalkan.', errorTitle: 'Gagal Membatalkan Lamaran',
+      operation: async () => {
+        const response = await cancelMutation.mutateAsync({applicationId: application!.applicationId, storageKind: application!.storageKind});
+        await Promise.all([queryClient.invalidateQueries({queryKey: applicationsKeys.all}), queryClient.invalidateQueries({queryKey: dashboardKeys.home()}), refreshUser()]);
+        return response;
+      },
+      onSuccessExit: () => router.replace('/(candidate)/(tabs)/career'),
+    });
+  };
+
+  const completeRequirements = (input: Parameters<typeof completeMutation.mutateAsync>[0]) => {
+    setRequirementsOpen(false);
+    void actionFeedback.runAction({
+      loadingMessage: 'Mengirim persyaratan...', successTitle: 'Persyaratan Terkirim',
+      successMessage: 'Persyaratan berhasil dikirim dan lamaran Anda sekarang aktif.', errorTitle: 'Gagal Mengirim Persyaratan',
+      operation: async () => {
+        const response = await completeMutation.mutateAsync(input);
+        await Promise.all([queryClient.invalidateQueries({queryKey: applicationsKeys.all}), queryClient.invalidateQueries({queryKey: applicationsKeys.process(baseApplication?.applicationId ?? 0)}), queryClient.invalidateQueries({queryKey: dashboardKeys.home()}), queryClient.invalidateQueries({queryKey: jobsKeys.detail(source, id)}), refreshUser()]);
+        return response;
+      },
+    });
+  };
 
   if (applicationsQuery.isPending && !application) {
     return (
@@ -243,7 +238,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
                 <Pressable
                   accessibilityLabel={saved ? 'Hapus dari lowongan disimpan' : 'Simpan lowongan'}
                   accessibilityRole="button"
-                  onPress={() => toggleSaved(job)}
+                  onPress={() => void actionFeedback.runAction({loadingMessage: saved ? 'Menghapus lowongan tersimpan...' : 'Menyimpan lowongan...', successTitle: saved ? 'Lowongan Dihapus' : 'Lowongan Tersimpan', successMessage: saved ? 'Lowongan dihapus dari daftar tersimpan.' : 'Lowongan ditambahkan ke daftar tersimpan.', errorTitle: 'Gagal Memperbarui Lowongan', operation: async () => toggleSaved(job)})}
                   style={[styles.bookmarkButton, saved && styles.bookmarkButtonActive]}
                 >
                   <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={APPLICATION_COLORS.blue} />
@@ -252,11 +247,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
                   accessibilityLabel="Bagikan lowongan"
                   accessibilityRole="button"
                   onPress={() => {
-                    void Share.share({message: `${job.title} di ${job.company} - ${job.location}`})
-                      .catch(() => {
-                        setFeedback('Lowongan belum dapat dibagikan.');
-                        setFeedbackError(true);
-                      });
+                    void actionFeedback.runAction({loadingMessage: 'Menyiapkan lowongan...', successTitle: 'Lowongan Siap Dibagikan', successMessage: 'Dialog berbagi berhasil dibuka.', errorTitle: 'Gagal Membagikan Lowongan', operation: () => Share.share({message: `${job.title} di ${job.company} - ${job.location}`})});
                   }}
                   style={styles.shareButton}
                 >
@@ -325,12 +316,6 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 
           <JobInformationSections job={job} />
 
-          {!!feedback && (
-            <View style={[styles.feedback, feedbackError && styles.feedbackError]}>
-              <Text style={[styles.feedbackText, feedbackError && styles.feedbackErrorText]}>{feedback}</Text>
-            </View>
-          )}
-
           {application.state === 'temporary' && application.storageKind === 'applicant-data' ? (
             <Pressable accessibilityRole="button" onPress={() => setRequirementsOpen(true)} style={styles.requirementsButton}>
               <Ionicons name="document-attach-outline" size={20} color="white" />
@@ -360,7 +345,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
         title={job.title}
         loading={cancelMutation.isPending}
         onClose={() => setCancelOpen(false)}
-        onConfirm={() => cancelMutation.mutate({applicationId: application.applicationId, storageKind: application.storageKind})}
+        onConfirm={cancelApplication}
       />
       {requirementsOpen ? <CompleteRequirementsModal
         visible={requirementsOpen}
@@ -369,7 +354,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
         loading={completeMutation.isPending}
         error={completeMutation.isError ? toAppApiError(completeMutation.error).message : undefined}
         onClose={() => setRequirementsOpen(false)}
-        onSubmit={input => completeMutation.mutate(input)}
+        onSubmit={completeRequirements}
       /> : null}
     </SafeAreaView>
   );
@@ -425,10 +410,6 @@ const styles = StyleSheet.create({
   infoValueCompact: {flex: 0, width: '100%', textAlign: 'left'},
   infoBanner: {flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: 10, backgroundColor: '#EAF2FF', padding: 11, marginTop: 8},
   infoBannerText: {flex: 1, fontFamily: APPLICATION_FONTS.regular, fontSize: 9.5, lineHeight: 15, color: '#3C5A82'},
-  feedback: {borderRadius: 11, backgroundColor: '#E7F9F1', padding: 12},
-  feedbackText: {fontFamily: APPLICATION_FONTS.semibold, fontSize: 10.5, color: '#087A51'},
-  feedbackError: {backgroundColor: '#FFECEF'},
-  feedbackErrorText: {color: '#B51E34'},
   cancelButton: {height: 50, borderRadius: 12, borderWidth: 1.5, borderColor: APPLICATION_COLORS.red, alignItems: 'center', justifyContent: 'center'},
   cancelButtonText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 12, color: APPLICATION_COLORS.red},
   requirementsButton: {height: 54, borderRadius: 12, backgroundColor: '#C57E00', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},

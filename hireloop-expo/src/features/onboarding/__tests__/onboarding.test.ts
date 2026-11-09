@@ -1,4 +1,4 @@
-import {mapCurrentOnboarding, toOnboardingPayload} from '../onboarding.mapper';
+import {mapCurrentOnboarding, normalizeExperienceOptions, toOnboardingPayload, toProductionPersonalPayload} from '../onboarding.mapper';
 import {onboardingReducer} from '../onboarding.reducer';
 import {calculateAge, validatePersonalStep, validateWorkStep} from '../onboarding.schemas';
 import {createEmptyOnboardingDraft, emptyAddress, type OnboardingDraft, type OnboardingState} from '../onboarding.types';
@@ -98,11 +98,29 @@ describe('onboarding domain', () => {
   });
 
   test('mapper current onboarding memakai field backend', () => {
-    const draft = mapCurrentOnboarding({data: {user: {full_name: 'Azka'}, job_seeker: {gender: 'male', birth_date: '1993-05-10T00:00:00Z', no_pengalaman_kerja: 1, educations: [{id: 4, education_level: 'S1', major_id: 17, major: {id: 17, name: 'Manajemen'}}]}}});
+    const draft = mapCurrentOnboarding({data: {user: {full_name: 'Azka', email: 'azka@example.com'}, job_seeker: {gender: 'male', birth_date: '1993-05-10T00:00:00Z', no_pengalaman_kerja: 1, educations: [{id: 4, education_level: 'S1', major_id: 17, major: {id: 17, name: 'Manajemen'}}]}}});
     expect(draft.fullName).toBe('Azka');
+    expect(draft.email).toBe('azka@example.com');
     expect(draft.birthDate).toBe('1993-05-10');
     expect(draft.hasNoExperience).toBe(true);
     expect(draft.educations[0]).toMatchObject({majorId: 17, majorName: 'Manajemen'});
+  });
+
+  test('normalizes experience-list and maps production step 1 field names', () => {
+    expect(normalizeExperienceOptions({data: [{id: 7, label: 'Operator Produksi', similar: ['Operator Mesin'], category: {id: 2, name: 'Produksi'}}]})).toEqual([{
+      id: 7,
+      name: 'Operator Produksi',
+      categoryId: 2,
+      categoryName: 'Produksi',
+      similar: ['Operator Mesin'],
+    }]);
+    const payload = toProductionPersonalPayload(completeDraft());
+    expect(payload).toMatchObject({
+      nama_lengkap: 'Azka Pratama',
+      jenis_kelamin: 'Laki-laki',
+      status_pernikahan: 'Belum Menikah',
+      pendidikan_terakhir: 'S1',
+    });
   });
 
   test('memulihkan nilai pengalaman legacy yang tertukar oleh response lama', () => {

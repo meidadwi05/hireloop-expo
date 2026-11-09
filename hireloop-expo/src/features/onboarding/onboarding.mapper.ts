@@ -1,6 +1,7 @@
 import type {
   AddressDetail,
   AvailabilityStatus,
+  ExperienceOption,
   OnboardingDraft,
   OnboardingPayload,
   SkillOption,
@@ -67,6 +68,34 @@ export function normalizeSkillOptions(input: unknown): SkillOption[] {
   }).filter(item => Number.isFinite(item.id) && item.name);
 }
 
+export function normalizeExperienceOptions(input: unknown): ExperienceOption[] {
+  const root = asRecord(input);
+  const nested = asRecord(root.data);
+  const source = Array.isArray(input)
+    ? input
+    : Array.isArray(root.data)
+      ? root.data as unknown[]
+      : Array.isArray(nested.data)
+        ? nested.data as unknown[]
+        : [];
+  return source.map(item => {
+    const record = asRecord(item);
+    const category = asRecord(record.category);
+    const similar = Array.isArray(record.similar)
+      ? record.similar.map(value => String(value)).filter(Boolean)
+      : typeof record.similar === 'string'
+        ? record.similar.split(',').map(value => value.trim()).filter(Boolean)
+        : [];
+    return {
+      id: Number(record.id),
+      name: asText(record.name, record.label, record.position),
+      categoryId: Number.isFinite(Number(record.job_category_id ?? category.id)) ? Number(record.job_category_id ?? category.id) : null,
+      categoryName: asText(category.name) || null,
+      similar,
+    };
+  }).filter(item => Number.isFinite(item.id) && item.name);
+}
+
 export function mapCurrentOnboarding(input: unknown, fallbackName = ''): OnboardingDraft {
   const root = asRecord(input);
   const data = asRecord(root.data ?? root);
@@ -82,6 +111,7 @@ export function mapCurrentOnboarding(input: unknown, fallbackName = ''): Onboard
 
   return {
     ...draft,
+    email: asText(user.email),
     nik: asText(seeker.nik, seeker.nik_ktp),
     ktpPath: asText(seeker.ktp_path),
     ktpUrl: asText(seeker.ktp_url),
@@ -160,6 +190,105 @@ export function mapCurrentOnboarding(input: unknown, fallbackName = ''): Onboard
       };
     }),
     availability: normalizeAvailability(seeker.availability ?? seeker.work_period_status),
+  };
+}
+
+export function isProductionOnboarding(input: unknown): boolean {
+  const root = asRecord(input);
+  const data = asRecord(root.data ?? root);
+  const user = asRecord(data.user);
+  return asBoolean(user.prod_candidate ?? data.prod_candidate);
+}
+
+export function toRegularPersonalPayload(draft: OnboardingDraft): Record<string, unknown> {
+  const domicile = draft.domicileSameAsIdentity ? draft.identityAddress : draft.domicileAddress;
+  return {
+    full_name: draft.fullName.trim(),
+    gender: draft.gender,
+    birth_place: draft.birthPlace.trim(),
+    birth_date: draft.birthDate,
+    marital_status: draft.maritalStatus,
+    phone: draft.phone.replace(/\D/g, ''),
+    same_as_ktp: draft.domicileSameAsIdentity,
+    ktp_address: draft.identityAddress.addressLine.trim(),
+    address: domicile.addressLine.trim(),
+    ktp_address_detail: addressPayload(draft.identityAddress),
+    domicile_address_detail: draft.domicileSameAsIdentity ? null : addressPayload(draft.domicileAddress),
+  };
+}
+
+export function toRegularEducationPayload(draft: OnboardingDraft): Record<string, unknown> {
+  const primary = draft.educations[0];
+  return {
+    education_level: primary?.educationLevel ?? '',
+    school_name: primary?.schoolName.trim() ?? '',
+    major_id: primary?.majorId ?? null,
+    major_name: primary?.majorName.trim() ?? '',
+    start_date: primary?.startDate || null,
+    end_date: primary?.ongoing ? null : primary?.endDate || null,
+    ongoing: primary?.ongoing ?? false,
+    educations: draft.educations.map(item => ({
+      education_level: item.educationLevel,
+      school_name: item.schoolName.trim(),
+      major_id: item.majorId,
+      major_name: item.majorName.trim(),
+      start_date: item.startDate || null,
+      end_date: item.ongoing ? null : item.endDate || null,
+      ongoing: item.ongoing,
+    })),
+    skills: draft.skills.map(item => ({skill_id: item.skillId, custom_name: item.customName, name: item.name})),
+  };
+}
+
+export function toProductionPersonalPayload(draft: OnboardingDraft): Record<string, unknown> {
+  const primary = draft.educations[0];
+  const domicile = draft.domicileSameAsIdentity ? draft.identityAddress : draft.domicileAddress;
+  const productionGender = draft.gender === 'male' ? 'Laki-laki' : draft.gender === 'female' ? 'Perempuan' : '';
+  const productionMaritalStatus = draft.maritalStatus === 'single'
+    ? 'Belum Menikah'
+    : draft.maritalStatus === 'married'
+      ? 'Menikah'
+      : draft.maritalStatus === 'other'
+        ? 'Lainnya'
+        : '';
+  return {
+    nama_lengkap: draft.fullName.trim(),
+    jenis_kelamin: productionGender,
+    tempat_lahir: draft.birthPlace.trim(),
+    tanggal_lahir: draft.birthDate,
+    status_pernikahan: productionMaritalStatus,
+    nomor_handphone: draft.phone.replace(/\D/g, ''),
+    alamat_ktp: draft.identityAddress.addressLine.trim(),
+    alamat_domisili: domicile.addressLine.trim(),
+    same_as_ktp: draft.domicileSameAsIdentity,
+    ktp_address_detail: addressPayload(draft.identityAddress),
+    domicile_address_detail: draft.domicileSameAsIdentity ? null : addressPayload(draft.domicileAddress),
+    nik: draft.nik,
+    ktp_path: draft.ktpPath || null,
+    avatar_path: draft.avatarPath || null,
+    pendidikan_terakhir: primary?.educationLevel ?? '',
+    nama_sekolah: primary?.schoolName.trim() ?? '',
+    jurusan: primary?.majorName.trim() ?? '',
+    tanggal_mulai_pendidikan: primary?.startDate || null,
+    tanggal_selesai_pendidikan: primary?.ongoing ? null : primary?.endDate || null,
+    sedang_berlangsung: primary?.ongoing ?? false,
+    educations: toRegularEducationPayload(draft).educations,
+  };
+}
+
+export function toProductionWorkPayload(draft: OnboardingDraft): Record<string, unknown> {
+  const payload = toOnboardingPayload(draft);
+  return {
+    pengalaman_kerja: payload.pengalaman_kerja,
+    no_pengalaman_kerja: payload.no_pengalaman_kerja,
+    skills: payload.skills,
+    pengalaman_mesin: payload.pengalaman_mesin,
+    sertifikasi: payload.sertifikasi,
+    profile_files: payload.profile_files,
+    availability: payload.availability,
+    work_period_status: payload.work_period_status,
+    persetujuan: payload.persetujuan,
+    bersedia_posisi_sesuai: payload.bersedia_posisi_sesuai,
   };
 }
 

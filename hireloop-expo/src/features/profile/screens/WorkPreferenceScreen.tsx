@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQuery} from '@tanstack/react-query';
+import {router} from 'expo-router';
 import React, {useMemo, useState} from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {masterDataApi} from '../../master-data/api/master-data.api';
 import {profileApi} from '../api/profile.api';
 import {asRecord} from '../profile.mapper';
@@ -59,6 +61,7 @@ function BinaryChoice({label, value, onChange}: {label: string; value: boolean; 
 }
 
 export function WorkPreferenceScreen() {
+  const feedback = useActionFeedback();
   const profile = useProfile();
   const rolesQuery = useQuery({queryKey: ['master', 'job-roles'], queryFn: async () => mapRoles(await masterDataApi.list('job-roles'))});
   const mutation = useProfileMutation(profileApi.updateWorkPreferences);
@@ -115,8 +118,10 @@ export function WorkPreferenceScreen() {
 
   const save = async () => {
     if (workTypes.length === 0 || workSettings.length === 0) return;
-    try {
-      await mutation.mutateAsync({
+    await feedback.runAction({
+      loadingMessage: 'Menyimpan preferensi kerja...', successTitle: 'Preferensi Tersimpan',
+      successMessage: 'Preferensi kerja Anda berhasil diperbarui.', errorTitle: 'Gagal Menyimpan Preferensi',
+      operation: () => mutation.mutateAsync({
         job_type_expected: workSettings[0],
         work_type: workTypes[0],
         work_period_status: availability,
@@ -127,11 +132,9 @@ export function WorkPreferenceScreen() {
         willing_to_relocate: relocate,
         expected_locations: locations,
         job_preferences: selectedRoles.map(role => ({role_taxonomy_id: role.id})),
-      });
-      Alert.alert('Berhasil', 'Preferensi kerja berhasil disimpan.');
-    } catch (error) {
-      Alert.alert('Gagal menyimpan', toAppApiError(error).message);
-    }
+      }),
+      onSuccessExit: () => router.back(),
+    });
   };
 
   if (profile.isLoading || profile.isError || !profile.data) {
