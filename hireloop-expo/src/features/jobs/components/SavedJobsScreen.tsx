@@ -112,85 +112,84 @@ export function SavedJobsScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
+      <BrandedHeaderBackground
+        containerWidth={containerWidth}
+        topInset={insets.top}
+        variant="application-list"
+        contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
+      >
+        <Pressable accessibilityLabel="Kembali ke Lowongan" accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={26} color="white" />
+        </Pressable>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Lowongan Disimpan</Text>
+          <Text style={styles.subtitle}>Lihat kembali lowongan pilihanmu</Text>
+        </View>
+      </BrandedHeaderBackground>
+
+      <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
+        <View style={styles.filterRow}>
+          <View style={styles.searchAnchor}>
+            <JobsSearchField
+              height={iconLayout.searchFieldHeight}
+              iconSize={iconLayout.searchIconSize}
+              iconSlotSize={iconLayout.iconSlotSize}
+              onChangeText={setSearch}
+              value={search}
+            />
+          </View>
+          <View ref={sortAnchorRef} collapsable={false} style={styles.sortAnchor}>
+            <Pressable
+              accessibilityLabel="Filter urutan lowongan disimpan"
+              accessibilityRole="button"
+              onPress={() => openSortDropdown(sortAnchorRef.current)}
+              style={({pressed}) => [styles.filterControl, styles.sortControl, pressed && styles.controlPressed]}
+            >
+              <Ionicons name="options-outline" size={18} color="#49607F" />
+              <Text style={styles.filterControlText}>Filter</Text>
+              {sort === 'oldest' ? <View style={styles.filterDot} /> : null}
+            </Pressable>
+          </View>
+        </View>
+        <View accessibilityRole="tablist" style={styles.statusTabs}>
+          {([
+            {label: 'Semua', value: 'all' as const},
+            {label: 'Aktif', value: 'active' as const},
+            {label: 'Ditutup', value: 'closed' as const},
+          ]).map(item => {
+            const selected = status === item.value;
+            return (
+              <Pressable
+                accessibilityRole="tab"
+                accessibilityState={{selected}}
+                key={item.value}
+                onPress={() => setStatus(item.value)}
+                style={[styles.statusPill, selected && styles.statusPillSelected]}
+                testID={`saved-status-${item.value}`}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.statusText,
+                    containerWidth <= 350 && styles.statusTextCompact,
+                    selected && styles.statusTextSelected,
+                  ]}
+                >
+                  {item.label} ({statusCounts[item.value]})
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.resultRow}>
+          <Text style={styles.resultText}>{visibleJobs.length} lowongan disimpan</Text>
+        </View>
+      </View>
+
       <FlatList
+        style={styles.list}
         data={hydrated ? visibleJobs : []}
         keyExtractor={item => item.key}
-        ListHeaderComponent={(
-          <>
-            <BrandedHeaderBackground
-              containerWidth={containerWidth}
-              topInset={insets.top}
-              variant="application-list"
-              contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
-            >
-              <Pressable accessibilityLabel="Kembali ke Lowongan" accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={26} color="white" />
-              </Pressable>
-              <View style={styles.headerCopy}>
-                <Text style={styles.title}>Lowongan Disimpan</Text>
-                <Text style={styles.subtitle}>Lihat kembali lowongan pilihanmu</Text>
-              </View>
-            </BrandedHeaderBackground>
-            <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
-              <View style={styles.filterRow}>
-                <View style={styles.searchAnchor}>
-                  <JobsSearchField
-                    height={iconLayout.searchFieldHeight}
-                    iconSize={iconLayout.searchIconSize}
-                    iconSlotSize={iconLayout.iconSlotSize}
-                    onChangeText={setSearch}
-                    value={search}
-                  />
-                </View>
-                <View ref={sortAnchorRef} collapsable={false} style={styles.sortAnchor}>
-                  <Pressable
-                    accessibilityLabel="Filter urutan lowongan disimpan"
-                    accessibilityRole="button"
-                    onPress={() => openSortDropdown(sortAnchorRef.current)}
-                    style={({pressed}) => [styles.filterControl, styles.sortControl, pressed && styles.controlPressed]}
-                  >
-                    <Ionicons name="options-outline" size={18} color="#49607F" />
-                    <Text style={styles.filterControlText}>Filter</Text>
-                    {sort === 'oldest' ? <View style={styles.filterDot} /> : null}
-                  </Pressable>
-                </View>
-              </View>
-              <View accessibilityRole="tablist" style={styles.statusTabs}>
-                {([
-                  {label: 'Semua', value: 'all' as const},
-                  {label: 'Aktif', value: 'active' as const},
-                  {label: 'Ditutup', value: 'closed' as const},
-                ]).map(item => {
-                  const selected = status === item.value;
-                  return (
-                    <Pressable
-                      accessibilityRole="tab"
-                      accessibilityState={{selected}}
-                      key={item.value}
-                      onPress={() => setStatus(item.value)}
-                      style={[styles.statusPill, selected && styles.statusPillSelected]}
-                      testID={`saved-status-${item.value}`}
-                    >
-                      <Text
-                        numberOfLines={1}
-                        style={[
-                          styles.statusText,
-                          containerWidth <= 350 && styles.statusTextCompact,
-                          selected && styles.statusTextSelected,
-                        ]}
-                      >
-                        {item.label} ({statusCounts[item.value]})
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultText}>{visibleJobs.length} lowongan disimpan</Text>
-              </View>
-            </View>
-          </>
-        )}
         renderItem={({item}) => (
           <View style={{paddingHorizontal: pagePadding}}>
             <JobListingCard
@@ -245,6 +244,7 @@ export function SavedJobsScreen() {
 
 const styles = StyleSheet.create({
   screen: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
+  list: {flex: 1},
   content: {flexGrow: 1},
   headerContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
   backButton: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},

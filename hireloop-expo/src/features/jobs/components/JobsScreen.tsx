@@ -54,8 +54,15 @@ export function JobsScreen() {
 
   const errorMessage = jobs.isError ? toAppApiError(jobs.error).message : undefined;
 
-  const header = (
-    <>
+  return (
+    <View
+      style={styles.viewport}
+      onLayout={event => {
+        const nextWidth = Math.round(event.nativeEvent.layout.width);
+        if (nextWidth > 0) setMeasuredWidth(current => current === nextWidth ? current : nextWidth);
+      }}
+    >
+      <StatusBar style="light" />
       <JobsHeader
         containerWidth={containerWidth}
         horizontalPadding={pagePadding}
@@ -66,19 +73,8 @@ export function JobsScreen() {
         <JobsCategoryTabs value={priority} onChange={setPriority} />
         <JobsResultHeader total={jobs.total} />
       </View>
-    </>
-  );
-
-  return (
-    <View
-      style={styles.viewport}
-      onLayout={event => {
-        const nextWidth = Math.round(event.nativeEvent.layout.width);
-        if (nextWidth > 0) setMeasuredWidth(current => current === nextWidth ? current : nextWidth);
-      }}
-    >
-      <StatusBar style="light" />
       <FlatList
+        style={styles.list}
         data={jobs.items}
         keyExtractor={item => item.key}
         renderItem={({item}) => (
@@ -98,7 +94,6 @@ export function JobsScreen() {
             />
           </View>
         )}
-        ListHeaderComponent={header}
         ListEmptyComponent={jobs.isPending
           ? <View style={{paddingHorizontal: pagePadding}}><JobsListSkeleton /></View>
           : <View style={{paddingHorizontal: pagePadding}}><JobsEmptyState error={errorMessage} onReset={reset} /></View>}
@@ -122,8 +117,9 @@ export function JobsScreen() {
 
 const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
-  content: {paddingBottom: 22},
-  controls: {gap: 18, paddingTop: 18, marginBottom: 18},
+  list: {flex: 1},
+  content: {flexGrow: 1, paddingBottom: 22},
+  controls: {gap: 18, paddingTop: 18, paddingBottom: 18},
   separator: {height: 16},
   footerLoader: {paddingVertical: 24},
   footerSpace: {height: 10},

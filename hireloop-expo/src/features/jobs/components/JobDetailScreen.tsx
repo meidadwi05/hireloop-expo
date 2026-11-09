@@ -63,20 +63,20 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <StatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <BrandedHeaderBackground
-          containerWidth={containerWidth}
-          topInset={insets.top}
-          variant="compact-detail"
-          contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
-        >
-          <Pressable accessibilityLabel="Kembali ke daftar lowongan" accessibilityRole="button" onPress={() => goBackOrReplace('/(candidate)/(tabs)/jobs')} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={26} color="white" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Detail Lowongan</Text>
-          <View style={styles.headerSpacer} />
-        </BrandedHeaderBackground>
+      <BrandedHeaderBackground
+        containerWidth={containerWidth}
+        topInset={insets.top}
+        variant="compact-detail"
+        contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
+      >
+        <Pressable accessibilityLabel="Kembali ke daftar lowongan" accessibilityRole="button" onPress={() => goBackOrReplace('/(candidate)/(tabs)/jobs')} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={26} color="white" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Detail Lowongan</Text>
+        <View style={styles.headerSpacer} />
+      </BrandedHeaderBackground>
 
+      <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           {detail.isPending && (
             <View style={styles.stateCard}>
@@ -152,39 +152,42 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
                 <Text style={styles.applyText}>{applyAccess.isTier2Banned ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
               </Pressable>
 
-              <ApplyConfirmationModal
-                job={job}
-                visible={confirmVisible && !applyAccess.isTier2Banned}
-                loading={apply.isPending}
-                onCancel={() => setConfirmVisible(false)}
-                onConfirm={() => {
-                  if (apply.isPending) return;
-                  if (applyAccess.isTier2Banned) {
-                    setConfirmVisible(false);
-                    setFeedback('Akun Anda masuk daftar blacklist permanen dan tidak dapat melamar pekerjaan.');
-                    return;
-                  }
-                  setFeedback('');
-                  apply.mutate({
-                    job_reference_type: job.source,
-                    job_reference_id: job.id,
-                    job_title: job.title,
-                    company_name: job.company,
-                    location: job.location,
-                    agreed: true,
-                  });
-                }}
-              />
             </>
           )}
         </View>
       </ScrollView>
+      {job && (
+        <ApplyConfirmationModal
+          job={job}
+          visible={confirmVisible && !applyAccess.isTier2Banned}
+          loading={apply.isPending}
+          onCancel={() => setConfirmVisible(false)}
+          onConfirm={() => {
+            if (apply.isPending) return;
+            if (applyAccess.isTier2Banned) {
+              setConfirmVisible(false);
+              setFeedback('Akun Anda masuk daftar blacklist permanen dan tidak dapat melamar pekerjaan.');
+              return;
+            }
+            setFeedback('');
+            apply.mutate({
+              job_reference_type: job.source,
+              job_reference_id: job.id,
+              job_title: job.title,
+              company_name: job.company,
+              location: job.location,
+              agreed: true,
+            });
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
+  scrollArea: {flex: 1},
   scrollContent: {paddingBottom: 24},
   headerContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},

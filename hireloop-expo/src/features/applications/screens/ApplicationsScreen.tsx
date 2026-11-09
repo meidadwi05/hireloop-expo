@@ -158,72 +158,69 @@ export function ApplicationsScreen() {
   const error = applicationsQuery.isError ? toAppApiError(applicationsQuery.error).message : null;
 
   const header = (
-    <>
-      <BrandedHeaderBackground
-        containerWidth={containerWidth}
-        topInset={insets.top}
-        variant="application-list"
-        contentStyle={[styles.heroContent, {paddingTop: insets.top + 8}]}
+    <BrandedHeaderBackground
+      containerWidth={containerWidth}
+      topInset={insets.top}
+      variant="application-list"
+      contentStyle={[styles.heroContent, {paddingTop: insets.top + 8}]}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Kembali ke Beranda"
+        onPress={() => router.replace('/(candidate)/(tabs)/home')}
+        style={styles.backButton}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Kembali ke Beranda"
-          onPress={() => router.replace('/(candidate)/(tabs)/home')}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={26} color="white" />
-        </Pressable>
-        <View style={styles.heroCopy}>
-          <Text style={styles.heroTitle}>Lamaran Saya</Text>
-          <Text style={styles.heroSubtitle}>Pantau perkembangan lamaranmu</Text>
-        </View>
-      </BrandedHeaderBackground>
+        <Ionicons name="arrow-back" size={26} color="white" />
+      </Pressable>
+      <View style={styles.heroCopy}>
+        <Text style={styles.heroTitle}>Lamaran Saya</Text>
+        <Text style={styles.heroSubtitle}>Pantau perkembangan lamaranmu</Text>
+      </View>
+    </BrandedHeaderBackground>
+  );
 
-      <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={22} color={APPLICATION_COLORS.body} />
-          <TextInput
-            accessibilityLabel="Cari lowongan atau perusahaan"
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Cari lowongan atau perusahaan..."
-            placeholderTextColor="#8794A8"
-            returnKeyType="search"
-            style={styles.searchInput}
-          />
-          {!!search && (
-            <Pressable accessibilityRole="button" accessibilityLabel="Hapus pencarian" onPress={() => setSearch('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={19} color="#98A5B8" />
-            </Pressable>
-          )}
-        </View>
-
-        <View style={styles.toolbar}>
-          <Pressable accessibilityRole="button" onPress={() => setFilterOpen(true)} style={styles.toolButton}>
-            <Ionicons name="options-outline" size={20} color={APPLICATION_COLORS.navy} />
-            <Text numberOfLines={1} style={styles.toolText}>{filter === 'all' ? 'Filter Status' : filter.replace('-', ' ')}</Text>
-            <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
+  const fixedControls = (
+    <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
+      <View style={styles.searchBox}>
+        <Ionicons name="search-outline" size={22} color={APPLICATION_COLORS.body} />
+        <TextInput
+          accessibilityLabel="Cari lowongan atau perusahaan"
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Cari lowongan atau perusahaan..."
+          placeholderTextColor="#8794A8"
+          returnKeyType="search"
+          style={styles.searchInput}
+        />
+        {!!search && (
+          <Pressable accessibilityRole="button" accessibilityLabel="Hapus pencarian" onPress={() => setSearch('')} style={styles.clearButton}>
+            <Ionicons name="close-circle" size={19} color="#98A5B8" />
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={() => setSortOpen(true)} style={styles.toolButton}>
-            <Ionicons name="calendar-outline" size={19} color={APPLICATION_COLORS.navy} />
-            <Text numberOfLines={1} style={styles.toolText}>{sort === 'newest' ? 'Terbaru' : 'Terlama'}</Text>
-            <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
-          </Pressable>
-        </View>
-        {!!error && applications.length > 0 && (
-          <View style={styles.staleBanner}>
-            <Ionicons name="cloud-offline-outline" size={18} color="#A96C00" />
-            <Text style={styles.staleBannerText}>Menampilkan data terakhir. Tarik ke bawah untuk mencoba memuat ulang.</Text>
-          </View>
         )}
       </View>
-    </>
+
+      <View style={styles.toolbar}>
+        <Pressable accessibilityRole="button" onPress={() => setFilterOpen(true)} style={styles.toolButton}>
+          <Ionicons name="options-outline" size={20} color={APPLICATION_COLORS.navy} />
+          <Text numberOfLines={1} style={styles.toolText}>{filter === 'all' ? 'Filter Status' : filter.replace('-', ' ')}</Text>
+          <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setSortOpen(true)} style={styles.toolButton}>
+          <Ionicons name="calendar-outline" size={19} color={APPLICATION_COLORS.navy} />
+          <Text numberOfLines={1} style={styles.toolText}>{sort === 'newest' ? 'Terbaru' : 'Terlama'}</Text>
+          <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
+        </Pressable>
+      </View>
+    </View>
   );
 
   return (
     <View style={styles.viewport}>
       <StatusBar style="light" />
+      {header}
+      {fixedControls}
       <FlatList
+        style={styles.list}
         data={visibleModels}
         keyExtractor={item => item.key}
         renderItem={({item}) => (
@@ -240,7 +237,14 @@ export function ApplicationsScreen() {
             />
           </View>
         )}
-        ListHeaderComponent={header}
+        ListHeaderComponent={!!error && applications.length > 0
+          ? <View style={[styles.staleBannerWrapper, {paddingHorizontal: pagePadding}]}>
+              <View style={styles.staleBanner}>
+                <Ionicons name="cloud-offline-outline" size={18} color="#A96C00" />
+                <Text style={styles.staleBannerText}>Menampilkan data terakhir. Tarik ke bawah untuk mencoba memuat ulang.</Text>
+              </View>
+            </View>
+          : null}
         ListEmptyComponent={applicationsQuery.isPending
           ? <View style={styles.empty}><ActivityIndicator size="large" color={APPLICATION_COLORS.blue} /><Text style={styles.emptyText}>Memuat lamaran...</Text></View>
           : <View style={styles.empty}>
@@ -293,7 +297,8 @@ export function ApplicationsScreen() {
 
 const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
-  content: {backgroundColor: APPLICATION_COLORS.background},
+  list: {flex: 1},
+  content: {flexGrow: 1, backgroundColor: APPLICATION_COLORS.background},
   heroContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
   backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: 4},
   heroCopy: {flex: 1, minWidth: 0},
@@ -306,7 +311,8 @@ const styles = StyleSheet.create({
   toolbar: {flexDirection: 'row', gap: 10, marginTop: 12},
   toolButton: {flex: 1, minWidth: 0, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 11, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', paddingHorizontal: 9},
   toolText: {flex: 1, minWidth: 0, fontFamily: APPLICATION_FONTS.semibold, fontSize: 10.5, textTransform: 'capitalize', color: APPLICATION_COLORS.navy},
-  staleBanner: {minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, backgroundColor: '#FFF7DF', paddingHorizontal: 11, marginTop: 12},
+  staleBannerWrapper: {paddingTop: 12},
+  staleBanner: {minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, backgroundColor: '#FFF7DF', paddingHorizontal: 11},
   staleBannerText: {flex: 1, fontFamily: APPLICATION_FONTS.medium, fontSize: 9.5, lineHeight: 15, color: '#7D570F'},
   separator: {height: 15},
   empty: {minHeight: 290, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, marginHorizontal: 18, marginTop: 22, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: APPLICATION_COLORS.border},
