@@ -1,5 +1,6 @@
-import {fireEvent, render} from '@testing-library/react-native';
+import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import React from 'react';
+import {StyleSheet} from 'react-native';
 
 import {InterviewCalendarCard} from '../components/interview-calendar/InterviewCalendarCard';
 import {
@@ -76,6 +77,8 @@ describe('interview calendar', () => {
     };
     const screen = render(<InterviewCalendarCard {...baseProps} />);
 
+    expect(screen.queryByText('Kalender')).toBeNull();
+
     fireEvent.press(screen.getByTestId('calendar-day-2026-12-08'));
     expect(onSelectDate).toHaveBeenCalledWith('2026-12-08');
 
@@ -90,5 +93,65 @@ describe('interview calendar', () => {
     expect(screen.getByTestId('calendar-month-select-dropdown')).toBeTruthy();
     expect(screen.queryByText('Test')).toBeNull();
     expect(screen.queryByText('Medical')).toBeNull();
+  });
+
+  it('memindahkan bulan dan tahun ketika tanggal bulan berikutnya ditekan sambil menampilkan loading', async () => {
+    const onChangeMonth = jest.fn();
+    const onChangeYear = jest.fn();
+    const onSelectDate = jest.fn();
+    const screen = render(
+      <InterviewCalendarCard
+        compact={false}
+        interviews={interviews}
+        onChangeMonth={onChangeMonth}
+        onChangeOpenDropdown={jest.fn()}
+        onChangeYear={onChangeYear}
+        onSelectDate={onSelectDate}
+        openDropdown={null}
+        selectedDate={null}
+        today={new Date('2026-11-10T00:00:00')}
+        visibleMonth={11}
+        visibleYear={2026}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('calendar-day-2027-01-01'));
+
+    expect(screen.getByTestId('calendar-transition-loading')).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByTestId('calendar-date-grid').props.style).opacity).toBe(0.35);
+    expect(onChangeMonth).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(onChangeMonth).toHaveBeenCalledWith(0);
+      expect(onChangeYear).toHaveBeenCalledWith(2027);
+      expect(onSelectDate).toHaveBeenCalledWith('2027-01-01');
+    }, {timeout: 1000});
+
+    await waitFor(() => expect(screen.queryByTestId('calendar-transition-loading')).toBeNull(), {timeout: 1000});
+  });
+
+  it('membersihkan timer perpindahan ketika kalender ditutup', async () => {
+    const onChangeMonth = jest.fn();
+    const screen = render(
+      <InterviewCalendarCard
+        compact
+        interviews={interviews}
+        onChangeMonth={onChangeMonth}
+        onChangeOpenDropdown={jest.fn()}
+        onChangeYear={jest.fn()}
+        onSelectDate={jest.fn()}
+        openDropdown={null}
+        selectedDate={null}
+        today={new Date('2026-11-10T00:00:00')}
+        visibleMonth={11}
+        visibleYear={2026}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('calendar-day-2027-01-01'));
+    screen.unmount();
+    await new Promise(resolve => setTimeout(resolve, 350));
+
+    expect(onChangeMonth).not.toHaveBeenCalled();
   });
 });

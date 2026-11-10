@@ -19,7 +19,7 @@ describe('dashboard shimmer skeletons', () => {
     const screen = render(
       <>
         <SummaryGridSkeleton compact={false} gap={10} minHeight={94} />
-        <InterviewCardSkeleton compact={false} dateWidth={92} />
+        <InterviewCardSkeleton compact={false} dateWidth={72} />
         <RecentApplicationsSkeleton compact={false} />
         <RecommendationSkeleton cardWidth={322} compact={false} />
       </>,
@@ -35,7 +35,7 @@ describe('dashboard shimmer skeletons', () => {
     const screen = render(
       <>
         <SummaryGridSkeleton compact gap={8} minHeight={86} />
-        <InterviewCardSkeleton compact dateWidth={76} />
+        <InterviewCardSkeleton compact dateWidth={64} />
         <RecentApplicationsSkeleton compact />
         <RecommendationSkeleton cardWidth={248} compact />
       </>,

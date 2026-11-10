@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, {useMemo} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import type {DashboardInterview} from '../../dashboard.types';
 import {
@@ -27,7 +27,8 @@ function CalendarSelect({
   options,
   onOpen,
   onSelect,
-  width,
+  disabled,
+  type,
   icon,
   testID,
 }: {
@@ -36,16 +37,18 @@ function CalendarSelect({
   options: Array<{label: string; value: number}>;
   onOpen: () => void;
   onSelect: (value: number) => void;
-  width: number;
+  disabled?: boolean;
+  type: 'month' | 'year';
   icon?: boolean;
   testID: string;
 }) {
   return (
-    <View style={[styles.selectWrap, {width}]}>
+    <View style={[styles.selectWrap, type === 'month' ? styles.monthSelectWrap : styles.yearSelectWrap]}>
       <Pressable
         accessibilityLabel={`Pilih ${testID === 'calendar-month-select' ? 'bulan' : 'tahun'}, saat ini ${label}`}
         accessibilityRole="button"
-        accessibilityState={{expanded: open}}
+        accessibilityState={{disabled, expanded: open}}
+        disabled={disabled}
         onPress={onOpen}
         style={[styles.selectField, open && styles.selectFieldOpen]}
         testID={testID}
@@ -100,6 +103,9 @@ export function InterviewCalendarCard({
   onSelectDate: (date: string | null) => void;
   today?: Date;
 }) {
+  const [transitioning, setTransitioning] = useState(false);
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cells = useMemo(() => buildCalendarCells(visibleYear, visibleMonth), [visibleMonth, visibleYear]);
   const eventDates = useMemo(() => interviewDateSet(interviews), [interviews]);
   const eventCounts = useMemo(() => interviews.reduce<Record<string, number>>((result, interview) => {
@@ -110,7 +116,31 @@ export function InterviewCalendarCard({
   const years = useMemo(() => calendarYearOptions(interviews, today), [interviews, today]);
   const todayKey = localDateKey(today);
 
+  useEffect(() => () => {
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    if (finishTimer.current) clearTimeout(finishTimer.current);
+  }, []);
+
+  const selectDate = (cell: ReturnType<typeof buildCalendarCells>[number]) => {
+    if (transitioning) return;
+    onChangeOpenDropdown(null);
+
+    if (cell.inCurrentMonth) {
+      onSelectDate(selectedDate === cell.key ? null : cell.key);
+      return;
+    }
+
+    setTransitioning(true);
+    transitionTimer.current = setTimeout(() => {
+      onChangeMonth(cell.date.getMonth());
+      onChangeYear(cell.date.getFullYear());
+      onSelectDate(cell.key);
+      finishTimer.current = setTimeout(() => setTransitioning(false), 120);
+    }, 180);
+  };
+
   const selectToday = () => {
+    if (transitioning) return;
     onChangeMonth(today.getMonth());
     onChangeYear(today.getFullYear());
     onChangeOpenDropdown(null);
@@ -118,15 +148,12 @@ export function InterviewCalendarCard({
   };
 
   return (
-    <View style={styles.card} testID="interview-calendar-card">
+    <View style={[styles.card, compact && styles.cardCompact]} testID="interview-calendar-card">
       {openDropdown ? <Pressable accessibilityLabel="Tutup pilihan kalender" onPress={() => onChangeOpenDropdown(null)} style={styles.dismissLayer} /> : null}
-      <View style={[styles.calendarHeader, compact && styles.calendarHeaderCompact]}>
-        <View style={styles.calendarTitleRow}>
-          <Ionicons name="calendar-outline" size={21} color="#111827" />
-          <Text style={styles.calendarTitle}>Kalender</Text>
-        </View>
+      <View style={styles.calendarHeader}>
         <View style={styles.filters}>
           <CalendarSelect
+            disabled={transitioning}
             icon
             label={CALENDAR_MONTHS[visibleMonth]}
             onOpen={() => onChangeOpenDropdown(openDropdown === 'month' ? null : 'month')}
@@ -137,9 +164,10 @@ export function InterviewCalendarCard({
             open={openDropdown === 'month'}
             options={CALENDAR_MONTHS.map((label, value) => ({label, value}))}
             testID="calendar-month-select"
-            width={compact ? 142 : 150}
+            type="month"
           />
           <CalendarSelect
+            disabled={transitioning}
             label={String(visibleYear)}
             onOpen={() => onChangeOpenDropdown(openDropdown === 'year' ? null : 'year')}
             onSelect={value => {
@@ -149,45 +177,51 @@ export function InterviewCalendarCard({
             open={openDropdown === 'year'}
             options={years.map(value => ({label: String(value), value}))}
             testID="calendar-year-select"
-            width={compact ? 92 : 96}
+            type="year"
           />
         </View>
       </View>
 
-      <View style={styles.weekdays}>
-        {CALENDAR_WEEKDAYS.map(day => <Text key={day} style={styles.weekday}>{day}</Text>)}
-      </View>
-      <View style={styles.grid}>
-        {cells.map(cell => {
-          const selected = selectedDate === cell.key;
-          const isToday = todayKey === cell.key;
-          const eventCount = eventCounts[cell.key] ?? 0;
-          return (
-            <View key={cell.key} style={styles.cellSlot}>
-              <Pressable
-                accessibilityLabel={`${cell.date.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}${eventCount ? `, ${eventCount} interview` : ''}${isToday ? ', hari ini' : ''}`}
-                accessibilityRole="button"
-                accessibilityState={{disabled: !cell.inCurrentMonth, selected}}
-                disabled={!cell.inCurrentMonth}
-                onPress={() => {
-                  onChangeOpenDropdown(null);
-                  onSelectDate(selected ? null : cell.key);
-                }}
-                style={[styles.dayButton, selected && styles.dayButtonSelected, isToday && !selected && styles.dayButtonToday]}
-                testID={`calendar-day-${cell.key}`}
-              >
-                <Text style={[styles.dayText, !cell.inCurrentMonth && styles.dayTextMuted, selected && styles.dayTextSelected]}>{cell.day}</Text>
-                <View style={[styles.dotSlot, eventDates.has(cell.key) && styles.eventDot, selected && eventDates.has(cell.key) && styles.eventDotSelected]} />
-              </Pressable>
-            </View>
-          );
-        })}
-      </View>
+      <View style={styles.calendarBody}>
+        <View pointerEvents={transitioning ? 'none' : 'auto'} style={[styles.calendarDates, transitioning && styles.calendarDatesLoading]} testID="calendar-date-grid">
+          <View style={styles.weekdays}>
+            {CALENDAR_WEEKDAYS.map(day => <Text key={day} style={styles.weekday}>{day}</Text>)}
+          </View>
+          <View style={styles.grid}>
+            {cells.map(cell => {
+              const selected = selectedDate === cell.key;
+              const isToday = todayKey === cell.key;
+              const eventCount = eventCounts[cell.key] ?? 0;
+              const adjacentLabel = cell.inCurrentMonth ? '' : cell.date < new Date(visibleYear, visibleMonth, 1) ? ', bulan sebelumnya' : ', bulan berikutnya';
+              return (
+                <View key={cell.key} style={styles.cellSlot}>
+                  <Pressable
+                    accessibilityLabel={`${cell.date.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}${eventCount ? `, ${eventCount} interview` : ''}${isToday ? ', hari ini' : ''}${adjacentLabel}`}
+                    accessibilityRole="button"
+                    accessibilityState={{selected}}
+                    onPress={() => selectDate(cell)}
+                    style={[styles.dayButton, selected && styles.dayButtonSelected, isToday && !selected && styles.dayButtonToday]}
+                    testID={`calendar-day-${cell.key}`}
+                  >
+                    <Text style={[styles.dayText, !cell.inCurrentMonth && styles.dayTextMuted, selected && styles.dayTextSelected]}>{cell.day}</Text>
+                    <View style={[styles.dotSlot, eventDates.has(cell.key) && styles.eventDot, selected && eventDates.has(cell.key) && styles.eventDotSelected]} />
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
 
-      <View style={styles.calendarFooter}>
-        <Pressable accessibilityRole="button" onPress={selectToday} style={styles.todayButton}>
-          <Text style={styles.todayText}>Hari ini</Text>
-        </Pressable>
+          <View style={styles.calendarFooter}>
+            <Pressable accessibilityRole="button" disabled={transitioning} onPress={selectToday} style={styles.todayButton}>
+              <Text style={styles.todayText}>Hari ini</Text>
+            </Pressable>
+          </View>
+        </View>
+        {transitioning ? (
+          <View accessibilityLabel="Memuat kalender bulan tujuan" accessibilityLiveRegion="polite" style={styles.loadingOverlay} testID="calendar-transition-loading">
+            <ActivityIndicator color="#0051FD" size="small" />
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -203,13 +237,13 @@ const shadow = {
 
 const styles = StyleSheet.create({
   card: {...shadow, position: 'relative', overflow: 'visible', borderWidth: 1, borderColor: '#DCE3EE', borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10, zIndex: 5},
-  dismissLayer: {position: 'absolute', zIndex: 10, top: 66, right: 0, bottom: 0, left: 0},
-  calendarHeader: {zIndex: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14},
-  calendarHeaderCompact: {alignItems: 'flex-start', flexDirection: 'column'},
-  calendarTitleRow: {minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8},
-  calendarTitle: {fontFamily: F.bold, fontSize: 17, lineHeight: 22, color: '#111827'},
-  filters: {flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-end'},
+  cardCompact: {paddingHorizontal: 14},
+  dismissLayer: {position: 'absolute', zIndex: 10, top: 62, right: 0, bottom: 0, left: 0},
+  calendarHeader: {zIndex: 20, width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 14},
+  filters: {width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8},
   selectWrap: {position: 'relative', zIndex: 30},
+  monthSelectWrap: {flex: 1, minWidth: 0, maxWidth: 180},
+  yearSelectWrap: {width: 92, flexShrink: 0, marginLeft: 'auto'},
   selectField: {height: 44, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#D6DDE8', borderRadius: 11, backgroundColor: '#FFFFFF', paddingHorizontal: 10},
   selectFieldOpen: {borderColor: '#0051FD', borderWidth: 1.5},
   selectLabel: {flex: 1, minWidth: 0, fontFamily: F.medium, fontSize: 11, color: '#111827'},
@@ -218,6 +252,10 @@ const styles = StyleSheet.create({
   dropdownOptionPressed: {backgroundColor: '#EEF5FF'},
   dropdownOptionText: {fontFamily: F.medium, fontSize: 10.5, color: '#344054'},
   dropdownOptionTextActive: {fontFamily: F.semibold, color: '#0051FD'},
+  calendarBody: {position: 'relative'},
+  calendarDates: {opacity: 1},
+  calendarDatesLoading: {opacity: 0.35},
+  loadingOverlay: {position: 'absolute', zIndex: 8, top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center'},
   weekdays: {flexDirection: 'row'},
   weekday: {width: '14.2857%', fontFamily: F.medium, fontSize: 10, color: '#7B8494', textAlign: 'center'},
   grid: {flexDirection: 'row', flexWrap: 'wrap', marginTop: 7},

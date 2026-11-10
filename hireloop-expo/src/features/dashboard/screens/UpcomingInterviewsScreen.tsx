@@ -61,11 +61,8 @@ function CalendarSkeleton() {
     <ShimmerGroup>
       <View accessibilityLabel="Memuat kalender interview" accessibilityRole="progressbar" style={styles.calendarSkeleton} testID="interview-calendar-skeleton">
         <View style={styles.calendarSkeletonHeader}>
-          <ShimmerBlock height={20} width={94} />
-          <View style={styles.calendarSkeletonFilters}>
-            <ShimmerBlock height={44} width={132} />
-            <ShimmerBlock height={44} width={84} />
-          </View>
+          <ShimmerBlock height={44} width={150} />
+          <ShimmerBlock height={44} width={92} />
         </View>
         <ShimmerBlock height={246} width="100%" />
       </View>
@@ -79,14 +76,14 @@ function InterviewSkeleton() {
       <View accessible accessibilityLabel="Memuat jadwal interview" accessibilityRole="progressbar" style={styles.skeletonList} testID="interviews-list-skeleton">
         {[0, 1, 2].map(item => (
           <View key={item} style={styles.skeletonCard}>
-            <ShimmerBlock borderRadius={12} height={152} width={78} />
+            <ShimmerBlock borderRadius={11} height={130} width={68} />
             <View style={styles.skeletonBody}>
               <ShimmerBlock height={15} width="75%" />
               <ShimmerBlock height={10} width="55%" />
               <ShimmerBlock height={11} width="65%" />
               <View style={styles.skeletonButtons}>
-                <ShimmerBlock height={44} width="58%" />
-                <ShimmerBlock height={44} width="36%" />
+                <ShimmerBlock height={38} width="58%" />
+                <ShimmerBlock height={38} width="36%" />
               </View>
             </View>
           </View>
@@ -274,10 +271,9 @@ const styles = StyleSheet.create({
   clearButton: {minHeight: 38, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
   clearText: {fontFamily: F.semibold, fontSize: 9.5, color: '#075DB8'},
   calendarSkeleton: {...shadow, minHeight: 344, borderRadius: 20, backgroundColor: '#FFFFFF', padding: 16},
-  calendarSkeletonHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14},
-  calendarSkeletonFilters: {flexDirection: 'row', gap: 8},
+  calendarSkeletonHeader: {width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 14},
   skeletonList: {gap: 14},
-  skeletonCard: {minHeight: 174, flexDirection: 'row', borderRadius: 18, backgroundColor: '#FFFFFF', padding: 11},
+  skeletonCard: {minHeight: 150, flexDirection: 'row', borderRadius: 17, backgroundColor: '#FFFFFF', padding: 9},
   skeletonBody: {flex: 1, gap: 9, paddingLeft: 12, paddingVertical: 3},
   skeletonButtons: {flexDirection: 'row', justifyContent: 'space-between', gap: 7, marginTop: 'auto'},
   stateCard: {...shadow, flex: 1, minHeight: 300, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: '#FFFFFF', padding: 28, marginBottom: 18},

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
-import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {
   interviewClock,
@@ -84,24 +84,18 @@ export function InterviewScheduleCard({
             <Text numberOfLines={2} style={[styles.position, compact && styles.positionCompact]}>{interviewPosition(interview)}</Text>
             <Text numberOfLines={1} style={styles.company}>{interviewCompany(interview)}</Text>
             <View style={styles.modeRow}>
-              <Ionicons name={online ? 'videocam-outline' : 'location-outline'} size={15} color="#0876E8" />
+              <Ionicons name={online ? 'videocam-outline' : 'location-outline'} size={14} color="#0876E8" />
               <Text numberOfLines={1} style={styles.modeText}>{modeText}</Text>
             </View>
             {stage ? <View style={styles.stageBadge}><Text numberOfLines={1} style={styles.stageText}>{stage}</Text></View> : null}
           </View>
-          <Image
-            accessibilityIgnoresInvertColors
-            accessible={false}
-            resizeMode="contain"
-            source={require('../../../assets/interview.png')}
-            style={[styles.illustration, compact && styles.illustrationCompact]}
-          />
         </View>
         <View style={styles.actions}>
           {canJoin ? (
             <Pressable
               accessibilityLabel={`Gabung interview ${interviewPosition(interview)}`}
               accessibilityRole="button"
+              hitSlop={3}
               onPress={onJoin}
               style={({pressed}) => [styles.joinButton, pressed && styles.pressed]}
             >
@@ -111,6 +105,7 @@ export function InterviewScheduleCard({
           <Pressable
             accessibilityLabel={`${online ? 'Lihat detail' : 'Lihat detail lokasi'} ${interviewPosition(interview)}`}
             accessibilityRole="button"
+            hitSlop={3}
             onPress={onDetail}
             style={({pressed}) => [styles.detailButton, !canJoin && styles.detailButtonFull, pressed && styles.pressed]}
           >
@@ -131,34 +126,32 @@ const shadow = {
 };
 
 const styles = StyleSheet.create({
-  card: {...shadow, minHeight: 174, flexDirection: 'row', gap: 11, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E7EF', borderRadius: 18, backgroundColor: '#FFFFFF', padding: 11},
-  cardCompact: {minHeight: 164, gap: 8, padding: 9},
-  dateBlock: {width: 78, minHeight: 152, overflow: 'hidden', borderRadius: 12, flexShrink: 0},
-  dateBlockCompact: {width: 70, minHeight: 146},
-  dateMain: {flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0643AA', paddingHorizontal: 4, paddingVertical: 7},
-  dateDay: {fontFamily: F.bold, fontSize: 29, lineHeight: 33, color: '#FFFFFF'},
-  dateDayCompact: {fontSize: 25, lineHeight: 29},
-  dateMonth: {fontFamily: F.medium, fontSize: 13.5, color: '#FFFFFF'},
-  dateRelative: {fontFamily: F.medium, fontSize: 8, color: 'rgba(255,255,255,0.92)', marginTop: 5},
-  dateTimeFooter: {minHeight: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D9E8FF', paddingHorizontal: 3, paddingVertical: 4},
-  dateTime: {fontFamily: F.semibold, fontSize: 8, lineHeight: 11, color: '#071C4D', textAlign: 'center'},
+  card: {...shadow, minHeight: 150, flexDirection: 'row', gap: 9, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E7EF', borderRadius: 17, backgroundColor: '#FFFFFF', padding: 9},
+  cardCompact: {minHeight: 144, gap: 7, padding: 8},
+  dateBlock: {width: 68, minHeight: 130, overflow: 'hidden', borderRadius: 11, flexShrink: 0},
+  dateBlockCompact: {width: 62, minHeight: 126},
+  dateMain: {flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0643AA', paddingHorizontal: 3, paddingVertical: 5},
+  dateDay: {fontFamily: F.bold, fontSize: 25, lineHeight: 28, color: '#FFFFFF'},
+  dateDayCompact: {fontSize: 22, lineHeight: 25},
+  dateMonth: {fontFamily: F.medium, fontSize: 12, color: '#FFFFFF'},
+  dateRelative: {fontFamily: F.medium, fontSize: 7.5, color: 'rgba(255,255,255,0.92)', marginTop: 4},
+  dateTimeFooter: {minHeight: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D9E8FF', paddingHorizontal: 3, paddingVertical: 3},
+  dateTime: {fontFamily: F.semibold, fontSize: 7.5, lineHeight: 10, color: '#071C4D', textAlign: 'center'},
   content: {flex: 1, minWidth: 0},
-  infoRow: {flex: 1, minHeight: 94, flexDirection: 'row', alignItems: 'center'},
+  infoRow: {flex: 1, minHeight: 78},
   copy: {flex: 1, minWidth: 0, alignSelf: 'stretch'},
-  position: {fontFamily: F.bold, fontSize: 13.5, lineHeight: 18, color: '#111827'},
-  positionCompact: {fontSize: 12, lineHeight: 16},
-  company: {fontFamily: F.regular, fontSize: 9.5, lineHeight: 13, color: '#667085', marginTop: 2},
-  modeRow: {flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7},
-  modeText: {flex: 1, minWidth: 0, fontFamily: F.medium, fontSize: 9, lineHeight: 13, color: '#344054'},
-  stageBadge: {maxWidth: '100%', alignSelf: 'flex-start', borderRadius: 10, backgroundColor: '#EAF2FF', paddingHorizontal: 8, paddingVertical: 4, marginTop: 7},
-  stageText: {fontFamily: F.semibold, fontSize: 8, color: '#1F63D8'},
-  illustration: {width: 68, height: 63, flexShrink: 0, marginLeft: 4},
-  illustrationCompact: {width: 52, height: 52},
-  actions: {minHeight: 44, flexDirection: 'row', gap: 7, marginTop: 7},
-  joinButton: {flex: 1.5, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#0649B8', paddingHorizontal: 7},
-  joinText: {fontFamily: F.semibold, fontSize: 9.5, color: '#FFFFFF'},
-  detailButton: {flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#EDF3FC', paddingHorizontal: 7},
+  position: {fontFamily: F.bold, fontSize: 12.5, lineHeight: 16, color: '#111827'},
+  positionCompact: {fontSize: 11.5, lineHeight: 15},
+  company: {fontFamily: F.regular, fontSize: 9, lineHeight: 12, color: '#667085', marginTop: 2},
+  modeRow: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5},
+  modeText: {flex: 1, minWidth: 0, fontFamily: F.medium, fontSize: 8.5, lineHeight: 12, color: '#344054'},
+  stageBadge: {maxWidth: '100%', alignSelf: 'flex-start', borderRadius: 9, backgroundColor: '#EAF2FF', paddingHorizontal: 7, paddingVertical: 3, marginTop: 5},
+  stageText: {fontFamily: F.semibold, fontSize: 7.5, color: '#1F63D8'},
+  actions: {minHeight: 38, flexDirection: 'row', gap: 6, marginTop: 6},
+  joinButton: {flex: 1.5, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#0649B8', paddingHorizontal: 6},
+  joinText: {fontFamily: F.semibold, fontSize: 9, color: '#FFFFFF'},
+  detailButton: {flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#EDF3FC', paddingHorizontal: 6},
   detailButtonFull: {flex: 1, backgroundColor: '#F1ECFF'},
-  detailText: {fontFamily: F.semibold, fontSize: 9.5, color: '#0B56B4'},
+  detailText: {fontFamily: F.semibold, fontSize: 9, color: '#0B56B4'},
   pressed: {opacity: 0.82},
 });

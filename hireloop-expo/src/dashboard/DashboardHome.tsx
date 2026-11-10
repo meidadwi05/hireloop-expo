@@ -262,6 +262,8 @@ export function ProfileCompletionCard({completion, containerWidth = 390, onOpenP
           Lengkapi Profilmu
         </Text>
         <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.9}
           numberOfLines={2}
           style={[styles.profileDescription, compact && styles.profileDescriptionCompact]}
         >
@@ -352,9 +354,6 @@ function InterviewContent({compact, dateWidth, interview, onDetail, onJoin}: {
       <View style={[styles.interviewDetail, compact && styles.interviewDetailCompact]}>
         <View style={styles.activityTopline}>
           <Text numberOfLines={1} style={[styles.activityRole, compact && styles.activityRoleCompact]}>{interview.role_taxonomy_name}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Lihat detail interview ${interview.role_taxonomy_name}`} hitSlop={8} onPress={() => onDetail(interview)} style={styles.interviewChevron}>
-            <Ionicons name="chevron-forward" size={20} color={C.brightBlue} />
-          </Pressable>
         </View>
         <Text numberOfLines={1} style={styles.activityCompany}>{interview.company_name ?? 'HireLoop Recruitment'}</Text>
         <View style={styles.activityMode}>
@@ -362,21 +361,12 @@ function InterviewContent({compact, dateWidth, interview, onDetail, onJoin}: {
           <Text numberOfLines={1} style={styles.activityModeText}>{interview.mode === 'online' ? 'Online · Zoom' : interview.location ?? 'Interview Offline'}</Text>
           {interview.mode === 'online' && <View style={styles.zoomBadge}><Text style={styles.zoomBadgeText}>zoom</Text></View>}
         </View>
-        <View style={[styles.interviewIllustrationWrap, compact && styles.interviewIllustrationWrapCompact]}>
-          <Image
-            accessibilityIgnoresInvertColors
-            accessible={false}
-            resizeMode="contain"
-            source={require('../assets/interview.png')}
-            style={styles.interviewIllustration}
-            testID="dashboard-interview-illustration"
-          />
-        </View>
         <View style={[styles.interviewButtons, compact && styles.interviewButtonsCompact]}>
           {interview.mode === 'online' ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Gabung interview ${interview.role_taxonomy_name}`}
+              hitSlop={3}
               onPress={() => onJoin(interview)}
               style={[styles.joinButton, compact && styles.interviewButtonCompact]}
             >
@@ -386,6 +376,7 @@ function InterviewContent({compact, dateWidth, interview, onDetail, onJoin}: {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${interview.mode === 'online' ? 'Lihat detail interview' : 'Lihat detail lokasi interview'} ${interview.role_taxonomy_name}`}
+            hitSlop={3}
             onPress={() => onDetail(interview)}
             style={[
               styles.detailInterviewButton,
@@ -885,40 +876,36 @@ const styles = StyleSheet.create({
   profileButtonCompact: {height: 38, alignSelf: 'stretch', minWidth: 0},
   profileButtonGradient: {flex: 1, width: '100%', paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center'},
   profileButtonText: {fontFamily: F.semibold, fontSize: 11, color: 'white'},
-  profileIllustration: {width: 116, height: 138, flexShrink: 0, alignSelf: 'center'},
-  profileIllustrationCompact: {width: 96, height: 118},
+  profileIllustration: {width: 104, height: 126, flexShrink: 0, alignSelf: 'center'},
+  profileIllustrationCompact: {width: 82, height: 104},
   interviewCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 10, marginTop: 13, overflow: 'hidden'},
   interviewCardCompact: {padding: 8},
-  interviewContent: {flexDirection: 'row', minHeight: 124},
-  dateBlock: {width: 82, minHeight: 124, borderRadius: 12, backgroundColor: '#0643AA', overflow: 'hidden'},
-  datePrimary: {flex: 1, width: '100%', backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, paddingTop: 8, paddingBottom: 6},
-  dateFooter: {width: '100%', minHeight: 30, backgroundColor: '#D9E8FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, paddingVertical: 5},
-  dateDay: {fontFamily: F.bold, fontSize: 27, lineHeight: 30, color: 'white'},
-  dateMonth: {fontFamily: F.regular, fontSize: 14.5, color: 'white'},
-  dateRelative: {fontFamily: F.medium, fontSize: 9, color: 'rgba(255,255,255,0.9)', marginTop: 4},
-  dateTime: {fontFamily: F.medium, fontSize: 9, lineHeight: 12, color: '#061A4D', textAlign: 'center'},
-  interviewDetail: {position: 'relative', flex: 1, minWidth: 0, paddingLeft: 12, paddingVertical: 1},
-  interviewDetailCompact: {paddingLeft: 8},
+  interviewContent: {flexDirection: 'row', minHeight: 112},
+  dateBlock: {width: 72, minHeight: 112, borderRadius: 11, backgroundColor: '#0643AA', overflow: 'hidden'},
+  datePrimary: {flex: 1, width: '100%', backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, paddingTop: 6, paddingBottom: 5},
+  dateFooter: {width: '100%', minHeight: 27, backgroundColor: '#D9E8FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, paddingVertical: 4},
+  dateDay: {fontFamily: F.bold, fontSize: 24, lineHeight: 27, color: 'white'},
+  dateMonth: {fontFamily: F.regular, fontSize: 12.5, color: 'white'},
+  dateRelative: {fontFamily: F.medium, fontSize: 8, color: 'rgba(255,255,255,0.9)', marginTop: 3},
+  dateTime: {fontFamily: F.medium, fontSize: 8, lineHeight: 11, color: '#061A4D', textAlign: 'center'},
+  interviewDetail: {position: 'relative', flex: 1, minWidth: 0, paddingLeft: 10},
+  interviewDetailCompact: {paddingLeft: 7},
   activityTopline: {flexDirection: 'row', alignItems: 'center'},
-  activityRole: {fontFamily: F.bold, fontSize: 16, color: C.ink, flex: 1},
-  activityRoleCompact: {fontSize: 14, lineHeight: 18},
-  interviewChevron: {width: 28, height: 28, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
-  activityCompany: {fontFamily: F.regular, fontSize: 9.5, color: C.muted, marginTop: 1, paddingRight: 60},
-  activityMode: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, paddingRight: 60},
-  activityModeText: {fontFamily: F.medium, fontSize: 10.5, color: '#454B57', flexShrink: 1},
+  activityRole: {fontFamily: F.bold, fontSize: 14, lineHeight: 18, color: C.ink, flex: 1},
+  activityRoleCompact: {fontSize: 12.5, lineHeight: 16},
+  activityCompany: {fontFamily: F.regular, fontSize: 9, color: C.muted, marginTop: 1},
+  activityMode: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5},
+  activityModeText: {fontFamily: F.medium, fontSize: 9.5, color: '#454B57', flexShrink: 1},
   zoomBadge: {backgroundColor: '#2D68FF', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 2},
   zoomBadgeText: {fontFamily: F.bold, fontSize: 6.5, color: 'white'},
-  interviewIllustrationWrap: {position: 'absolute', top: 29, right: 0, width: 56, height: 51},
-  interviewIllustrationWrapCompact: {top: 31, width: 48, height: 44},
-  interviewIllustration: {width: '100%', height: '100%'},
-  interviewButtons: {flexDirection: 'row', gap: 7, marginTop: 'auto', paddingTop: 7},
+  interviewButtons: {flexDirection: 'row', gap: 6, marginTop: 'auto', paddingTop: 6},
   interviewButtonsCompact: {flexDirection: 'row', gap: 6},
-  interviewButtonCompact: {minHeight: 44},
-  joinButton: {flex: 1.5, minHeight: 44, borderRadius: 9, backgroundColor: '#0345AE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
-  joinButtonText: {fontFamily: F.semibold, fontSize: 9.5, color: 'white'},
-  detailInterviewButton: {flex: 1, minHeight: 44, borderRadius: 9, backgroundColor: '#EEF3FC', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
+  interviewButtonCompact: {minHeight: 38},
+  joinButton: {flex: 1.5, minHeight: 38, borderRadius: 8, backgroundColor: '#0345AE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6},
+  joinButtonText: {fontFamily: F.semibold, fontSize: 9, color: 'white'},
+  detailInterviewButton: {flex: 1, minHeight: 38, borderRadius: 8, backgroundColor: '#EEF3FC', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6},
   detailLocationButton: {flex: 1, backgroundColor: '#F1ECFF'},
-  detailInterviewText: {fontFamily: F.semibold, fontSize: 9.5, color: C.blue},
+  detailInterviewText: {fontFamily: F.semibold, fontSize: 9, color: C.blue},
   emptyActivity: {minHeight: 130, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 25},
   emptyTitle: {fontFamily: F.semibold, fontSize: 13, color: C.ink, marginTop: 9, textAlign: 'center'},
   emptyText: {fontFamily: F.regular, fontSize: 10.5, lineHeight: 16, color: C.muted, marginTop: 4, textAlign: 'center'},

@@ -55,13 +55,13 @@ describe('dashboard sections', () => {
     expect(screen.getByText('OKT')).toBeTruthy();
     expect(screen.getByText('10:00 WIB')).toBeTruthy();
     expect(StyleSheet.flatten(screen.getByTestId('interview-date-block').props.style)).toMatchObject({
-      borderRadius: 12,
+      borderRadius: 11,
       overflow: 'hidden',
-      width: 82,
+      width: 72,
     });
     expect(StyleSheet.flatten(screen.getByTestId('interview-date-primary').props.style).backgroundColor).toBe('#0643AA');
     expect(StyleSheet.flatten(screen.getByTestId('interview-date-footer').props.style).backgroundColor).toBe('#D9E8FF');
-    expect(screen.getByTestId('dashboard-interview-illustration').props.source).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-interview-illustration')).toBeNull();
     expect(screen.queryByText('Progress Lamaran')).toBeNull();
     expect(screen.queryByText('Pengumuman')).toBeNull();
 
@@ -126,7 +126,7 @@ describe('dashboard sections', () => {
     expect(screen.getByText('Jadwal Anda')).toBeTruthy();
     expect(screen.getByText('Admin utama')).toBeTruthy();
     expect(screen.getByText('ALAMAT INTERVIEW')).toBeTruthy();
-    expect(screen.getByText('asd - asd asd st')).toBeTruthy();
+    expect(screen.getAllByText('asd - asd asd st')).toHaveLength(2);
     expect(screen.getByText('Buka Maps')).toBeTruthy();
   });
 
@@ -186,8 +186,8 @@ describe('dashboard sections', () => {
       padding: 14,
     });
     expect(StyleSheet.flatten(screen.getByTestId('profile-completion-illustration').props.style)).toMatchObject({
-      width: 96,
-      height: 118,
+      width: 82,
+      height: 104,
     });
     expect(screen.getByText('Lengkapi Profilmu').props.numberOfLines).toBe(1);
     expect(screen.getByText(/Lengkapi data dan pengalaman/).props.numberOfLines).toBe(2);
