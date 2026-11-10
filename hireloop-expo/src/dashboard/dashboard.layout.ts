@@ -95,7 +95,7 @@ export function getDashboardResponsiveLayout(viewportWidth: number) {
     compact,
     contentPadding,
     contentWidth,
-    interviewDateWidth: compact ? 76 : 92,
+    interviewDateWidth: compact ? 72 : 82,
     jobCardWidth: Math.round(clamp(contentWidth * jobWidthRatio, 248, 370)),
     pageWidth,
     phone,

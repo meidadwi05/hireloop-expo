@@ -1,4 +1,5 @@
-import {fireEvent, render} from '@testing-library/react-native';
+import {fireEvent, render, waitFor} from '@testing-library/react-native';
+import * as Linking from 'expo-linking';
 import React from 'react';
 import {processColor, StyleSheet} from 'react-native';
 
@@ -12,11 +13,20 @@ import {
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
+jest.mock('expo-linking', () => ({
+  canOpenURL: jest.fn(async () => true),
+  openURL: jest.fn(async () => undefined),
+}));
+
 jest.mock('../../features/dashboard/hooks/use-dashboard-home', () => ({
   useDashboardHome: jest.fn(),
 }));
 
 describe('dashboard sections', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('menampilkan card interview terdekat tanpa tab aktivitas lama', () => {
     const screen = render(
       <NearestInterviewCard
@@ -47,12 +57,77 @@ describe('dashboard sections', () => {
     expect(StyleSheet.flatten(screen.getByTestId('interview-date-block').props.style)).toMatchObject({
       borderRadius: 12,
       overflow: 'hidden',
-      width: 92,
+      width: 82,
     });
     expect(StyleSheet.flatten(screen.getByTestId('interview-date-primary').props.style).backgroundColor).toBe('#0643AA');
     expect(StyleSheet.flatten(screen.getByTestId('interview-date-footer').props.style).backgroundColor).toBe('#D9E8FF');
+    expect(screen.getByTestId('dashboard-interview-illustration').props.source).toBeTruthy();
     expect(screen.queryByText('Progress Lamaran')).toBeNull();
     expect(screen.queryByText('Pengumuman')).toBeNull();
+
+    fireEvent.press(screen.getByText('Detail'));
+
+    expect(screen.getByTestId('interview-detail-modal')).toBeTruthy();
+    expect(screen.getByText('Jadwal Interview')).toBeTruthy();
+  });
+
+  it('membuka tautan interview langsung dari tombol gabung', async () => {
+    const screen = render(
+      <NearestInterviewCard
+        interviews={[{
+          id: 7,
+          date: '2026-10-27',
+          agenda: 'Interview tahap awal',
+          time: '10:00',
+          mode: 'online',
+          location: null,
+          meeting_link: 'https://example.test/meeting',
+          role_taxonomy_name: 'Product Designer',
+          candidate_name: 'Zaki',
+          company_name: 'Tech Solutions Indonesia',
+        }]}
+      />,
+    );
+
+    fireEvent.press(screen.getByText('Gabung Interview'));
+
+    await waitFor(() => {
+      expect(Linking.canOpenURL).toHaveBeenCalledWith('https://example.test/meeting');
+      expect(Linking.openURL).toHaveBeenCalledWith('https://example.test/meeting');
+    });
+  });
+
+  it('menyembunyikan tombol gabung dan menampilkan detail lokasi untuk interview offline', () => {
+    const screen = render(
+      <NearestInterviewCard
+        interviews={[{
+          id: 8,
+          date: '2026-12-08',
+          agenda: 'sesi 1',
+          time: '14:09',
+          mode: 'offline',
+          location: 'asd - asd asd st',
+          meeting_link: null,
+          address_maps_url: 'https://maps.google.com/?q=asd',
+          role_taxonomy_name: 'Lowongan Operator Produksi',
+          candidate_name: 'Zaki',
+          company_name: 'HireLoop Recruitment',
+          pic_name: 'Admin utama',
+        }]}
+      />,
+    );
+
+    expect(screen.queryByText('Gabung Interview')).toBeNull();
+    expect(screen.getByText('Detail Lokasi')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Detail Lokasi'));
+
+    expect(screen.getByText('sesi 1')).toBeTruthy();
+    expect(screen.getByText('Jadwal Anda')).toBeTruthy();
+    expect(screen.getByText('Admin utama')).toBeTruthy();
+    expect(screen.getByText('ALAMAT INTERVIEW')).toBeTruthy();
+    expect(screen.getByText('asd - asd asd st')).toBeTruthy();
+    expect(screen.getByText('Buka Maps')).toBeTruthy();
   });
 
   it('menampilkan empty state saat jadwal interview belum tersedia', () => {
@@ -89,6 +164,8 @@ describe('dashboard sections', () => {
     const screen = render(<ProfileCompletionCard completion={75} onOpenProfile={onOpenProfile} />);
 
     expect(screen.getByText('Lengkapi Profilmu')).toBeTruthy();
+    expect(screen.getByText('Lengkapi Profilmu').props.numberOfLines).toBe(1);
+    expect(screen.getByText(/Lengkapi data dan pengalaman/).props.numberOfLines).toBe(2);
     expect(screen.getByText('75%')).toBeTruthy();
     expect(screen.getByText('Lengkapi sekarang')).toBeTruthy();
     expect(screen.getByTestId('profile-completion-illustration').props.source).toBeTruthy();
@@ -98,6 +175,22 @@ describe('dashboard sections', () => {
     ]);
     fireEvent.press(screen.getByText('Lengkapi sekarang'));
     expect(onOpenProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('menjaga card kelengkapan profil tetap horizontal dan compact pada Android sempit', () => {
+    const screen = render(<ProfileCompletionCard completion={90} containerWidth={320} />);
+
+    expect(StyleSheet.flatten(screen.getByTestId('profile-completion-card').props.style)).toMatchObject({
+      flexDirection: 'row',
+      minHeight: 164,
+      padding: 14,
+    });
+    expect(StyleSheet.flatten(screen.getByTestId('profile-completion-illustration').props.style)).toMatchObject({
+      width: 96,
+      height: 118,
+    });
+    expect(screen.getByText('Lengkapi Profilmu').props.numberOfLines).toBe(1);
+    expect(screen.getByText(/Lengkapi data dan pengalaman/).props.numberOfLines).toBe(2);
   });
 
   it('menampilkan lamaran terbaru dinamis lengkap dengan perusahaan, tanggal, dan status backend', () => {

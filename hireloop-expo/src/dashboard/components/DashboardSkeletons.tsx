@@ -38,14 +38,14 @@ export function InterviewCardSkeleton({compact, dateWidth}: {compact: boolean; d
     <View accessible accessibilityLabel="Memuat interview terdekat" accessibilityRole="progressbar" testID="dashboard-interview-shimmer">
       <SkeletonSectionHeader title="Interview Terdekat" />
       <View style={[styles.interviewCard, compact && styles.cardCompact]}>
-        <ShimmerBlock borderRadius={12} height={150} width={dateWidth} />
+        <ShimmerBlock borderRadius={12} height={124} width={dateWidth} />
         <View style={styles.interviewCopy}>
           <ShimmerBlock height={18} width="84%" />
           <ShimmerBlock height={11} width="68%" />
           <ShimmerBlock height={13} width="60%" />
           <View style={[styles.interviewActions, compact && styles.interviewActionsCompact]}>
-            <ShimmerBlock height={38} width={compact ? '100%' : '58%'} />
-            <ShimmerBlock height={38} width={compact ? '100%' : '36%'} />
+            <ShimmerBlock height={40} width={compact ? '58%' : '58%'} />
+            <ShimmerBlock height={40} width={compact ? '36%' : '36%'} />
           </View>
         </View>
       </View>
@@ -118,11 +118,11 @@ const styles = StyleSheet.create({
   summaryGrid: {zIndex: 3, elevation: 6, flexDirection: 'row', flexWrap: 'wrap'},
   summaryCard: {...cardShadow, flexBasis: '47%', flexGrow: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: 16, backgroundColor: 'white', paddingVertical: 13},
   summaryCopy: {flex: 1, minWidth: 0, gap: 6},
-  interviewCard: {...cardShadow, minHeight: 178, flexDirection: 'row', gap: 14, borderRadius: 18, backgroundColor: 'white', padding: 14, marginTop: 13},
+  interviewCard: {...cardShadow, minHeight: 144, flexDirection: 'row', gap: 14, borderRadius: 18, backgroundColor: 'white', padding: 10, marginTop: 13},
   cardCompact: {gap: 10, padding: 10},
   interviewCopy: {flex: 1, minWidth: 0, gap: 10, paddingVertical: 4},
   interviewActions: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 'auto'},
-  interviewActionsCompact: {flexDirection: 'column', alignItems: 'stretch'},
+  interviewActionsCompact: {flexDirection: 'row', alignItems: 'center'},
   recentCard: {...cardShadow, borderRadius: 18, backgroundColor: 'white', paddingHorizontal: 16, marginTop: 14},
   recentRow: {minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 12},
   divider: {borderBottomWidth: 1, borderBottomColor: '#EAEDF3'},

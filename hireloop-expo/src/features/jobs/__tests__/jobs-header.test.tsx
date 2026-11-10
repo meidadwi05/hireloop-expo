@@ -18,7 +18,7 @@ jest.mock('@expo/vector-icons/Ionicons', () => {
 });
 
 describe('JobsHeader', () => {
-  it('keeps the complete artwork explicitly anchored inside the blue header', () => {
+  it('uses the shorter artwork without adding excess space below the title', () => {
     const screen = render(
       <JobsHeader
         containerWidth={390}
@@ -35,12 +35,12 @@ describe('JobsHeader', () => {
 
     expect(artwork.props.resizeMode).toBe('contain');
     expect(headerStyle.backgroundColor).toBe('#00419E');
-    expect(headerStyle.height).toBeCloseTo(128, 1);
+    expect(headerStyle.height).toBeCloseTo(390 / (1983 / 515), 1);
     expect(contentStyle.paddingHorizontal).toBe(20);
     expect(artworkStyle.top).toBe(0);
-    expect(artworkStyle.left).toBe(70);
-    expect(artworkStyle.width).toBe(320);
-    expect(artworkStyle.height).toBeLessThanOrEqual(129);
+    expect(artworkStyle.left).toBe(0);
+    expect(artworkStyle.width).toBe(390);
+    expect(artworkStyle.height).toBeCloseTo(headerStyle.height, 5);
     expect(screen.queryByLabelText('Lowongan tersimpan')).toBeNull();
     expect(screen.queryByLabelText('Cari posisi, perusahaan, atau lokasi')).toBeNull();
   });

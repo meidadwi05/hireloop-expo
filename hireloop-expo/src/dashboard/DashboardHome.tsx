@@ -21,8 +21,10 @@ import type {CandidateUser} from '../features/auth/auth.types';
 import {isCandidateTier2Banned} from '../features/auth/candidate-apply-access';
 import type {CandidateApplication} from '../features/applications/applications.types';
 import {applicationStatePresentation, formatApplicationDate} from '../features/applications/components/applications.ui';
+import {InterviewDetailModal} from '../features/dashboard/components/InterviewDetailModal';
 import type {DashboardInterview} from '../features/dashboard/dashboard.types';
 import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
+import {openInterviewDestination} from '../features/dashboard/interview-linking';
 import {useSavedJobs} from '../features/jobs/saved-jobs-provider';
 import type {JobCardModel} from '../features/jobs/jobs.types';
 import {CandidateEvaluationNotice} from './components/CandidateEvaluationNotice';
@@ -244,15 +246,27 @@ export function SummaryCard({applications, interviewsCount, savedCount, viewport
 }
 
 export function ProfileCompletionCard({completion, containerWidth = 390, onOpenProfile}: {completion: number; containerWidth?: number; onOpenProfile?: () => void}) {
-  const compact = containerWidth < 360;
+  const compact = containerWidth < 380;
 
   if (completion >= 100) return null;
 
   return (
-    <View style={[styles.profileCard, compact && styles.profileCardCompact]}>
+    <View style={[styles.profileCard, compact && styles.profileCardCompact]} testID="profile-completion-card">
       <View style={styles.profileCopy}>
-        <Text style={[styles.profileTitle, compact && styles.profileTitleCompact]}>Lengkapi Profilmu</Text>
-        <Text style={[styles.profileDescription, compact && styles.profileDescriptionCompact]}>Lengkapi data dan pengalaman kerjamu{`\n`}untuk meningkatkan peluang dipanggil interview!</Text>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.88}
+          numberOfLines={1}
+          style={[styles.profileTitle, compact && styles.profileTitleCompact]}
+        >
+          Lengkapi Profilmu
+        </Text>
+        <Text
+          numberOfLines={2}
+          style={[styles.profileDescription, compact && styles.profileDescriptionCompact]}
+        >
+          Lengkapi data dan pengalaman kerjamu untuk meningkatkan peluang dipanggil interview!
+        </Text>
         <View style={styles.progressHeader}>
           <View />
           <Text style={styles.progressValue}>{completion}%</Text>
@@ -302,7 +316,13 @@ function getRelativeDayLabel(value: string) {
   return difference > 1 ? `${difference} hari lagi` : 'Terlewat';
 }
 
-function InterviewContent({compact, dateWidth, interview}: {compact: boolean; dateWidth: number; interview?: DashboardInterview}) {
+function InterviewContent({compact, dateWidth, interview, onDetail, onJoin}: {
+  compact: boolean;
+  dateWidth: number;
+  interview?: DashboardInterview;
+  onDetail: (interview: DashboardInterview) => void;
+  onJoin: (interview: DashboardInterview) => void;
+}) {
   if (!interview) {
     return (
       <View style={styles.emptyActivity}>
@@ -332,28 +352,48 @@ function InterviewContent({compact, dateWidth, interview}: {compact: boolean; da
       <View style={[styles.interviewDetail, compact && styles.interviewDetailCompact]}>
         <View style={styles.activityTopline}>
           <Text numberOfLines={1} style={[styles.activityRole, compact && styles.activityRoleCompact]}>{interview.role_taxonomy_name}</Text>
-          <Ionicons name="chevron-forward" size={20} color={C.brightBlue} />
+          <Pressable accessibilityRole="button" accessibilityLabel={`Lihat detail interview ${interview.role_taxonomy_name}`} hitSlop={8} onPress={() => onDetail(interview)} style={styles.interviewChevron}>
+            <Ionicons name="chevron-forward" size={20} color={C.brightBlue} />
+          </Pressable>
         </View>
-        <Text numberOfLines={1} style={styles.activityCompany}>{interview.company_name ?? 'HireLoop Recruitment'}  <Ionicons name="checkmark-circle" size={13} color={C.brightBlue} /></Text>
+        <Text numberOfLines={1} style={styles.activityCompany}>{interview.company_name ?? 'HireLoop Recruitment'}</Text>
         <View style={styles.activityMode}>
           <Ionicons name={interview.mode === 'online' ? 'videocam-outline' : 'location-outline'} size={17} color={C.blue} />
           <Text numberOfLines={1} style={styles.activityModeText}>{interview.mode === 'online' ? 'Online · Zoom' : interview.location ?? 'Interview Offline'}</Text>
           {interview.mode === 'online' && <View style={styles.zoomBadge}><Text style={styles.zoomBadgeText}>zoom</Text></View>}
         </View>
+        <View style={[styles.interviewIllustrationWrap, compact && styles.interviewIllustrationWrapCompact]}>
+          <Image
+            accessibilityIgnoresInvertColors
+            accessible={false}
+            resizeMode="contain"
+            source={require('../assets/interview.png')}
+            style={styles.interviewIllustration}
+            testID="dashboard-interview-illustration"
+          />
+        </View>
         <View style={[styles.interviewButtons, compact && styles.interviewButtonsCompact]}>
+          {interview.mode === 'online' ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Gabung interview ${interview.role_taxonomy_name}`}
+              onPress={() => onJoin(interview)}
+              style={[styles.joinButton, compact && styles.interviewButtonCompact]}
+            >
+              <Text style={styles.joinButtonText}>Gabung Interview</Text>
+            </Pressable>
+          ) : null}
           <Pressable
             accessibilityRole="button"
-            onPress={() => Alert.alert('Gabung Interview', interview.meeting_link ?? 'Tautan interview belum tersedia.')}
-            style={[styles.joinButton, compact && styles.interviewButtonCompact]}
+            accessibilityLabel={`${interview.mode === 'online' ? 'Lihat detail interview' : 'Lihat detail lokasi interview'} ${interview.role_taxonomy_name}`}
+            onPress={() => onDetail(interview)}
+            style={[
+              styles.detailInterviewButton,
+              compact && styles.interviewButtonCompact,
+              interview.mode === 'offline' && styles.detailLocationButton,
+            ]}
           >
-            <Text style={styles.joinButtonText}>Gabung Interview</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => Alert.alert(interview.agenda, interview.location ?? 'Detail interview')}
-            style={[styles.detailInterviewButton, compact && styles.interviewButtonCompact]}
-          >
-            <Text style={styles.detailInterviewText}>Detail</Text>
+            <Text style={styles.detailInterviewText}>{interview.mode === 'online' ? 'Detail' : 'Detail Lokasi'}</Text>
           </Pressable>
         </View>
       </View>
@@ -367,12 +407,28 @@ export function NearestInterviewCard({containerWidth = 390, interviews, onOpenAl
   onOpenAll?: () => void;
 }) {
   const responsive = getDashboardResponsiveLayout(containerWidth);
+  const [selectedInterview, setSelectedInterview] = useState<DashboardInterview | null>(null);
+  const joinInterview = async (interview: DashboardInterview) => {
+    try {
+      await openInterviewDestination(interview);
+    } catch (error) {
+      Alert.alert('Tautan Tidak Dapat Dibuka', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+    }
+  };
+
   return (
     <View>
       <SectionHeader compact={responsive.compact} title="Interview Terdekat" onPress={() => onOpenAll?.()} />
       <View style={[styles.interviewCard, responsive.compact && styles.interviewCardCompact]}>
-        <InterviewContent compact={responsive.compact} dateWidth={responsive.interviewDateWidth} interview={interviews[0]} />
+        <InterviewContent
+          compact={responsive.compact}
+          dateWidth={responsive.interviewDateWidth}
+          interview={interviews[0]}
+          onDetail={setSelectedInterview}
+          onJoin={interview => void joinInterview(interview)}
+        />
       </View>
+      <InterviewDetailModal interview={selectedInterview} onClose={() => setSelectedInterview(null)} />
     </View>
   );
 }
@@ -480,6 +536,7 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
   onShare: () => void;
   onToggleSaved: () => void;
 }) {
+  const [shared, setShared] = useState(false);
   const visibleSkills = job.skills.slice(0, 4);
   const hiddenSkillCount = Math.max(0, job.skills.length - visibleSkills.length);
   const workMode = job.workType || 'On Site';
@@ -505,24 +562,30 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={saved ? 'Hapus dari tersimpan' : 'Simpan lowongan'}
+            accessibilityState={{selected: saved}}
             onPress={event => {
               event.stopPropagation();
               onToggleSaved();
             }}
             hitSlop={8}
+            style={({pressed}) => [styles.jobActionIconButton, saved && styles.jobActionIconButtonActive, pressed && styles.jobActionIconButtonPressed]}
+            testID="dashboard-job-bookmark-button"
           >
-            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color="#63728A" />
+            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? C.brightBlue : '#63728A'} testID="dashboard-job-bookmark-icon" />
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Bagikan lowongan"
+            accessibilityLabel={shared ? 'Lowongan telah dibagikan' : 'Bagikan lowongan'}
             onPress={event => {
               event.stopPropagation();
+              setShared(true);
               onShare();
             }}
             hitSlop={8}
+            style={({pressed}) => [styles.jobActionIconButton, shared && styles.jobActionIconButtonActive, pressed && styles.jobActionIconButtonPressed]}
+            testID="dashboard-job-share-button"
           >
-            <Ionicons name="share-social-outline" size={20} color="#63728A" />
+            <Ionicons name={shared ? 'share-social' : 'share-social-outline'} size={20} color={shared ? C.brightBlue : '#63728A'} testID="dashboard-job-share-icon" />
           </Pressable>
         </View>
       </View>
@@ -728,7 +791,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
                 onOpenAll={() => onNavigate?.('/(candidate)/interviews')}
               />}
           {profileLoading
-            ? <View style={[styles.profileCompletionLoading, {height: responsive.compact ? 170 : 190}]} />
+            ? <View style={[styles.profileCompletionLoading, {height: responsive.compact ? 164 : 172}]} />
             : <ProfileCompletionCard completion={profileCompletion} containerWidth={width} onOpenProfile={() => onNavigate?.('/profile')} />}
           <ShortcutGrid containerWidth={width} onNavigate={onNavigate} />
           {applicationsLoading ? (
@@ -807,49 +870,54 @@ const styles = StyleSheet.create({
   errorBannerCompact: {alignItems: 'flex-start', flexWrap: 'wrap'},
   errorText: {fontFamily: F.regular, fontSize: 11, lineHeight: 16, color: '#805219', flex: 1},
   retryText: {fontFamily: F.bold, fontSize: 10, color: C.blue},
-  profileCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 20, minHeight: 210, flexDirection: 'row', overflow: 'hidden'},
-  profileCardCompact: {minHeight: 0, flexDirection: 'column', paddingHorizontal: 15},
-  profileCopy: {flex: 1, zIndex: 2},
-  profileTitle: {fontFamily: F.bold, fontSize: 20, color: C.ink},
-  profileTitleCompact: {fontSize: 17},
-  profileDescription: {fontFamily: F.regular, fontSize: 12, lineHeight: 19, color: '#333943', marginTop: 9},
-  profileDescriptionCompact: {fontSize: 10, lineHeight: 16},
-  progressHeader: {flexDirection: 'row', justifyContent: 'space-between', marginTop: 1},
-  progressValue: {fontFamily: F.bold, fontSize: 17, color: C.ink},
-  progressTrack: {height: 7, borderRadius: 5, backgroundColor: '#EEF0F4', marginTop: 4, width: '100%', overflow: 'hidden'},
+  profileCard: {...cardShadow, minHeight: 172, flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden', borderRadius: 18, backgroundColor: 'white', padding: 16},
+  profileCardCompact: {minHeight: 164, flexDirection: 'row', gap: 6, padding: 14},
+  profileCopy: {flex: 1, minWidth: 0, zIndex: 2},
+  profileTitle: {fontFamily: F.bold, fontSize: 17, lineHeight: 22, color: C.ink},
+  profileTitleCompact: {fontSize: 15.5, lineHeight: 20},
+  profileDescription: {fontFamily: F.regular, fontSize: 10.5, lineHeight: 15, color: '#333943', marginTop: 5},
+  profileDescriptionCompact: {fontSize: 9.5, lineHeight: 14},
+  progressHeader: {minHeight: 18, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 5},
+  progressValue: {fontFamily: F.bold, fontSize: 13, lineHeight: 17, color: C.ink},
+  progressTrack: {height: 6, borderRadius: 5, backgroundColor: '#EEF0F4', marginTop: 3, width: '100%', overflow: 'hidden'},
   progressFill: {height: '100%', borderRadius: 5, backgroundColor: C.blue},
-  profileButton: {height: 42, minWidth: 156, borderRadius: 10, alignSelf: 'flex-start', marginTop: 20, overflow: 'hidden'},
-  profileButtonCompact: {alignSelf: 'stretch', minWidth: 0},
+  profileButton: {height: 40, minWidth: 150, borderRadius: 10, alignSelf: 'flex-start', marginTop: 13, overflow: 'hidden'},
+  profileButtonCompact: {height: 38, alignSelf: 'stretch', minWidth: 0},
   profileButtonGradient: {flex: 1, width: '100%', paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center'},
   profileButtonText: {fontFamily: F.semibold, fontSize: 11, color: 'white'},
-  profileIllustration: {width: 132, height: 160, marginLeft: 10, alignSelf: 'center'},
-  profileIllustrationCompact: {width: '100%', height: 108, marginLeft: 0, marginTop: 14},
-  interviewCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 14, marginTop: 13, overflow: 'hidden'},
-  interviewCardCompact: {padding: 10},
-  interviewContent: {flexDirection: 'row', minHeight: 150},
-  dateBlock: {width: 92, minHeight: 150, borderRadius: 12, backgroundColor: '#0643AA', overflow: 'hidden'},
-  datePrimary: {flex: 1, width: '100%', backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingTop: 11, paddingBottom: 8},
-  dateFooter: {width: '100%', minHeight: 34, backgroundColor: '#D9E8FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 7},
-  dateDay: {fontFamily: F.bold, fontSize: 31, lineHeight: 34, color: 'white'},
-  dateMonth: {fontFamily: F.regular, fontSize: 17, color: 'white'},
-  dateRelative: {fontFamily: F.medium, fontSize: 10.5, color: 'rgba(255,255,255,0.9)', marginTop: 7},
-  dateTime: {fontFamily: F.medium, fontSize: 10.5, lineHeight: 14, color: '#061A4D', textAlign: 'center'},
-  interviewDetail: {flex: 1, minWidth: 0, paddingLeft: 14, paddingVertical: 3},
-  interviewDetailCompact: {paddingLeft: 10},
+  profileIllustration: {width: 116, height: 138, flexShrink: 0, alignSelf: 'center'},
+  profileIllustrationCompact: {width: 96, height: 118},
+  interviewCard: {...cardShadow, backgroundColor: 'white', borderRadius: 18, padding: 10, marginTop: 13, overflow: 'hidden'},
+  interviewCardCompact: {padding: 8},
+  interviewContent: {flexDirection: 'row', minHeight: 124},
+  dateBlock: {width: 82, minHeight: 124, borderRadius: 12, backgroundColor: '#0643AA', overflow: 'hidden'},
+  datePrimary: {flex: 1, width: '100%', backgroundColor: '#0643AA', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, paddingTop: 8, paddingBottom: 6},
+  dateFooter: {width: '100%', minHeight: 30, backgroundColor: '#D9E8FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, paddingVertical: 5},
+  dateDay: {fontFamily: F.bold, fontSize: 27, lineHeight: 30, color: 'white'},
+  dateMonth: {fontFamily: F.regular, fontSize: 14.5, color: 'white'},
+  dateRelative: {fontFamily: F.medium, fontSize: 9, color: 'rgba(255,255,255,0.9)', marginTop: 4},
+  dateTime: {fontFamily: F.medium, fontSize: 9, lineHeight: 12, color: '#061A4D', textAlign: 'center'},
+  interviewDetail: {position: 'relative', flex: 1, minWidth: 0, paddingLeft: 12, paddingVertical: 1},
+  interviewDetailCompact: {paddingLeft: 8},
   activityTopline: {flexDirection: 'row', alignItems: 'center'},
   activityRole: {fontFamily: F.bold, fontSize: 16, color: C.ink, flex: 1},
   activityRoleCompact: {fontSize: 14, lineHeight: 18},
-  activityCompany: {fontFamily: F.regular, fontSize: 10.5, color: C.muted, marginTop: 3},
-  activityMode: {flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10},
+  interviewChevron: {width: 28, height: 28, alignItems: 'center', justifyContent: 'center', flexShrink: 0},
+  activityCompany: {fontFamily: F.regular, fontSize: 9.5, color: C.muted, marginTop: 1, paddingRight: 60},
+  activityMode: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, paddingRight: 60},
   activityModeText: {fontFamily: F.medium, fontSize: 10.5, color: '#454B57', flexShrink: 1},
   zoomBadge: {backgroundColor: '#2D68FF', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 2},
   zoomBadgeText: {fontFamily: F.bold, fontSize: 6.5, color: 'white'},
-  interviewButtons: {flexDirection: 'row', gap: 8, marginTop: 'auto', paddingTop: 10},
-  interviewButtonsCompact: {flexDirection: 'column', gap: 6},
-  interviewButtonCompact: {flex: 0, width: '100%', minHeight: 38},
-  joinButton: {flex: 1.5, minHeight: 37, borderRadius: 9, backgroundColor: '#0345AE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
+  interviewIllustrationWrap: {position: 'absolute', top: 29, right: 0, width: 56, height: 51},
+  interviewIllustrationWrapCompact: {top: 31, width: 48, height: 44},
+  interviewIllustration: {width: '100%', height: '100%'},
+  interviewButtons: {flexDirection: 'row', gap: 7, marginTop: 'auto', paddingTop: 7},
+  interviewButtonsCompact: {flexDirection: 'row', gap: 6},
+  interviewButtonCompact: {minHeight: 44},
+  joinButton: {flex: 1.5, minHeight: 44, borderRadius: 9, backgroundColor: '#0345AE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
   joinButtonText: {fontFamily: F.semibold, fontSize: 9.5, color: 'white'},
-  detailInterviewButton: {flex: 1, minHeight: 37, borderRadius: 9, backgroundColor: '#EEF3FC', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
+  detailInterviewButton: {flex: 1, minHeight: 44, borderRadius: 9, backgroundColor: '#EEF3FC', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7},
+  detailLocationButton: {flex: 1, backgroundColor: '#F1ECFF'},
   detailInterviewText: {fontFamily: F.semibold, fontSize: 9.5, color: C.blue},
   emptyActivity: {minHeight: 130, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 25},
   emptyTitle: {fontFamily: F.semibold, fontSize: 13, color: C.ink, marginTop: 9, textAlign: 'center'},
@@ -900,7 +968,10 @@ const styles = StyleSheet.create({
   jobTitleWrap: {flex: 1},
   jobTitle: {fontFamily: F.bold, fontSize: 15.5, lineHeight: 20, color: C.ink},
   companyName: {fontFamily: F.regular, fontSize: 10.5, color: C.muted, marginTop: 3},
-  jobActions: {flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0},
+  jobActions: {flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0},
+  jobActionIconButton: {width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center'},
+  jobActionIconButtonActive: {backgroundColor: '#EDF5FF'},
+  jobActionIconButtonPressed: {opacity: 0.68},
   jobBadgeRow: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16},
   activeBadge: {borderRadius: 14, backgroundColor: '#E5FAF1', paddingHorizontal: 12, paddingVertical: 6},
   activeBadgeText: {fontFamily: F.semibold, fontSize: 9, color: '#00A968'},

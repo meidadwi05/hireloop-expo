@@ -1,15 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQuery} from '@tanstack/react-query';
 import {LinearGradient} from 'expo-linear-gradient';
-import * as Linking from 'expo-linking';
 import {router} from 'expo-router';
 import React, {useMemo, useState} from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   FlatList,
   Image,
-  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -17,17 +13,16 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
 import {ShimmerBlock, ShimmerGroup} from '../../../shared/components/shimmer';
 import {dashboardApi} from '../api/dashboard.api';
+import {InterviewDetailModal} from '../components/InterviewDetailModal';
 import {
   interviewClock,
   interviewCompany,
-  interviewDestination,
   interviewPosition,
-  isSafeExternalUrl,
   selectUpcomingInterviews,
 } from '../dashboard.interviews';
 import {dashboardKeys} from '../dashboard.keys';
@@ -196,82 +191,6 @@ function EmptyState() {
   );
 }
 
-function DetailSheet({interview, onClose}: {interview: DashboardInterview | null; onClose: () => void}) {
-  const insets = useSafeAreaInsets();
-  const [opening, setOpening] = useState(false);
-  if (!interview) return null;
-
-  const destination = interviewDestination(interview);
-  const canOpenDestination = isSafeExternalUrl(destination);
-  const online = interview.mode === 'online';
-  const rows = [
-    ['Tanggal', longDate(interview.date)],
-    ['Waktu', interviewClock(interview)],
-    ['Metode', interview.method || (online ? 'Online' : 'Offline')],
-    ['Lokasi / Platform', interview.location_platform || interview.location || (online ? 'Online Interview' : 'Lokasi menyusul')],
-    ['Tahap', interview.stage_name || interview.interview_type || interview.category || interview.agenda],
-    ['PIC', interview.pic_name || 'Belum ditentukan'],
-  ];
-
-  const confirmExternalOpen = () => {
-    if (!destination || !canOpenDestination || opening) return;
-    Alert.alert(
-      online ? 'Gabung interview?' : 'Buka lokasi interview?',
-      online ? 'Tautan meeting akan dibuka di aplikasi atau browser eksternal.' : 'Lokasi akan dibuka di aplikasi peta atau browser.',
-      [
-        {text: 'Batal', style: 'cancel'},
-        {text: 'Lanjutkan', onPress: () => void (async () => {
-          setOpening(true);
-          try {
-            const supported = await Linking.canOpenURL(destination);
-            if (!supported) throw new Error('Periksa kembali tautan interview atau coba dari perangkat lain.');
-            await Linking.openURL(destination);
-            onClose();
-          } catch (error) {
-            Alert.alert('Tautan Tidak Dapat Dibuka', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
-          } finally {
-            setOpening(false);
-          }
-        })()},
-      ],
-    );
-  };
-
-  return (
-    <Modal animationType="slide" transparent visible onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={styles.modalBackdrop}>
-        <Pressable onPress={() => undefined} style={[styles.sheet, {paddingBottom: Math.max(insets.bottom, 18)}]}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <View style={styles.sheetHeading}>
-              <Text style={styles.sheetTitle}>{interviewPosition(interview)}</Text>
-              <Text style={styles.sheetCompany}>{interviewCompany(interview)}</Text>
-            </View>
-            <Pressable accessibilityLabel="Tutup detail interview" hitSlop={8} onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={22} color={C.navy} />
-            </Pressable>
-          </View>
-          <View style={styles.sheetRows}>
-            {rows.map(([label, value]) => value ? (
-              <View key={label} style={styles.sheetRow}>
-                <Text style={styles.sheetLabel}>{label}</Text>
-                <Text style={styles.sheetValue}>{value}</Text>
-              </View>
-            ) : null)}
-          </View>
-          {interview.note ? <View style={styles.noteBox}><Text style={styles.noteLabel}>Catatan</Text><Text style={styles.noteText}>{interview.note}</Text></View> : null}
-          {canOpenDestination ? (
-            <Pressable accessibilityRole="button" disabled={opening} onPress={confirmExternalOpen} style={[styles.primaryButton, opening && styles.disabled]}>
-              {opening ? <ActivityIndicator color="white" /> : <Ionicons name={online ? 'videocam-outline' : 'map-outline'} size={19} color="white" />}
-              <Text style={styles.primaryButtonText}>{online ? 'Gabung Interview' : 'Buka Maps'}</Text>
-            </Pressable>
-          ) : <Text style={styles.unavailableLink}>Tautan belum tersedia.</Text>}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
 export function UpcomingInterviewsScreen() {
   const {width} = useWindowDimensions();
   const compact = Math.min(width, 720) < 360;
@@ -335,7 +254,7 @@ export function UpcomingInterviewsScreen() {
           />
         )}
       </View>
-      <DetailSheet interview={selected} onClose={() => setSelected(null)} />
+      <InterviewDetailModal interview={selected} onClose={() => setSelected(null)} />
     </SafeAreaView>
   );
 }
@@ -403,23 +322,4 @@ const styles = StyleSheet.create({
   stateText: {fontFamily: F.regular, fontSize: 11.5, lineHeight: 18, color: C.muted, textAlign: 'center', marginTop: 6},
   stateButton: {minWidth: 155, minHeight: 44, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: C.blue, paddingHorizontal: 18, marginTop: 20},
   stateButtonText: {fontFamily: F.semibold, fontSize: 11, color: 'white'},
-  modalBackdrop: {flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(2,18,51,0.52)'},
-  sheet: {width: '100%', maxWidth: 720, alignSelf: 'center', maxHeight: '88%', borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: 'white', paddingHorizontal: 20, paddingTop: 10},
-  sheetHandle: {width: 44, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 14},
-  sheetHeader: {flexDirection: 'row', alignItems: 'flex-start', gap: 10},
-  sheetHeading: {flex: 1, minWidth: 0},
-  sheetTitle: {fontFamily: F.bold, fontSize: 18, lineHeight: 24, color: C.navy},
-  sheetCompany: {fontFamily: F.regular, fontSize: 11, lineHeight: 16, color: C.muted, marginTop: 3},
-  closeButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#F2F5F9'},
-  sheetRows: {marginTop: 18, borderTopWidth: 1, borderTopColor: C.border},
-  sheetRow: {minHeight: 49, flexDirection: 'row', alignItems: 'center', gap: 14, borderBottomWidth: 1, borderBottomColor: C.border, paddingVertical: 9},
-  sheetLabel: {width: 112, fontFamily: F.medium, fontSize: 10.5, color: C.muted},
-  sheetValue: {flex: 1, fontFamily: F.semibold, fontSize: 11, lineHeight: 16, color: C.ink, textAlign: 'right'},
-  noteBox: {borderRadius: 12, backgroundColor: '#F4F7FB', padding: 13, marginTop: 14},
-  noteLabel: {fontFamily: F.semibold, fontSize: 10.5, color: C.navy},
-  noteText: {fontFamily: F.regular, fontSize: 10.5, lineHeight: 17, color: '#475467', marginTop: 4},
-  primaryButton: {minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, backgroundColor: C.blue, marginTop: 18},
-  primaryButtonText: {fontFamily: F.bold, fontSize: 12, color: 'white'},
-  disabled: {opacity: 0.6},
-  unavailableLink: {fontFamily: F.medium, fontSize: 10.5, color: C.muted, textAlign: 'center', marginTop: 18},
 });

@@ -9,54 +9,55 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-const headerBackground = require('../../assets/up_background.png');
+const headerBackground = require('../../assets/up_background_new.png');
 
-export const BRANDED_HEADER_ARTWORK_ASPECT_RATIO = 1983 / 793;
+export const BRANDED_HEADER_ARTWORK_ASPECT_RATIO = 1983 / 515;
 
 export type BrandedHeaderVariant = 'account' | 'application-list' | 'compact-detail' | 'jobs-list' | 'notifications' | 'saved-list';
 
 type BrandedHeaderPreset = {
   backgroundColor: string;
   minimumContentHeight: number;
-  artworkTop: number;
-  maximumArtworkReferenceWidth?: number;
+  maximumArtworkWidth: number;
   resizeMode?: ImageResizeMode;
 };
 
 const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
   account: {
     backgroundColor: '#003E9A',
-    minimumContentHeight: 88,
-    artworkTop: 0,
+    minimumContentHeight: 72,
+    maximumArtworkWidth: 430,
+    resizeMode: 'contain',
   },
   'application-list': {
     backgroundColor: '#003E9A',
-    minimumContentHeight: 88,
-    artworkTop: 0,
-    maximumArtworkReferenceWidth: 430,
-    resizeMode: 'cover',
+    minimumContentHeight: 74,
+    maximumArtworkWidth: 430,
+    resizeMode: 'contain',
   },
   'compact-detail': {
     backgroundColor: '#003E9A',
-    minimumContentHeight: 72,
-    artworkTop: 0,
-    maximumArtworkReferenceWidth: 430,
-    resizeMode: 'cover',
+    minimumContentHeight: 64,
+    maximumArtworkWidth: 430,
+    resizeMode: 'contain',
   },
   'jobs-list': {
     backgroundColor: '#00419E',
-    minimumContentHeight: 96,
-    artworkTop: 0,
+    minimumContentHeight: 72,
+    maximumArtworkWidth: 430,
+    resizeMode: 'contain',
   },
   notifications: {
     backgroundColor: '#003E9A',
-    minimumContentHeight: 112,
-    artworkTop: 0,
+    minimumContentHeight: 88,
+    maximumArtworkWidth: 430,
+    resizeMode: 'contain',
   },
   'saved-list': {
     backgroundColor: '#003E9A',
-    minimumContentHeight: 88,
-    artworkTop: 0,
+    minimumContentHeight: 72,
+    maximumArtworkWidth: 430,
+    resizeMode: 'contain',
   },
 };
 
@@ -75,11 +76,10 @@ export function getBrandedHeaderLayout(
   const preset = PRESETS[variant];
   const safeWidth = Math.max(1, containerWidth);
   const safeInset = Math.max(0, topInset);
-  const artworkReferenceWidth = Math.min(safeWidth, preset.maximumArtworkReferenceWidth ?? safeWidth);
-  const artworkWidth = safeWidth;
-  const artworkHeight = artworkReferenceWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
+  const artworkWidth = Math.min(safeWidth, preset.maximumArtworkWidth);
+  const artworkHeight = artworkWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
-  const height = Math.max(minimumContentHeight, preset.artworkTop + artworkHeight);
+  const height = Math.max(minimumContentHeight, artworkHeight);
 
   return {
     height,
@@ -88,8 +88,8 @@ export function getBrandedHeaderLayout(
     artworkStyle: {
       width: artworkWidth,
       height: artworkHeight,
-      top: preset.artworkTop,
-      left: 0,
+      top: height - artworkHeight,
+      left: safeWidth - artworkWidth,
     },
   };
 }

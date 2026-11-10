@@ -112,6 +112,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   const applicationsQuery = useApplications();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const baseApplication = useMemo(
     () => applicationsQuery.data?.find(item => item.source === source && item.referenceId === id) ?? null,
@@ -240,23 +241,25 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
                 <Pressable
                   accessibilityLabel={saved ? 'Hapus dari lowongan disimpan' : 'Simpan lowongan'}
                   accessibilityRole="button"
+                  accessibilityState={{selected: saved}}
                   onPress={() => void toggleSaved(job)}
                   style={[styles.bookmarkButton, saved && styles.bookmarkButtonActive]}
                 >
-                  <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={APPLICATION_COLORS.blue} />
+                  <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? APPLICATION_COLORS.blue : APPLICATION_COLORS.body} />
                 </Pressable>
                 <Pressable
-                  accessibilityLabel="Bagikan lowongan"
+                  accessibilityLabel={shared ? 'Lowongan telah dibagikan' : 'Bagikan lowongan'}
                   accessibilityRole="button"
                   onPress={() => {
+                    setShared(true);
                     void Share.share({message: `${job.title} di ${job.company} - ${job.location}`}).catch(error => {
                       Alert.alert('Gagal Membagikan Lowongan', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
                     });
                   }}
-                  style={styles.shareButton}
+                  style={[styles.shareButton, shared && styles.shareButtonActive]}
                 >
-                  <Ionicons name="share-social-outline" size={18} color={APPLICATION_COLORS.body} />
-                  <Text style={styles.shareButtonText}>Bagikan</Text>
+                  <Ionicons name={shared ? 'share-social' : 'share-social-outline'} size={18} color={shared ? APPLICATION_COLORS.blue : APPLICATION_COLORS.body} />
+                  <Text style={[styles.shareButtonText, shared && styles.shareButtonTextActive]}>Bagikan</Text>
                 </Pressable>
               </View>
             </View>
@@ -393,8 +396,10 @@ const styles = StyleSheet.create({
   summaryActions: {flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0},
   bookmarkButton: {width: 42, height: 42, borderRadius: 10, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center'},
   bookmarkButtonActive: {borderColor: '#BFD8FF', backgroundColor: '#EDF5FF'},
+  shareButtonActive: {borderColor: '#BFD8FF', backgroundColor: '#EDF5FF'},
   shareButton: {height: 42, borderRadius: 10, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12},
   shareButtonText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 10.5, color: APPLICATION_COLORS.body},
+  shareButtonTextActive: {color: APPLICATION_COLORS.blue},
   summaryMetadata: {flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 9, marginTop: 14},
   summaryRow: {maxWidth: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 7},
   summaryText: {minWidth: 0, flexShrink: 1, fontFamily: APPLICATION_FONTS.regular, fontSize: 11, lineHeight: 18, color: APPLICATION_COLORS.body},

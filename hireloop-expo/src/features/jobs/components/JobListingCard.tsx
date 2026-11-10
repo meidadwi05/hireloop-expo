@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
-import React from 'react';
+import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import type {CandidateJobCard} from '../jobs.types';
@@ -37,6 +37,7 @@ export function JobListingCard({
   onToggleSaved,
   onShare,
 }: JobListingCardProps) {
+  const [shared, setShared] = useState(false);
   const visibleSkills = job.skills.slice(0, 4);
   const extraSkills = Math.max(0, job.skills.length - visibleSkills.length);
   const applyUnavailable = !job.active || applyBlocked;
@@ -61,24 +62,40 @@ export function JobListingCard({
           <Pressable
             accessibilityLabel={saved ? 'Hapus dari lowongan tersimpan' : 'Simpan lowongan untuk sesi ini'}
             accessibilityRole="button"
+            accessibilityState={{selected: saved}}
             hitSlop={8}
             onPress={event => {
               event?.stopPropagation();
               onToggleSaved();
             }}
+            style={({pressed}) => [styles.actionButton, saved && styles.actionButtonActive, pressed && styles.actionButtonPressed]}
+            testID="job-listing-bookmark-button"
           >
-            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={iconLayout.cardActionIconSize} color="#60708A" />
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={iconLayout.cardActionIconSize}
+              color={saved ? JOBS_COLORS.blue : '#60708A'}
+              testID="job-listing-bookmark-icon"
+            />
           </Pressable>
           <Pressable
-            accessibilityLabel="Bagikan lowongan"
+            accessibilityLabel={shared ? 'Lowongan telah dibagikan' : 'Bagikan lowongan'}
             accessibilityRole="button"
             hitSlop={8}
             onPress={event => {
               event?.stopPropagation();
+              setShared(true);
               onShare();
             }}
+            style={({pressed}) => [styles.actionButton, shared && styles.actionButtonActive, pressed && styles.actionButtonPressed]}
+            testID="job-listing-share-button"
           >
-            <Ionicons name="share-social-outline" size={iconLayout.cardActionIconSize} color="#60708A" />
+            <Ionicons
+              name={shared ? 'share-social' : 'share-social-outline'}
+              size={iconLayout.cardActionIconSize}
+              color={shared ? JOBS_COLORS.blue : '#60708A'}
+              testID="job-listing-share-icon"
+            />
           </Pressable>
         </View>
       </View>
@@ -195,7 +212,10 @@ const styles = StyleSheet.create({
   titleCopy: {flex: 1, minWidth: 0, paddingTop: 1},
   title: {fontFamily: JOBS_FONTS.bold, fontSize: 16, lineHeight: 21, color: JOBS_COLORS.ink},
   company: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 17, color: JOBS_COLORS.body, marginTop: 3},
-  actions: {flexDirection: 'row', gap: 11, paddingTop: 4, flexShrink: 0},
+  actions: {flexDirection: 'row', gap: 6, flexShrink: 0},
+  actionButton: {width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center'},
+  actionButtonActive: {backgroundColor: '#EDF5FF'},
+  actionButtonPressed: {opacity: 0.68},
   badges: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14},
   badge: {minHeight: 27, borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4},
   activeBadge: {backgroundColor: JOBS_COLORS.greenBackground},
