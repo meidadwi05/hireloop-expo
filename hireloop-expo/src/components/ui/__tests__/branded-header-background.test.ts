@@ -59,6 +59,18 @@ describe('getBrandedHeaderLayout', () => {
     expect(wide.resizeMode).toBe('cover');
   });
 
+  it('caps the detail header artwork on a wide PWA viewport without shifting its origin', () => {
+    const phone = getBrandedHeaderLayout('compact-detail', 430, 24);
+    const wide = getBrandedHeaderLayout('compact-detail', 720, 24);
+
+    expect(wide.height).toBe(phone.height);
+    expect(wide.artworkStyle.left).toBe(0);
+    expect(wide.artworkStyle.top).toBe(0);
+    expect(wide.artworkStyle.width).toBe(720);
+    expect(wide.artworkStyle.height).toBe(phone.artworkStyle.height);
+    expect(wide.resizeMode).toBe('cover');
+  });
+
   it.each(['jobs-list', 'saved-list'] satisfies BrandedHeaderVariant[])(
     '%s restores the full-width artwork to its original left position',
     variant => {

@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, {useState} from 'react';
-import {Pressable, StyleSheet, TextInput, View} from 'react-native';
+import React from 'react';
+import {Pressable, StyleSheet, View} from 'react-native';
 
+import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {JOBS_COLORS, JOBS_FONTS} from './jobs.ui';
 
 type JobsSearchFieldProps = {
@@ -13,27 +14,22 @@ type JobsSearchFieldProps = {
 };
 
 export function JobsSearchField({value, height, iconSize, iconSlotSize, onChangeText}: JobsSearchFieldProps) {
-  const [focused, setFocused] = useState(false);
-
   return (
-    <View style={[styles.container, {height, minHeight: height}, focused && styles.focused]}>
-      <View style={[styles.iconSlot, {width: iconSlotSize}]}>
+    <FormTextInput
+      accessibilityLabel="Cari posisi, perusahaan, atau lokasi"
+      autoCapitalize="none"
+      autoCorrect={false}
+      containerStyle={[styles.container, {height, minHeight: height}]}
+      fieldTestID="jobs-search-frame"
+      inputStyle={styles.input}
+      leftAccessory={<View style={[styles.iconSlot, {width: iconSlotSize}]}>
         <Ionicons name="search-outline" color="#536684" size={iconSize} />
-      </View>
-      <TextInput
-        accessibilityLabel="Cari posisi, perusahaan, atau lokasi"
-        autoCapitalize="none"
-        autoCorrect={false}
-        onBlur={() => setFocused(false)}
-        onChangeText={onChangeText}
-        onFocus={() => setFocused(true)}
-        placeholder="Cari posisi, perusahaan, atau lokasi"
-        placeholderTextColor="#8F9AB0"
-        returnKeyType="search"
-        style={styles.input}
-        value={value}
-      />
-      {!!value && (
+      </View>}
+      onChangeText={onChangeText}
+      placeholder="Cari posisi, perusahaan, atau lokasi"
+      placeholderTextColor="#8F9AB0"
+      returnKeyType="search"
+      rightAccessory={value ? (
         <Pressable
           accessibilityLabel="Hapus pencarian"
           accessibilityRole="button"
@@ -42,23 +38,20 @@ export function JobsSearchField({value, height, iconSize, iconSlotSize, onChange
         >
           <Ionicons name="close-circle" color="#8F9AB0" size={Math.max(18, iconSize - 1)} />
         </Pressable>
-      )}
-    </View>
+      ) : undefined}
+      value={value}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     borderRadius: 15,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: 'white',
     paddingHorizontal: 17,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
   },
-  focused: {borderColor: JOBS_COLORS.blue},
   iconSlot: {alignItems: 'center', justifyContent: 'center', flexShrink: 0},
   input: {
     flex: 1,

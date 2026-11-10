@@ -40,6 +40,8 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#003E9A',
     minimumContentHeight: 72,
     artworkTop: 0,
+    maximumArtworkReferenceWidth: 430,
+    resizeMode: 'cover',
   },
   'jobs-list': {
     backgroundColor: '#00419E',

@@ -10,13 +10,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
+import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
 import {jobsApi} from '../../jobs/api/jobs.api';
 import {jobsKeys} from '../../jobs/jobs.keys';
@@ -227,23 +227,22 @@ export function ApplicationsScreen() {
 
   const fixedControls = (
     <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
-      <View style={styles.searchBox}>
-        <Ionicons name="search-outline" size={22} color={APPLICATION_COLORS.body} />
-        <TextInput
-          accessibilityLabel="Cari lowongan atau perusahaan"
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Cari lowongan atau perusahaan..."
-          placeholderTextColor="#8794A8"
-          returnKeyType="search"
-          style={styles.searchInput}
-        />
-        {!!search && (
+      <FormTextInput
+        accessibilityLabel="Cari lowongan atau perusahaan"
+        containerStyle={styles.searchBox}
+        inputStyle={styles.searchInput}
+        leftAccessory={<Ionicons name="search-outline" size={22} color={APPLICATION_COLORS.body} />}
+        onChangeText={setSearch}
+        placeholder="Cari lowongan atau perusahaan..."
+        placeholderTextColor="#8794A8"
+        returnKeyType="search"
+        rightAccessory={search ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Hapus pencarian" onPress={() => setSearch('')} style={styles.clearButton}>
             <Ionicons name="close-circle" size={19} color="#98A5B8" />
           </Pressable>
-        )}
-      </View>
+        ) : undefined}
+        value={search}
+      />
 
       <View style={styles.toolbar}>
         <View ref={statusAnchorRef} collapsable={false} style={styles.toolAnchor}>
@@ -351,7 +350,7 @@ const styles = StyleSheet.create({
   heroTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},
   heroSubtitle: {fontFamily: APPLICATION_FONTS.regular, fontSize: 13, lineHeight: 19, color: '#DDEAFF', marginTop: 2},
   controlsSheet: {position: 'relative', zIndex: 2, marginTop: -16, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', backgroundColor: 'white', paddingTop: 21, paddingBottom: 18},
-  searchBox: {height: 52, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', paddingHorizontal: 14},
+  searchBox: {height: 52, gap: 10, borderRadius: 12, paddingHorizontal: 14},
   searchInput: {flex: 1, minWidth: 0, height: '100%', fontFamily: APPLICATION_FONTS.regular, fontSize: 11.5, color: APPLICATION_COLORS.navy},
   clearButton: {width: 30, height: 40, alignItems: 'center', justifyContent: 'center'},
   toolbar: {flexDirection: 'row', gap: 10, marginTop: 12},

@@ -2,8 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQuery} from '@tanstack/react-query';
 import {router} from 'expo-router';
 import React, {useMemo, useState} from 'react';
-import {Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
+import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {masterDataApi} from '../../master-data/api/master-data.api';
@@ -148,19 +149,19 @@ export function WorkPreferenceScreen() {
         <View style={styles.sectionBlock}>
           <View style={styles.sectionTitleRow}><Ionicons name="briefcase-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Posisi yang diminati</Text></View>
           <View style={styles.chipWrap}>{selectedRoles.map(role => <View key={role.id} style={styles.selectedChip}><Text style={styles.selectedChipText}>{role.name}</Text><Pressable onPress={() => setSelectedRoles(items => items.filter(item => item.id !== role.id))}><Ionicons name="close" size={16} color={profileColors.blue} /></Pressable></View>)}</View>
-          <TextInput placeholder="Cari posisi" placeholderTextColor="#98A2B3" value={roleSearch} onChangeText={setRoleSearch} style={styles.input} />
+          <FormTextInput accessibilityLabel="Cari posisi yang diminati" containerStyle={styles.inputFrame} inputStyle={styles.input} placeholder="Cari posisi" placeholderTextColor="#98A2B3" value={roleSearch} onChangeText={setRoleSearch} />
           {availableRoles.length > 0 ? <View style={styles.suggestionBox}>{availableRoles.map(role => <Pressable key={role.id} onPress={() => { if (selectedRoles.length >= 10) return Alert.alert('Batas posisi', 'Maksimal 10 posisi.'); setSelectedRoles(items => items.some(item => item.id === role.id) ? items : [...items, role]); setRoleSearch(''); }} style={styles.suggestion}><Text style={styles.suggestionText}>{role.name}</Text><Ionicons name="add" size={18} color={profileColors.blue} /></Pressable>)}</View> : null}
         </View>
 
         <View style={styles.sectionBlock}>
           <View style={styles.sectionTitleRow}><Ionicons name="location-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Lokasi kerja yang diminati</Text></View>
           <View style={styles.chipWrap}>{locations.map(location => <View key={location} style={styles.selectedChip}><Text style={styles.selectedChipText}>{location}</Text><Pressable onPress={() => setLocations(items => items.filter(item => item !== location))}><Ionicons name="close" size={16} color={profileColors.blue} /></Pressable></View>)}</View>
-          <View style={styles.addRow}><TextInput placeholder="Tambah lokasi" placeholderTextColor="#98A2B3" value={locationInput} onChangeText={setLocationInput} onSubmitEditing={addLocation} style={[styles.input, styles.addInput]} /><Pressable onPress={addLocation} style={styles.addButton}><Ionicons name="add" size={21} color={profileColors.blue} /></Pressable></View>
+          <View style={styles.addRow}><FormTextInput accessibilityLabel="Tambah lokasi kerja" containerStyle={[styles.inputFrame, styles.addInput]} inputStyle={styles.input} placeholder="Tambah lokasi" placeholderTextColor="#98A2B3" value={locationInput} onChangeText={setLocationInput} onSubmitEditing={addLocation} /><Pressable accessibilityRole="button" accessibilityLabel="Tambahkan lokasi kerja" onPress={addLocation} style={styles.addButton}><Ionicons name="add" size={21} color={profileColors.blue} /></Pressable></View>
         </View>
 
         <View style={styles.sectionBlock}>
           <View style={styles.sectionTitleRow}><Ionicons name="cash-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Ekspektasi gaji</Text></View>
-          <TextInput accessibilityLabel="Ekspektasi gaji" keyboardType="number-pad" placeholder="Contoh: Rp 8.000.000" placeholderTextColor="#98A2B3" value={formatRupiahInput(salary)} onChangeText={value => setSalary(sanitizeRupiahInput(value))} style={styles.input} />
+          <FormTextInput accessibilityLabel="Ekspektasi gaji" containerStyle={styles.inputFrame} inputStyle={styles.input} keyboardType="number-pad" placeholder="Contoh: Rp 8.000.000" placeholderTextColor="#98A2B3" value={formatRupiahInput(salary)} onChangeText={value => setSalary(sanitizeRupiahInput(value))} />
         </View>
 
         <View style={styles.sectionBlock}>
@@ -197,7 +198,8 @@ const styles = StyleSheet.create({
   chipWrap: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
   selectedChip: {minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 10, backgroundColor: '#EAF2FF', paddingHorizontal: 11},
   selectedChipText: {fontFamily: profileFonts.semibold, fontSize: 10.5, color: profileColors.blue},
-  input: {height: 48, borderWidth: 1.5, borderColor: '#CBD5E1', borderRadius: 11, backgroundColor: 'white', paddingHorizontal: 13, fontFamily: profileFonts.regular, fontSize: 12, color: profileColors.ink},
+  inputFrame: {height: 48, borderRadius: 11, paddingHorizontal: 13},
+  input: {height: 44, paddingVertical: 0, fontFamily: profileFonts.regular, fontSize: 12, color: profileColors.ink},
   suggestionBox: {borderWidth: 1, borderColor: profileColors.border, borderRadius: 10, backgroundColor: 'white', overflow: 'hidden'},
   suggestion: {minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: profileColors.border},
   suggestionText: {fontFamily: profileFonts.medium, fontSize: 11, color: profileColors.ink},

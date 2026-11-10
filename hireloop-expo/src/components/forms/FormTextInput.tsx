@@ -1,4 +1,4 @@
-import React, {useRef} from 'react';
+import React, {useCallback, useRef} from 'react';
 import {
   StyleSheet,
   TextInput,
@@ -22,7 +22,7 @@ export type FormTextInputProps = Omit<TextInputProps, 'style'> & {
   rightAccessory?: React.ReactNode;
 };
 
-export function FormTextInput({
+export const FormTextInput = React.forwardRef<TextInput, FormTextInputProps>(function FormTextInput({
   accessibilityState,
   containerStyle,
   disabledContainerStyle,
@@ -38,9 +38,14 @@ export function FormTextInput({
   rightAccessory,
   underlineColorAndroid = 'transparent',
   ...inputProps
-}: FormTextInputProps) {
+}: FormTextInputProps, forwardedRef) {
   const inputRef = useRef<TextInput>(null);
   const disabled = editable === false;
+  const assignInputRef = useCallback((input: TextInput | null) => {
+    inputRef.current = input;
+    if (typeof forwardedRef === 'function') forwardedRef(input);
+    else if (forwardedRef) forwardedRef.current = input;
+  }, [forwardedRef]);
 
   return (
     <FormFieldFrame
@@ -60,7 +65,7 @@ export function FormTextInput({
           {leftAccessory}
           <TextInput
             {...inputProps}
-            ref={inputRef}
+            ref={assignInputRef}
             accessibilityState={{
               ...accessibilityState,
               disabled,
@@ -82,7 +87,7 @@ export function FormTextInput({
       )}
     </FormFieldFrame>
   );
-}
+});
 
 const styles = StyleSheet.create({
   frame: {
@@ -95,6 +100,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     outlineColor: 'transparent',
+    outlineStyle: 'none' as never,
     outlineWidth: 0,
   } as TextStyle,
 });

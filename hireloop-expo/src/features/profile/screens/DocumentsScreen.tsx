@@ -14,10 +14,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
+import {FormTextInput, type FormTextInputProps} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {DateField} from '../../onboarding/components/DateField';
@@ -296,8 +296,8 @@ function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; 
   );
 }
 
-function FormField({label, ...props}: React.ComponentProps<typeof TextInput> & {label: string}) {
-  return <View style={styles.fieldGroup}><Text style={styles.fieldLabel}>{label}</Text><TextInput {...props} placeholderTextColor="#98A2B3" style={styles.field} /></View>;
+function FormField({label, accessibilityLabel = label, ...props}: FormTextInputProps & {label: string}) {
+  return <View style={styles.fieldGroup}><Text style={styles.fieldLabel}>{label}</Text><FormTextInput {...props} accessibilityLabel={accessibilityLabel} containerStyle={styles.fieldFrame} inputStyle={styles.field} placeholderTextColor="#98A2B3" /></View>;
 }
 
 function ActionModal({item, visible, onClose, onEdit}: {item: ProfileFileItem | null; visible: boolean; onClose: () => void; onEdit: () => void}) {
@@ -413,7 +413,8 @@ const styles = StyleSheet.create({
   segmentTextActive: {color: 'white'},
   fieldGroup: {gap: 7},
   fieldLabel: {fontFamily: profileFonts.semibold, fontSize: 12, color: profileColors.ink},
-  field: {height: 48, borderWidth: 1.5, borderColor: '#D7DFEA', borderRadius: 11, paddingHorizontal: 12, fontFamily: profileFonts.regular, fontSize: 12, color: profileColors.ink},
+  fieldFrame: {height: 48, borderRadius: 11, paddingHorizontal: 12},
+  field: {height: 44, paddingVertical: 0, fontFamily: profileFonts.regular, fontSize: 12, color: profileColors.ink},
   uploadBox: {minHeight: 155, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#72A8FF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', padding: 15},
   uploadTitle: {fontFamily: profileFonts.semibold, fontSize: 11.5, color: profileColors.ink, marginTop: 6, textAlign: 'center'},
   pickedName: {maxWidth: '100%', fontFamily: profileFonts.regular, fontSize: 9.5, color: '#475467', marginTop: 4},

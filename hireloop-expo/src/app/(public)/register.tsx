@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
+import {FormFieldPressable} from '../../components/forms/FormFieldPressable';
 import {FormTextInput} from '../../components/forms/FormTextInput';
 import {toAppApiError} from '../../core/api/api-error';
 import {goBackOrReplace} from '../../core/navigation/go-back-or-replace';
@@ -268,13 +269,13 @@ export default function RegisterRoute() {
               <Text style={styles.modalBody}>Masukkan 6 digit kode yang kami kirim ke</Text>
               <Text style={styles.modalEmail}>{email.trim().toLowerCase()}</Text>
               <TextInput ref={otpInputRef} accessibilityLabel="Kode OTP enam digit" autoComplete="one-time-code" keyboardType="number-pad" maxLength={6} onBlur={() => setOtpFocused(false)} onChangeText={(value) => { setOtp(value.replace(/\D/g, '')); setErrors((current) => ({...current, otp: undefined})); }} onFocus={() => setOtpFocused(true)} style={styles.hiddenOtpInput} value={otp} />
-              <Pressable accessibilityRole="button" accessibilityLabel="Masukkan kode OTP" onPress={() => otpInputRef.current?.focus()} style={[styles.otpBoxes, otpFocused && styles.otpBoxesFocused, errors.otp && styles.otpBoxesError]}>
+              <FormFieldPressable active={otpFocused} accessibilityRole="button" accessibilityLabel="Masukkan kode OTP" containerStyle={styles.otpBoxes} error={Boolean(errors.otp)} errorContainerStyle={styles.otpBoxesError} onPress={() => otpInputRef.current?.focus()}>
                 {Array.from({length: 6}, (_, index) => (
                   <View key={index} style={styles.otpBox}>
                     <Text style={styles.otpDigit}>{otp[index] ?? ''}</Text>
                   </View>
                 ))}
-              </Pressable>
+              </FormFieldPressable>
               {!!errors.otp && <Text style={styles.modalError}>{errors.otp}</Text>}
               {!!notice && <Text style={styles.otpNotice}>{notice}</Text>}
               <PrimaryButton label="Verifikasi OTP" loading={loading} disabled={otp.length !== 6} onPress={() => void verifyOtp()} />
@@ -420,7 +421,6 @@ const styles = StyleSheet.create({
   modalEmail: {fontFamily: 'PlusJakartaSans_500Medium', color: '#1359D5', fontSize: 15, lineHeight: 23, textAlign: 'center', marginTop: 6},
   hiddenOtpInput: {position: 'absolute', width: 1, height: 1, opacity: 0},
   otpBoxes: {width: '100%', flexDirection: 'row', justifyContent: 'space-between', gap: 7, marginTop: 28, marginBottom: 12, padding: 4, borderRadius: 15, borderWidth: 2, borderColor: 'transparent'},
-  otpBoxesFocused: {borderColor: '#111111'},
   otpBoxesError: {borderColor: '#FF6978'},
   otpBox: {flex: 1, maxWidth: 52, aspectRatio: 0.86, borderRadius: 12, backgroundColor: '#F1F1F1', alignItems: 'center', justifyContent: 'center'},
   otpDigit: {fontFamily: 'PlusJakartaSans_700Bold', color: '#0878FF', fontSize: 23},

@@ -17,6 +17,7 @@ describe('FormTextInput', () => {
     const frame = screen.getByTestId('email-frame');
 
     expect(StyleSheet.flatten(input.props.style).outlineWidth).toBe(0);
+    expect(StyleSheet.flatten(input.props.style).outlineStyle).toBe('none');
 
     fireEvent(input, 'focus');
     expect(StyleSheet.flatten(frame.props.style).borderColor).toBe('#1268FF');
@@ -60,5 +61,25 @@ describe('FormTextInput', () => {
 
     expect(onFocus).toHaveBeenCalledTimes(1);
     expect(onBlur).toHaveBeenCalledTimes(1);
+  });
+
+  it('meneruskan perubahan teks dan submit tanpa mengubah perilakunya', () => {
+    const onChangeText = jest.fn();
+    const onSubmitEditing = jest.fn();
+    const screen = render(
+      <FormTextInput
+        accessibilityLabel="Pencarian"
+        onChangeText={onChangeText}
+        onSubmitEditing={onSubmitEditing}
+        value=""
+      />,
+    );
+    const input = screen.getByLabelText('Pencarian');
+
+    fireEvent.changeText(input, 'operator');
+    fireEvent(input, 'submitEditing');
+
+    expect(onChangeText).toHaveBeenCalledWith('operator');
+    expect(onSubmitEditing).toHaveBeenCalledTimes(1);
   });
 });

@@ -10,10 +10,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
+import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
 import {profileApi} from '../api/profile.api';
 import {calculateProfileCompletion, formatAddress} from '../profile.mapper';
@@ -184,12 +184,14 @@ export function ProfileScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Ubah Tentang Saya</Text>
-            <TextInput
+            <FormTextInput
+              accessibilityLabel="Tentang Saya"
+              containerStyle={styles.aboutInputFrame}
+              inputStyle={styles.aboutInput}
               multiline
               maxLength={1000}
               onChangeText={setAbout}
               placeholder="Ceritakan pengalaman dan tujuan karier Anda"
-              style={styles.aboutInput}
               textAlignVertical="top"
               value={about}
             />
@@ -240,7 +242,8 @@ const styles = StyleSheet.create({
   modalBackdrop: {flex: 1, backgroundColor: 'rgba(0,20,55,0.55)', justifyContent: 'center', padding: 20},
   modalCard: {backgroundColor: 'white', borderRadius: 18, padding: 18},
   modalTitle: {fontFamily: profileFonts.bold, fontSize: 18, color: profileColors.ink},
-  aboutInput: {height: 150, borderWidth: 1.5, borderColor: '#D7DFEA', borderRadius: 12, padding: 12, fontFamily: profileFonts.regular, fontSize: 13, color: profileColors.ink, marginTop: 14},
+  aboutInputFrame: {height: 150, alignItems: 'stretch', borderRadius: 12, padding: 12, marginTop: 14},
+  aboutInput: {height: 122, padding: 0, fontFamily: profileFonts.regular, fontSize: 13, color: profileColors.ink},
   counter: {fontFamily: profileFonts.regular, fontSize: 10, color: profileColors.muted, textAlign: 'right', marginTop: 5},
   modalButtons: {flexDirection: 'row', gap: 10, marginTop: 14},
   cancelButton: {flex: 1, minHeight: 46, borderRadius: 10, borderWidth: 1.5, borderColor: profileColors.blue, alignItems: 'center', justifyContent: 'center'},
