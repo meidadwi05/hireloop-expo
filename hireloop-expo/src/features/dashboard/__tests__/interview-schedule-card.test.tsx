@@ -5,6 +5,11 @@ import {InterviewScheduleCard} from '../components/InterviewScheduleCard';
 import type {DashboardInterview} from '../dashboard.types';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
+jest.mock('expo-linear-gradient', () => {
+  const ReactModule = jest.requireActual<typeof import('react')>('react');
+  const {View: NativeView} = jest.requireActual<typeof import('react-native')>('react-native');
+  return {LinearGradient: (props: object) => ReactModule.createElement(NativeView, props)};
+});
 
 function interview(overrides: Partial<DashboardInterview> = {}): DashboardInterview {
   return {
@@ -31,6 +36,8 @@ describe('InterviewScheduleCard', () => {
     fireEvent.press(screen.getByText('Gabung Interview'));
     fireEvent.press(screen.getByText('Detail'));
 
+    expect(screen.getByTestId('interview-card-chevron')).toBeTruthy();
+    expect(screen.getByTestId('interview-join-gradient').props.colors).toEqual(['#0145C0', '#00205A']);
     expect(onJoin).toHaveBeenCalledTimes(1);
     expect(onDetail).toHaveBeenCalledTimes(1);
   });

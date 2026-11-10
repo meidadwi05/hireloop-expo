@@ -165,7 +165,7 @@ describe('dashboard sections', () => {
 
     expect(screen.getByText('Lengkapi Profilmu')).toBeTruthy();
     expect(screen.getByText('Lengkapi Profilmu').props.numberOfLines).toBe(1);
-    expect(screen.getByText(/Lengkapi data dan pengalaman/).props.numberOfLines).toBe(2);
+    expect(screen.getByText(/Lengkapi data dan pengalaman/).props.numberOfLines).toBe(3);
     expect(screen.getByText('75%')).toBeTruthy();
     expect(screen.getByText('Lengkapi sekarang')).toBeTruthy();
     expect(screen.getByTestId('profile-completion-illustration').props.source).toBeTruthy();
@@ -190,7 +190,7 @@ describe('dashboard sections', () => {
       height: 104,
     });
     expect(screen.getByText('Lengkapi Profilmu').props.numberOfLines).toBe(1);
-    expect(screen.getByText(/Lengkapi data dan pengalaman/).props.numberOfLines).toBe(2);
+    expect(screen.getByText(/Lengkapi data dan pengalaman/).props.numberOfLines).toBe(3);
   });
 
   it('menampilkan lamaran terbaru dinamis lengkap dengan perusahaan, tanggal, dan status backend', () => {

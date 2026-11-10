@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   calendarHeader: {zIndex: 20, width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 14},
   filters: {width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8},
   selectWrap: {position: 'relative', zIndex: 30},
-  monthSelectWrap: {flex: 1, minWidth: 0, maxWidth: 180},
+  monthSelectWrap: {width: 150, minWidth: 132, flexShrink: 1},
   yearSelectWrap: {width: 92, flexShrink: 0, marginLeft: 'auto'},
   selectField: {height: 44, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#D6DDE8', borderRadius: 11, backgroundColor: '#FFFFFF', paddingHorizontal: 10},
   selectFieldOpen: {borderColor: '#0051FD', borderWidth: 1.5},

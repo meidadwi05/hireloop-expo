@@ -264,7 +264,7 @@ export function ProfileCompletionCard({completion, containerWidth = 390, onOpenP
         <Text
           adjustsFontSizeToFit
           minimumFontScale={0.9}
-          numberOfLines={2}
+          numberOfLines={3}
           style={[styles.profileDescription, compact && styles.profileDescriptionCompact]}
         >
           Lengkapi data dan pengalaman kerjamu untuk meningkatkan peluang dipanggil interview!
@@ -647,8 +647,16 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
           style={[styles.applyButton, compact && styles.jobActionButtonCompact, applyBlocked && styles.blockedApplyButton, !job.active && styles.disabledApplyButton]}
           testID="dashboard-job-apply-button"
         >
-          {applyBlocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
-          <Text style={styles.applyButtonText}>{applyBlocked ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
+          <LinearGradient
+            colors={applyBlocked ? ['#E33B5B', '#C81E43'] : ['#0865FF', '#003F9F']}
+            end={{x: 1, y: 0}}
+            start={{x: 0, y: 0}}
+            style={styles.applyButtonGradient}
+            testID="dashboard-job-apply-gradient"
+          >
+            {applyBlocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
+            <Text style={styles.applyButtonText}>{applyBlocked ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
+          </LinearGradient>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -782,7 +790,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
                 onOpenAll={() => onNavigate?.('/(candidate)/interviews')}
               />}
           {profileLoading
-            ? <View style={[styles.profileCompletionLoading, {height: responsive.compact ? 164 : 172}]} />
+            ? <View style={[styles.profileCompletionLoading, {height: responsive.compact ? 178 : 186}]} />
             : <ProfileCompletionCard completion={profileCompletion} containerWidth={width} onOpenProfile={() => onNavigate?.('/profile')} />}
           <ShortcutGrid containerWidth={width} onNavigate={onNavigate} />
           {applicationsLoading ? (
@@ -989,8 +997,9 @@ const styles = StyleSheet.create({
   jobButtons: {flexDirection: 'row', alignItems: 'center', gap: 8},
   jobButtonsCompact: {flexDirection: 'column', alignItems: 'stretch'},
   jobActionButtonCompact: {flex: 0, width: '100%', minHeight: 42},
-  applyButton: {flex: 1.65, height: 40, borderRadius: 10, backgroundColor: '#0345AE', paddingHorizontal: 12, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center'},
-  blockedApplyButton: {backgroundColor: '#D92D45'},
+  applyButton: {flex: 1.65, height: 40, overflow: 'hidden', borderRadius: 10},
+  applyButtonGradient: {flex: 1, width: '100%', flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
+  blockedApplyButton: {},
   disabledApplyButton: {opacity: 0.5},
   applyButtonText: {fontFamily: F.bold, fontSize: 10.5, color: 'white'},
   detailButton: {flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},

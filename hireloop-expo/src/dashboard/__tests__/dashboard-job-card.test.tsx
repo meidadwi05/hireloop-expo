@@ -6,7 +6,11 @@ import {JobCard} from '../DashboardHome';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('expo-router', () => ({router: {push: jest.fn()}}));
-jest.mock('expo-linear-gradient', () => ({LinearGradient: ({children}: {children: React.ReactNode}) => children}));
+jest.mock('expo-linear-gradient', () => {
+  const ReactModule = jest.requireActual<typeof import('react')>('react');
+  const {View: NativeView} = jest.requireActual<typeof import('react-native')>('react-native');
+  return {LinearGradient: (props: object) => ReactModule.createElement(NativeView, props)};
+});
 
 jest.mock('../../features/dashboard/hooks/use-dashboard-home', () => ({
   useDashboardHome: jest.fn(),
@@ -76,7 +80,8 @@ describe('dashboard job card', () => {
 
     expect(cardStyle.borderColor).toBe('#EDF1F7');
     expect(timestampsStyle.marginBottom).toBe(12);
-    expect(buttonStyle.backgroundColor).toBe('#0345AE');
+    expect(buttonStyle.overflow).toBe('hidden');
+    expect(screen.getByTestId('dashboard-job-apply-gradient').props.colors).toEqual(['#0865FF', '#003F9F']);
     expect(detailButtonStyle.alignItems).toBe('center');
     expect(detailButtonStyle.justifyContent).toBe('center');
     expect(detailTextStyle.fontFamily).toBe('PlusJakartaSans_700Bold');
@@ -134,7 +139,8 @@ describe('dashboard job card', () => {
 
     const applyButton = screen.getByTestId('dashboard-job-apply-button');
     const buttonStyle = StyleSheet.flatten(applyButton.props.style);
-    expect(buttonStyle.backgroundColor).toBe('#D92D45');
+    expect(buttonStyle.overflow).toBe('hidden');
+    expect(screen.getByTestId('dashboard-job-apply-gradient').props.colors).toEqual(['#E33B5B', '#C81E43']);
     expect(screen.getByText('Akun Terblokir')).toBeTruthy();
 
     fireEvent.press(applyButton);

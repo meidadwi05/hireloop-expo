@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {LinearGradient} from 'expo-linear-gradient';
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
@@ -81,7 +82,19 @@ export function InterviewScheduleCard({
       <View style={styles.content}>
         <View style={styles.infoRow}>
           <View style={styles.copy}>
-            <Text numberOfLines={2} style={[styles.position, compact && styles.positionCompact]}>{interviewPosition(interview)}</Text>
+            <View style={styles.titleRow}>
+              <Text numberOfLines={2} style={[styles.position, compact && styles.positionCompact]}>{interviewPosition(interview)}</Text>
+              <Pressable
+                accessibilityLabel={`Lihat detail ${interviewPosition(interview)}`}
+                accessibilityRole="button"
+                hitSlop={6}
+                onPress={onDetail}
+                style={styles.cardChevron}
+                testID="interview-card-chevron"
+              >
+                <Ionicons name="chevron-forward" size={18} color="#0876E8" />
+              </Pressable>
+            </View>
             <Text numberOfLines={1} style={styles.company}>{interviewCompany(interview)}</Text>
             <View style={styles.modeRow}>
               <Ionicons name={online ? 'videocam-outline' : 'location-outline'} size={14} color="#0876E8" />
@@ -99,7 +112,15 @@ export function InterviewScheduleCard({
               onPress={onJoin}
               style={({pressed}) => [styles.joinButton, pressed && styles.pressed]}
             >
-              <Text style={styles.joinText}>Gabung Interview</Text>
+              <LinearGradient
+                colors={['#0145C0', '#00205A']}
+                end={{x: 1, y: 0}}
+                start={{x: 0, y: 0}}
+                style={styles.joinGradient}
+                testID="interview-join-gradient"
+              >
+                <Text style={styles.joinText}>Gabung Interview</Text>
+              </LinearGradient>
             </Pressable>
           ) : null}
           <Pressable
@@ -140,15 +161,18 @@ const styles = StyleSheet.create({
   content: {flex: 1, minWidth: 0},
   infoRow: {flex: 1, minHeight: 78},
   copy: {flex: 1, minWidth: 0, alignSelf: 'stretch'},
-  position: {fontFamily: F.bold, fontSize: 12.5, lineHeight: 16, color: '#111827'},
+  titleRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 3},
+  position: {flex: 1, minWidth: 0, fontFamily: F.bold, fontSize: 12.5, lineHeight: 16, color: '#111827'},
   positionCompact: {fontSize: 11.5, lineHeight: 15},
+  cardChevron: {width: 28, height: 28, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginTop: -5, marginRight: -3},
   company: {fontFamily: F.regular, fontSize: 9, lineHeight: 12, color: '#667085', marginTop: 2},
   modeRow: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5},
   modeText: {flex: 1, minWidth: 0, fontFamily: F.medium, fontSize: 8.5, lineHeight: 12, color: '#344054'},
   stageBadge: {maxWidth: '100%', alignSelf: 'flex-start', borderRadius: 9, backgroundColor: '#EAF2FF', paddingHorizontal: 7, paddingVertical: 3, marginTop: 5},
   stageText: {fontFamily: F.semibold, fontSize: 7.5, color: '#1F63D8'},
   actions: {minHeight: 38, flexDirection: 'row', gap: 6, marginTop: 6},
-  joinButton: {flex: 1.5, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#0649B8', paddingHorizontal: 6},
+  joinButton: {flex: 1.5, minHeight: 38, overflow: 'hidden', borderRadius: 9},
+  joinGradient: {flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6},
   joinText: {fontFamily: F.semibold, fontSize: 9, color: '#FFFFFF'},
   detailButton: {flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#EDF3FC', paddingHorizontal: 6},
   detailButtonFull: {flex: 1, backgroundColor: '#F1ECFF'},
