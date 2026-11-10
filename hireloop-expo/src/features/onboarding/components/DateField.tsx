@@ -39,6 +39,7 @@ export function DateField({label, value, onChange, required, error, disabled, to
     <View style={styles.group}>
       <FieldLabel label={label} required={required} tone={tone} />
       <FormFieldPressable
+        active={open}
         accessibilityRole="button"
         accessibilityLabel={`${label}. ${value ? displayDate(value) : 'Belum dipilih'}`}
         accessibilityState={{disabled: Boolean(disabled), expanded: open}}

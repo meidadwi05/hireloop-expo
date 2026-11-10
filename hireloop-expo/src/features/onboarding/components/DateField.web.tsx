@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
+import {FormFieldFrame} from '../../../components/forms/FormFieldFrame';
 import {localDateToIso} from './date-field.utils';
 import type {DateFieldProps} from './DateField.types';
 import {FieldLabel} from './FormControls';
@@ -40,9 +41,19 @@ export function DateField({label, value, onChange, required, error, disabled, to
   return (
     <View style={styles.group}>
       <FieldLabel label={label} required={required} tone={tone} />
-      <View style={[styles.control, focused && styles.focused, error && styles.errorBorder, disabled && styles.disabled]}>
+      <FormFieldFrame
+        accessible={false}
+        active={focused}
+        activateWhilePressed={false}
+        containerStyle={styles.control}
+        disabled={disabled}
+        disabledContainerStyle={styles.disabled}
+        error={Boolean(error)}
+        errorContainerStyle={styles.errorBorder}
+        focusable={false}
+      >
         {input}
-      </View>
+      </FormFieldFrame>
       {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
     </View>
   );
@@ -51,7 +62,6 @@ export function DateField({label, value, onChange, required, error, disabled, to
 const styles = StyleSheet.create({
   group: {gap: 8, marginBottom: 20},
   control: {minHeight: 54, borderRadius: 11, borderWidth: 2, borderColor: '#E0E5EC', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', overflow: 'hidden'},
-  focused: {borderColor: '#111111'},
   disabled: {backgroundColor: '#D2CED0'},
   errorBorder: {borderColor: '#FF5B67'},
   error: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FF8B93', fontSize: 11, lineHeight: 16},

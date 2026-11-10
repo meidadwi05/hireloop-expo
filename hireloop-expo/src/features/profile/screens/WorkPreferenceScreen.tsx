@@ -138,7 +138,7 @@ export function WorkPreferenceScreen() {
   };
 
   if (profile.isLoading || profile.isError || !profile.data) {
-    return <View style={styles.screen}><ProfileHeader title="Preferensi Kerja" /><ScreenState loading={profile.isLoading} error={profile.isError ? toAppApiError(profile.error).message : !profile.data ? 'Profil tidak ditemukan.' : undefined} onRetry={() => void profile.refetch()} /></View>;
+    return <View style={styles.screen}><ProfileHeader title="Preferensi Kerja" /><ScreenState loading={profile.isLoading} loadingVariant="work-preference" error={profile.isError ? toAppApiError(profile.error).message : !profile.data ? 'Profil tidak ditemukan.' : undefined} onRetry={() => void profile.refetch()} /></View>;
   }
 
   return (

@@ -123,6 +123,7 @@ export function ProfileScreen() {
       {profile.isLoading || profile.isError || !data ? (
         <ScreenState
           loading={profile.isLoading}
+          loadingVariant="profile"
           error={profile.isError ? toAppApiError(profile.error).message : !data ? 'Profil kandidat tidak ditemukan.' : undefined}
           onRetry={() => void profile.refetch()}
         />

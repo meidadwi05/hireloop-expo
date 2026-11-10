@@ -155,7 +155,7 @@ export function SkillsScreen() {
   return (
     <View style={styles.screen}>
       <ProfileHeader title="Keahlian" fallback="/profile" />
-      {loading || error ? <ScreenState loading={loading} error={error ? toAppApiError(error).message : undefined} onRetry={() => void Promise.all([profile.refetch(), tools.refetch(), languages.refetch()])} /> : (
+      {loading || error ? <ScreenState loading={loading} loadingVariant="skills" error={error ? toAppApiError(error).message : undefined} onRetry={() => void Promise.all([profile.refetch(), tools.refetch(), languages.refetch()])} /> : (
         <ProfilePage>
           <ProfileCard>
             <SectionHeader icon="sparkles-outline" title="Keahlian" action={() => setMode('skill')} />

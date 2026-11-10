@@ -17,6 +17,7 @@ import {jobsKeys} from '../jobs.keys';
 import type {CandidateJobSource} from '../jobs.types';
 import {ApplyConfirmationModal} from './ApplyConfirmationModal';
 import {JobInformationSections} from './JobInformationSections';
+import {JobDetailSkeleton} from './JobDetailSkeleton';
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
 
 type JobDetailScreenProps = {
@@ -63,9 +64,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
       <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           {detail.isPending && (
-            <View style={styles.stateCard}>
-              <Text style={styles.stateTitle}>Memuat detail lowongan...</Text>
-            </View>
+            <JobDetailSkeleton />
           )}
           {!!error && (
             <View style={styles.stateCard}>

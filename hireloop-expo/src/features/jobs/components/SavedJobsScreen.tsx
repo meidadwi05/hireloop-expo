@@ -17,6 +17,7 @@ import {
 import {useSavedJobs} from '../saved-jobs-provider';
 import type {CandidateJobCard} from '../jobs.types';
 import {JobListingCard} from './JobListingCard';
+import {JobsListSkeleton} from './JobsListSkeleton';
 import {JobsSearchField} from './JobsSearchField';
 import {JOBS_COLORS, JOBS_FONTS} from './jobs.ui';
 
@@ -208,7 +209,9 @@ export function SavedJobsScreen() {
             />
           </View>
         )}
-        ListEmptyComponent={(
+        ListEmptyComponent={!hydrated
+          ? <View style={{paddingHorizontal: pagePadding}}><JobsListSkeleton /></View>
+          : (
           <View style={styles.empty}>
             <Ionicons name={hydrated ? savedJobs.length ? 'search-outline' : 'bookmark-outline' : 'hourglass-outline'} size={50} color="#8EA0B8" />
             <Text style={styles.emptyTitle}>{!hydrated ? 'Memuat lowongan disimpan...' : savedJobs.length ? 'Lowongan tidak ditemukan' : 'Belum ada lowongan disimpan'}</Text>

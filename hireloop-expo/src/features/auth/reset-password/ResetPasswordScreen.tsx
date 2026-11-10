@@ -115,7 +115,6 @@ function PasswordInput({
         containerStyle={styles.inputWrap}
         error={Boolean(error)}
         errorContainerStyle={styles.inputError}
-        focusedContainerStyle={styles.inputFocused}
         inputStyle={styles.input}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -391,7 +390,6 @@ const styles = StyleSheet.create({
   fieldGroup: {marginTop: 18},
   label: {fontFamily: F.semibold, color: '#FFFFFF', fontSize: 14, marginBottom: 9},
   inputWrap: {height: 56, borderRadius: 12, borderColor: C.border, backgroundColor: C.input, gap: 11, paddingHorizontal: 15},
-  inputFocused: {borderColor: C.cyan},
   inputError: {borderColor: '#FF8292'},
   input: {height: '100%', paddingVertical: 0, fontFamily: F.regular, color: '#FFFFFF', fontSize: 14},
   criteria: {gap: 9, marginTop: 16, marginBottom: 2},

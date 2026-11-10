@@ -574,7 +574,7 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
       </View>
 
       <View style={styles.jobDivider} />
-      <View style={styles.timestamps}>
+      <View style={styles.timestamps} testID="dashboard-job-timestamps">
         <Text style={styles.timestamp}>{job.publishedLabel}</Text>
         <Text style={styles.timestampDot}>{'\u2022'}</Text>
         <Text style={styles.timestamp}>{job.updatedLabel}</Text>
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
   jobStatDivider: {width: 1, height: 34, backgroundColor: '#E3E7EE'},
   jobDeadline: {flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 14},
   jobDeadlineText: {fontFamily: F.regular, fontSize: 9, color: '#68768B', flex: 1},
-  timestamps: {flexDirection: 'row', alignItems: 'center', gap: 7},
+  timestamps: {flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12},
   timestamp: {fontFamily: F.medium, fontSize: 8, color: '#00A968'},
   timestampDot: {fontFamily: F.regular, color: '#CDD1D8'},
   jobDivider: {height: 1, backgroundColor: C.border, marginVertical: 14},

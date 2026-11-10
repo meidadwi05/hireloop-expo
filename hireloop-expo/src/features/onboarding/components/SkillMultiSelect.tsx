@@ -29,6 +29,7 @@ export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, e
     <View style={styles.group}>
       <FieldLabel label="Keahlian" required />
       <FormFieldPressable
+        active={open}
         accessibilityRole="button"
         accessibilityLabel="Pilih keahlian"
         containerStyle={styles.control}

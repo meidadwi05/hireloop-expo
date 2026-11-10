@@ -17,6 +17,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
+import {NotificationsListSkeleton} from '../components/NotificationsListSkeleton';
 import {useNotifications} from '../hooks/use-notifications';
 import {resolveNotificationDestination} from '../notifications.navigation';
 import type {CandidateNotification} from '../notifications.types';
@@ -193,10 +194,7 @@ export function NotificationsScreen() {
       >
         {header}
         {notifications.isLoading ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color="#1267E8" />
-            <Text style={styles.loadingText}>Memuat notifikasi...</Text>
-          </View>
+          <NotificationsListSkeleton horizontalPadding={pagePadding} />
         ) : initialError ? (
           <View style={styles.centerState}>
             <View style={styles.emptyIcon}><Ionicons name="cloud-offline-outline" size={31} color="#B45F06" /></View>

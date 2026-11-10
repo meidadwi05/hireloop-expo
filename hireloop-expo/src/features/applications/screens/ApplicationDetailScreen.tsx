@@ -4,7 +4,6 @@ import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
 import React, {useMemo, useState} from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -32,6 +31,7 @@ import {canCancelApplication, mergeRecruitmentProcess} from '../applications.map
 import type {CandidateApplication} from '../applications.types';
 import {useApplications} from '../hooks/use-applications';
 import {ApplicationVerticalTimeline} from '../components/ApplicationTimeline';
+import {ApplicationDetailSkeleton, ApplicationTimelineSkeleton} from '../components/ApplicationSkeletons';
 import {CancelApplicationModal} from '../components/CancelApplicationModal';
 import {CompleteRequirementsModal} from '../components/CompleteRequirementsModal';
 import {
@@ -169,11 +169,16 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 
   if (applicationsQuery.isPending && !application) {
     return (
-      <View style={styles.fullState}>
+      <>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color={APPLICATION_COLORS.blue} />
-        <Text style={styles.fullStateText}>Memuat detail lamaran...</Text>
-      </View>
+        <ApplicationDetailSkeleton
+          bottomInset={insets.bottom}
+          containerWidth={containerWidth}
+          horizontalPadding={pagePadding}
+          topInset={insets.top}
+          onBack={() => goBackOrReplace('/(candidate)/(tabs)/career')}
+        />
+      </>
     );
   }
 
@@ -283,7 +288,6 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Progres Seleksi</Text>
-            {processQuery.isFetching && !processQuery.data && <ActivityIndicator color={APPLICATION_COLORS.blue} style={styles.inlineLoader} />}
             {!!processError && (
               <View style={styles.partialError}>
                 <Ionicons name="information-circle-outline" size={19} color="#A96C00" />
@@ -291,7 +295,9 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
                 <Pressable accessibilityRole="button" onPress={() => void processQuery.refetch()}><Text style={styles.retryText}>Coba lagi</Text></Pressable>
               </View>
             )}
-            <ApplicationVerticalTimeline stages={application.stages} />
+            {processQuery.isFetching && !processQuery.data
+              ? <ApplicationTimelineSkeleton />
+              : <ApplicationVerticalTimeline stages={application.stages} />}
           </View>
 
           <View style={styles.sectionCard}>

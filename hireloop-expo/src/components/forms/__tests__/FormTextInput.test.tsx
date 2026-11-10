@@ -16,8 +16,10 @@ describe('FormTextInput', () => {
     const input = screen.getByLabelText('Email');
     const frame = screen.getByTestId('email-frame');
 
+    expect(StyleSheet.flatten(input.props.style).outlineWidth).toBe(0);
+
     fireEvent(input, 'focus');
-    expect(StyleSheet.flatten(frame.props.style).borderColor).toBe('#111111');
+    expect(StyleSheet.flatten(frame.props.style).borderColor).toBe('#1268FF');
 
     fireEvent(input, 'blur');
     expect(StyleSheet.flatten(frame.props.style).borderColor).toBe('#DDE3EA');

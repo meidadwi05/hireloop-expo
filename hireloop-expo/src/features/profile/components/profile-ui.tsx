@@ -1,7 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, {type PropsWithChildren} from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
+import {ProfileLoadingSkeleton, type ProfileLoadingVariant} from './ProfileLoadingSkeleton';
 
 export const profileColors = {
   background: '#F5F8FC',
@@ -136,19 +136,15 @@ export function DataRow({label, value, icon, last = false, right}: {
   );
 }
 
-export function ScreenState({loading, error, empty, onRetry}: {
+export function ScreenState({loading, loadingVariant = 'profile', error, empty, onRetry}: {
   loading?: boolean;
+  loadingVariant?: ProfileLoadingVariant;
   error?: string;
   empty?: string;
   onRetry?: () => void;
 }) {
   if (loading) {
-    return (
-      <View style={styles.state}>
-        <ActivityIndicator size="large" color={profileColors.blue} />
-        <Text style={styles.stateText}>Memuat data profil...</Text>
-      </View>
-    );
+    return <ProfileLoadingSkeleton variant={loadingVariant} />;
   }
   if (error) {
     return (

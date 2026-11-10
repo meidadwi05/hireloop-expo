@@ -140,7 +140,7 @@ export function ExperienceScreen() {
   return (
     <View style={styles.screen}>
       <ProfileHeader title="Pengalaman Kerja" rightIcon="add" rightLabel="Tambah" onRightPress={() => openForm(null)} fallback="/profile" />
-      {query.isLoading || query.isError ? <ScreenState loading={query.isLoading} error={query.isError ? toAppApiError(query.error).message : undefined} onRetry={() => void query.refetch()} /> : (
+      {query.isLoading || query.isError ? <ScreenState loading={query.isLoading} loadingVariant="experience" error={query.isError ? toAppApiError(query.error).message : undefined} onRetry={() => void query.refetch()} /> : (
         <ProfilePage>
           <ProfileCard style={styles.summary}>
             <View style={styles.summaryIcon}><Ionicons name="briefcase-outline" size={25} color={profileColors.blue} /></View>

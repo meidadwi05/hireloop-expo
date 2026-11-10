@@ -20,6 +20,7 @@ import {
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {ShimmerBlock, ShimmerGroup} from '../../../shared/components/shimmer';
 import {dashboardApi} from '../api/dashboard.api';
 import {
   interviewClock,
@@ -164,19 +165,21 @@ function InterviewCard({compact, interview, onOpen}: {compact: boolean; intervie
 
 function InterviewSkeleton() {
   return (
-    <View style={styles.skeletonList}>
-      {[0, 1, 2].map(item => (
-        <View key={item} style={styles.skeletonCard}>
-          <View style={styles.skeletonDate} />
-          <View style={styles.skeletonBody}>
-            <View style={[styles.skeletonLine, {width: '75%'}]} />
-            <View style={[styles.skeletonLine, {width: '55%'}]} />
-            <View style={[styles.skeletonLine, {width: '65%'}]} />
+    <ShimmerGroup>
+      <View accessible accessibilityLabel="Memuat jadwal interview" accessibilityRole="progressbar" style={styles.skeletonList} testID="interviews-list-skeleton">
+        {[0, 1, 2].map(item => (
+          <View key={item} style={styles.skeletonCard}>
+            <ShimmerBlock borderRadius={12} height={126} width={78} />
+            <View style={styles.skeletonBody}>
+              <ShimmerBlock height={12} width="75%" />
+              <ShimmerBlock height={12} width="55%" />
+              <ShimmerBlock height={12} width="65%" />
+            </View>
+            <ShimmerBlock borderRadius={14} height={62} width={72} />
           </View>
-          <View style={styles.skeletonImage} />
-        </View>
-      ))}
-    </View>
+        ))}
+      </View>
+    </ShimmerGroup>
   );
 }
 

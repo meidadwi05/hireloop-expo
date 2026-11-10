@@ -112,6 +112,7 @@ export function SelectField({label, value, options, onChange, placeholder, requi
     <View style={styles.fieldGroup}>
       <FieldLabel label={label} required={required} tone={tone} />
       <FormFieldPressable
+        active={open}
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityState={{expanded: open, disabled: Boolean(disabled)}}

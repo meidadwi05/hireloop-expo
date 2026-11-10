@@ -69,11 +69,13 @@ describe('dashboard job card', () => {
     expect(screen.getByText(/Lihat Detail/)).toBeTruthy();
 
     const cardStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-card').props.style);
+    const timestampsStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-timestamps').props.style);
     const buttonStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-apply-button').props.style);
     const detailButtonStyle = StyleSheet.flatten(screen.getByTestId('dashboard-job-detail-button').props.style);
     const detailTextStyle = StyleSheet.flatten(screen.getByText(/Lihat Detail/).props.style);
 
     expect(cardStyle.borderColor).toBe('#EDF1F7');
+    expect(timestampsStyle.marginBottom).toBe(12);
     expect(buttonStyle.backgroundColor).toBe('#0345AE');
     expect(detailButtonStyle.alignItems).toBe('center');
     expect(detailButtonStyle.justifyContent).toBe('center');

@@ -69,7 +69,11 @@ export function OnboardingSlide({
         <Animated.View
           style={[
             styles.hero,
-            {marginBottom: metrics.heroCopyGap, width: metrics.heroWidth},
+            {
+              marginBottom: metrics.heroCopyGap,
+              marginTop: metrics.heroTopOffset,
+              width: metrics.heroWidth,
+            },
             heroMotion,
           ]}
         >

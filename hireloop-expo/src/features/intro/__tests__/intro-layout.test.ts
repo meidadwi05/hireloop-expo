@@ -13,12 +13,14 @@ describe('responsive metrics onboarding', () => {
 
     expect(metrics.horizontalPadding).toBeGreaterThanOrEqual(20);
     expect(metrics.horizontalPadding).toBeLessThanOrEqual(38);
-    expect(metrics.heroHeight).toBeGreaterThanOrEqual(210);
-    expect(metrics.heroHeight).toBeLessThanOrEqual(500);
+    expect(metrics.heroHeight).toBeGreaterThanOrEqual(220);
+    expect(metrics.heroHeight).toBeLessThanOrEqual(520);
     expect(metrics.heroWidth).toBeGreaterThanOrEqual(300);
-    expect(metrics.heroWidth).toBeLessThanOrEqual(Math.min(width * 1.04, 540));
-    expect(metrics.heroCopyGap).toBeGreaterThanOrEqual(20);
-    expect(metrics.heroCopyGap).toBeLessThanOrEqual(34);
+    expect(metrics.heroWidth).toBeLessThanOrEqual(Math.min(width * 1.1, 570));
+    expect(metrics.heroCopyGap).toBeGreaterThanOrEqual(24);
+    expect(metrics.heroCopyGap).toBeLessThanOrEqual(42);
+    expect(metrics.heroTopOffset).toBeGreaterThanOrEqual(4);
+    expect(metrics.heroTopOffset).toBeLessThanOrEqual(12);
     expect(metrics.titleFontSize).toBeGreaterThanOrEqual(26);
     expect(metrics.titleFontSize).toBeLessThanOrEqual(36);
     expect(metrics.bodyFontSize).toBeGreaterThanOrEqual(14);
@@ -31,6 +33,7 @@ describe('responsive metrics onboarding', () => {
 
     expect(short.heroHeight).toBeLessThan(tall.heroHeight);
     expect(short.heroCopyGap).toBeLessThan(tall.heroCopyGap);
+    expect(short.heroTopOffset).toBeLessThan(tall.heroTopOffset);
     expect(short.titleFontSize).toBeGreaterThanOrEqual(26);
   });
 });

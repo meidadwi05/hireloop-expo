@@ -2,12 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQueries} from '@tanstack/react-query';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import React, {useMemo, useState} from 'react';
+import React, {useMemo, useRef, useState} from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -24,11 +24,30 @@ import type {CandidateJobDetail} from '../../jobs/jobs.types';
 import {useApplications} from '../hooks/use-applications';
 import type {ApplicationCardModel, ApplicationUiState, CandidateApplication} from '../applications.types';
 import {ApplicationCard} from '../components/ApplicationCard';
+import {ApplicationsListSkeleton} from '../components/ApplicationSkeletons';
 import {APPLICATION_COLORS, APPLICATION_FONTS} from '../components/applications.ui';
 
 type StatusFilter = 'all' | ApplicationUiState;
 type SortOrder = 'newest' | 'oldest';
+type DropdownKind = 'status' | 'sort';
+type DropdownAnchor = {height: number; width: number; x: number; y: number};
+type DropdownOption = {label: string; value: string};
 const EMPTY_APPLICATIONS: CandidateApplication[] = [];
+
+const STATUS_OPTIONS: DropdownOption[] = [
+  {value: 'all', label: 'Semua Status'},
+  {value: 'applied', label: 'Applied'},
+  {value: 'in-progress', label: 'In Progress'},
+  {value: 'hired', label: 'Hired'},
+  {value: 'rejected', label: 'Rejected'},
+  {value: 'canceled', label: 'Canceled'},
+  {value: 'closed', label: 'Closed'},
+];
+
+const SORT_OPTIONS: DropdownOption[] = [
+  {value: 'newest', label: 'Terbaru'},
+  {value: 'oldest', label: 'Terlama'},
+];
 
 function fallbackJob(application: CandidateApplication): CandidateJobDetail {
   return {
@@ -66,47 +85,59 @@ function fallbackJob(application: CandidateApplication): CandidateJobDetail {
   };
 }
 
-function ChoiceModal({
+function DropdownMenu({
   title,
   visible,
+  anchor,
   options,
   value,
+  viewportWidth,
   onClose,
   onChange,
 }: {
   title: string;
   visible: boolean;
-  options: {value: string; label: string}[];
+  anchor: DropdownAnchor | null;
+  options: DropdownOption[];
   value: string;
+  viewportWidth: number;
   onClose: () => void;
   onChange: (value: string) => void;
 }) {
+  if (!anchor) return null;
+
+  const menuWidth = Math.min(Math.max(anchor.width, 176), viewportWidth - 24);
+  const menuLeft = Math.max(12, Math.min(anchor.x + anchor.width - menuWidth, viewportWidth - menuWidth - 12));
+
   return (
-    <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable accessibilityViewIsModal style={styles.modalCard} onPress={event => event.stopPropagation()}>
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>{title}</Text>
-          {options.map(option => {
-            const selected = option.value === value;
-            return (
-              <Pressable
-                key={option.value}
-                accessibilityRole="radio"
-                accessibilityState={{selected}}
-                onPress={() => {
-                  onChange(option.value);
-                  onClose();
-                }}
-                style={styles.optionRow}
-              >
-                <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{option.label}</Text>
-                <View style={[styles.radio, selected && styles.radioSelected]}>
-                  {selected && <View style={styles.radioDot} />}
-                </View>
-              </Pressable>
-            );
-          })}
+    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
+      <Pressable style={styles.dropdownOverlay} onPress={onClose}>
+        <Pressable
+          accessibilityViewIsModal
+          onPress={event => event.stopPropagation()}
+          style={[styles.dropdownCard, {left: menuLeft, top: anchor.y + anchor.height + 6, width: menuWidth}]}
+        >
+          <Text style={styles.dropdownTitle}>{title}</Text>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={options.length > 5} style={styles.dropdownOptions}>
+            {options.map(option => {
+              const selected = option.value === value;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{selected}}
+                  onPress={() => {
+                    onChange(option.value);
+                    onClose();
+                  }}
+                  style={styles.dropdownOption}
+                >
+                  <Text numberOfLines={1} style={[styles.dropdownOptionText, selected && styles.dropdownOptionTextSelected]}>{option.label}</Text>
+                  <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} color={selected ? APPLICATION_COLORS.blue : '#A8B3C3'} size={21} />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -120,8 +151,10 @@ export function ApplicationsScreen() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [sort, setSort] = useState<SortOrder>('newest');
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<DropdownKind | null>(null);
+  const [dropdownAnchor, setDropdownAnchor] = useState<DropdownAnchor | null>(null);
+  const statusAnchorRef = useRef<View>(null);
+  const sortAnchorRef = useRef<View>(null);
   const pagePadding = width <= 350 ? 14 : 18;
   const containerWidth = Math.min(width, 720);
   const applications = applicationsQuery.data ?? EMPTY_APPLICATIONS;
@@ -156,6 +189,19 @@ export function ApplicationsScreen() {
       });
   }, [appliedModels, filter, search, sort]);
   const error = applicationsQuery.isError ? toAppApiError(applicationsQuery.error).message : null;
+  const selectedStatusLabel = STATUS_OPTIONS.find(option => option.value === filter)?.label ?? 'Filter Status';
+
+  const openDropdown = (kind: DropdownKind, anchorView: View | null) => {
+    anchorView?.measureInWindow((x, y, measuredWidth, height) => {
+      setDropdownAnchor({height, width: measuredWidth, x, y});
+      setActiveDropdown(kind);
+    });
+  };
+
+  const closeDropdown = () => {
+    setActiveDropdown(null);
+    setDropdownAnchor(null);
+  };
 
   const header = (
     <BrandedHeaderBackground
@@ -200,16 +246,20 @@ export function ApplicationsScreen() {
       </View>
 
       <View style={styles.toolbar}>
-        <Pressable accessibilityRole="button" onPress={() => setFilterOpen(true)} style={styles.toolButton}>
-          <Ionicons name="options-outline" size={20} color={APPLICATION_COLORS.navy} />
-          <Text numberOfLines={1} style={styles.toolText}>{filter === 'all' ? 'Filter Status' : filter.replace('-', ' ')}</Text>
-          <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
-        </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setSortOpen(true)} style={styles.toolButton}>
-          <Ionicons name="calendar-outline" size={19} color={APPLICATION_COLORS.navy} />
-          <Text numberOfLines={1} style={styles.toolText}>{sort === 'newest' ? 'Terbaru' : 'Terlama'}</Text>
-          <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
-        </Pressable>
+        <View ref={statusAnchorRef} collapsable={false} style={styles.toolAnchor}>
+          <Pressable accessibilityLabel="Filter status lamaran" accessibilityRole="button" onPress={() => openDropdown('status', statusAnchorRef.current)} style={({pressed}) => [styles.toolButton, pressed && styles.toolButtonPressed]}>
+            <Ionicons name="options-outline" size={20} color={APPLICATION_COLORS.navy} />
+            <Text numberOfLines={1} style={styles.toolText}>{selectedStatusLabel}</Text>
+            <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
+          </Pressable>
+        </View>
+        <View ref={sortAnchorRef} collapsable={false} style={styles.toolAnchor}>
+          <Pressable accessibilityLabel="Urutkan lamaran" accessibilityRole="button" onPress={() => openDropdown('sort', sortAnchorRef.current)} style={({pressed}) => [styles.toolButton, pressed && styles.toolButtonPressed]}>
+            <Ionicons name="calendar-outline" size={19} color={APPLICATION_COLORS.navy} />
+            <Text numberOfLines={1} style={styles.toolText}>{sort === 'newest' ? 'Terbaru' : 'Terlama'}</Text>
+            <Ionicons name="chevron-down" size={17} color={APPLICATION_COLORS.navy} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -246,7 +296,7 @@ export function ApplicationsScreen() {
             </View>
           : null}
         ListEmptyComponent={applicationsQuery.isPending
-          ? <View style={styles.empty}><ActivityIndicator size="large" color={APPLICATION_COLORS.blue} /><Text style={styles.emptyText}>Memuat lamaran...</Text></View>
+          ? <ApplicationsListSkeleton horizontalPadding={pagePadding} />
           : <View style={styles.empty}>
               <Ionicons name={error ? 'cloud-offline-outline' : 'document-text-outline'} size={48} color="#98A8BE" />
               <Text style={styles.emptyTitle}>{error ? 'Lamaran belum dapat dimuat' : 'Tidak ada lamaran yang sesuai'}</Text>
@@ -267,29 +317,25 @@ export function ApplicationsScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <ChoiceModal
+      <DropdownMenu
+        anchor={dropdownAnchor}
         title="Filter Status"
-        visible={filterOpen}
+        visible={activeDropdown === 'status'}
         value={filter}
-        onClose={() => setFilterOpen(false)}
+        viewportWidth={width}
+        onClose={closeDropdown}
         onChange={value => setFilter(value as StatusFilter)}
-        options={[
-          {value: 'all', label: 'Semua Status'},
-          {value: 'applied', label: 'Applied'},
-          {value: 'in-progress', label: 'In Progress'},
-          {value: 'hired', label: 'Hired'},
-          {value: 'rejected', label: 'Rejected'},
-          {value: 'canceled', label: 'Canceled'},
-          {value: 'closed', label: 'Closed'},
-        ]}
+        options={STATUS_OPTIONS}
       />
-      <ChoiceModal
+      <DropdownMenu
+        anchor={dropdownAnchor}
         title="Urutkan Lamaran"
-        visible={sortOpen}
+        visible={activeDropdown === 'sort'}
         value={sort}
-        onClose={() => setSortOpen(false)}
+        viewportWidth={width}
+        onClose={closeDropdown}
         onChange={value => setSort(value as SortOrder)}
-        options={[{value: 'newest', label: 'Terbaru'}, {value: 'oldest', label: 'Terlama'}]}
+        options={SORT_OPTIONS}
       />
     </View>
   );
@@ -309,7 +355,9 @@ const styles = StyleSheet.create({
   searchInput: {flex: 1, minWidth: 0, height: '100%', fontFamily: APPLICATION_FONTS.regular, fontSize: 11.5, color: APPLICATION_COLORS.navy},
   clearButton: {width: 30, height: 40, alignItems: 'center', justifyContent: 'center'},
   toolbar: {flexDirection: 'row', gap: 10, marginTop: 12},
-  toolButton: {flex: 1, minWidth: 0, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 11, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', paddingHorizontal: 9},
+  toolAnchor: {flex: 1, minWidth: 0},
+  toolButton: {height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 11, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', paddingHorizontal: 9},
+  toolButtonPressed: {opacity: 0.72},
   toolText: {flex: 1, minWidth: 0, fontFamily: APPLICATION_FONTS.semibold, fontSize: 10.5, textTransform: 'capitalize', color: APPLICATION_COLORS.navy},
   staleBannerWrapper: {paddingTop: 12},
   staleBanner: {minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, backgroundColor: '#FFF7DF', paddingHorizontal: 11},
@@ -320,14 +368,11 @@ const styles = StyleSheet.create({
   emptyText: {fontFamily: APPLICATION_FONTS.regular, fontSize: 11, lineHeight: 18, color: APPLICATION_COLORS.body, textAlign: 'center', marginTop: 7},
   emptyButton: {height: 42, borderRadius: 10, backgroundColor: APPLICATION_COLORS.blue, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, marginTop: 16},
   emptyButtonText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 11, color: 'white'},
-  modalOverlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 18, 58, 0.56)'},
-  modalCard: {width: '100%', maxWidth: 720, alignSelf: 'center', borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: 'white', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30},
-  modalHandle: {width: 42, height: 4, borderRadius: 2, backgroundColor: '#D8DFE9', alignSelf: 'center'},
-  modalTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 17, color: APPLICATION_COLORS.navy, marginVertical: 16},
-  optionRow: {minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#EEF1F5'},
-  optionLabel: {fontFamily: APPLICATION_FONTS.medium, fontSize: 12, color: APPLICATION_COLORS.body},
-  optionLabelSelected: {fontFamily: APPLICATION_FONTS.bold, color: APPLICATION_COLORS.blue},
-  radio: {width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#C6CFDC', alignItems: 'center', justifyContent: 'center'},
-  radioSelected: {borderColor: APPLICATION_COLORS.blue},
-  radioDot: {width: 10, height: 10, borderRadius: 5, backgroundColor: APPLICATION_COLORS.blue},
+  dropdownOverlay: {flex: 1, backgroundColor: 'rgba(6,26,77,0.08)'},
+  dropdownCard: {position: 'absolute', maxHeight: 310, borderRadius: 14, borderWidth: 1, borderColor: '#D5DDE9', backgroundColor: 'white', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6, shadowColor: '#193A70', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.16, shadowRadius: 14, elevation: 9},
+  dropdownTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 12.5, color: APPLICATION_COLORS.navy, paddingHorizontal: 4, paddingVertical: 10},
+  dropdownOptions: {maxHeight: 245},
+  dropdownOption: {minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, borderTopColor: '#EEF1F5', paddingHorizontal: 4},
+  dropdownOptionText: {flex: 1, minWidth: 0, fontFamily: APPLICATION_FONTS.medium, fontSize: 11.5, color: APPLICATION_COLORS.body},
+  dropdownOptionTextSelected: {fontFamily: APPLICATION_FONTS.bold, color: APPLICATION_COLORS.blue},
 });
