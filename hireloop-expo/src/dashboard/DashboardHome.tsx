@@ -354,6 +354,16 @@ function InterviewContent({compact, dateWidth, interview, onDetail, onJoin}: {
       <View style={[styles.interviewDetail, compact && styles.interviewDetailCompact]}>
         <View style={styles.activityTopline}>
           <Text numberOfLines={1} style={[styles.activityRole, compact && styles.activityRoleCompact]}>{interview.role_taxonomy_name}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Lihat detail interview ${interview.role_taxonomy_name}`}
+            hitSlop={8}
+            onPress={() => onDetail(interview)}
+            style={styles.activityChevron}
+            testID="dashboard-interview-card-chevron"
+          >
+            <Ionicons name="chevron-forward" size={18} color="#0876E8" />
+          </Pressable>
         </View>
         <Text numberOfLines={1} style={styles.activityCompany}>{interview.company_name ?? 'HireLoop Recruitment'}</Text>
         <View style={styles.activityMode}>
@@ -369,8 +379,17 @@ function InterviewContent({compact, dateWidth, interview, onDetail, onJoin}: {
               hitSlop={3}
               onPress={() => onJoin(interview)}
               style={[styles.joinButton, compact && styles.interviewButtonCompact]}
+              testID="dashboard-interview-join-button"
             >
-              <Text style={styles.joinButtonText}>Gabung Interview</Text>
+              <LinearGradient
+                colors={['#0145C0', '#00205A']}
+                end={{x: 1, y: 0}}
+                start={{x: 0, y: 0}}
+                style={styles.joinButtonGradient}
+                testID="dashboard-interview-join-gradient"
+              >
+                <Text style={styles.joinButtonText}>Gabung Interview</Text>
+              </LinearGradient>
             </Pressable>
           ) : null}
           <Pressable
@@ -901,6 +920,7 @@ const styles = StyleSheet.create({
   activityTopline: {flexDirection: 'row', alignItems: 'center'},
   activityRole: {fontFamily: F.bold, fontSize: 14, lineHeight: 18, color: C.ink, flex: 1},
   activityRoleCompact: {fontSize: 12.5, lineHeight: 16},
+  activityChevron: {width: 24, height: 24, marginLeft: 2, alignItems: 'center', justifyContent: 'center'},
   activityCompany: {fontFamily: F.regular, fontSize: 9, color: C.muted, marginTop: 1},
   activityMode: {flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5},
   activityModeText: {fontFamily: F.medium, fontSize: 9.5, color: '#454B57', flexShrink: 1},
@@ -909,7 +929,8 @@ const styles = StyleSheet.create({
   interviewButtons: {flexDirection: 'row', gap: 6, marginTop: 'auto', paddingTop: 6},
   interviewButtonsCompact: {flexDirection: 'row', gap: 6},
   interviewButtonCompact: {minHeight: 38},
-  joinButton: {flex: 1.5, minHeight: 38, borderRadius: 8, backgroundColor: '#0345AE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6},
+  joinButton: {flex: 1.5, minHeight: 38, borderRadius: 8, overflow: 'hidden'},
+  joinButtonGradient: {flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6},
   joinButtonText: {fontFamily: F.semibold, fontSize: 9, color: 'white'},
   detailInterviewButton: {flex: 1, minHeight: 38, borderRadius: 8, backgroundColor: '#EEF3FC', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6},
   detailLocationButton: {flex: 1, backgroundColor: '#F1ECFF'},

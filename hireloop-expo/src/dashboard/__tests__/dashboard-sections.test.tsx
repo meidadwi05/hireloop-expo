@@ -51,6 +51,11 @@ describe('dashboard sections', () => {
     expect(screen.getByText(/Online/)).toBeTruthy();
     expect(screen.getByText('Gabung Interview')).toBeTruthy();
     expect(screen.getByText('Detail')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-interview-card-chevron')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-interview-join-gradient').props.colors).toEqual([
+      processColor('#0145C0'),
+      processColor('#00205A'),
+    ]);
     expect(screen.getByText('27')).toBeTruthy();
     expect(screen.getByText('OKT')).toBeTruthy();
     expect(screen.getByText('10:00 WIB')).toBeTruthy();
@@ -65,7 +70,7 @@ describe('dashboard sections', () => {
     expect(screen.queryByText('Progress Lamaran')).toBeNull();
     expect(screen.queryByText('Pengumuman')).toBeNull();
 
-    fireEvent.press(screen.getByText('Detail'));
+    fireEvent.press(screen.getByTestId('dashboard-interview-card-chevron'));
 
     expect(screen.getByTestId('interview-detail-modal')).toBeTruthy();
     expect(screen.getByText('Jadwal Interview')).toBeTruthy();
