@@ -8,17 +8,18 @@ import {FormTextInput} from '../../../components/forms/FormTextInput';
 import type {SelectedSkill, SkillOption} from '../onboarding.types';
 import {FieldLabel} from './FormControls';
 
-export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, error}: {
+export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, error, allowCustom = true}: {
   options: SkillOption[];
   selected: SelectedSkill[];
   onToggle: (skill: SkillOption) => void;
   onToggleCustom: (name: string) => void;
   error?: string;
+  allowCustom?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const normalizedQuery = query.trim().toLowerCase();
-  const canAddCustom = query.trim().length >= 2
+  const canAddCustom = allowCustom && query.trim().length >= 2
     && !options.some(option => option.name.toLowerCase() === normalizedQuery)
     && !selected.some(skill => skill.name.toLowerCase() === normalizedQuery);
   const filtered = useMemo(() => options.filter(option => (
@@ -71,7 +72,7 @@ export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, e
                   <View style={styles.customCopy}><Text style={styles.customTitle}>Tambahkan keahlian sendiri</Text><Text numberOfLines={1} style={styles.customName}>{query.trim()}</Text></View>
                 </Pressable>
               ) : null}
-              ListEmptyComponent={<Text style={styles.empty}>Tidak ada skill master yang cocok. Anda tetap dapat menambahkan skill sendiri.</Text>}
+              ListEmptyComponent={<Text style={styles.empty}>{allowCustom ? 'Tidak ada skill master yang cocok. Anda tetap dapat menambahkan skill sendiri.' : 'Tidak ada keahlian master yang cocok.'}</Text>}
               renderItem={({item}) => <Pressable accessibilityRole="button" onPress={() => onToggle(item)} style={styles.option}><Text style={styles.optionText}>{item.name}</Text><Ionicons name="add-circle-outline" size={22} color="#087BFF" /></Pressable>}
             />
             <Pressable onPress={() => setOpen(false)} style={styles.done}><Text style={styles.doneText}>Selesai</Text></Pressable>

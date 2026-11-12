@@ -5,6 +5,20 @@ import {spawnSync} from 'node:child_process';
 const root = process.cwd();
 const easConfig = JSON.parse(await readFile(path.join(root, 'eas.json'), 'utf8'));
 const productionApiUrl = easConfig?.build?.production?.env?.EXPO_PUBLIC_API_URL;
+const productionPublicEnvironment = {...(easConfig?.build?.production?.env ?? {})};
+
+function parseEnvironment(source) {
+  return Object.fromEntries(source
+    .split(/\r?\n/u)
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('#') && line.includes('='))
+    .map(line => {
+      const separator = line.indexOf('=');
+      const key = line.slice(0, separator).trim();
+      const value = line.slice(separator + 1).trim().replace(/^(["'])(.*)\1$/u, '$2');
+      return [key, value];
+    }));
+}
 
 if (typeof productionApiUrl !== 'string' || productionApiUrl.length === 0) {
   throw new Error('EXPO_PUBLIC_API_URL production tidak tersedia di eas.json.');
@@ -18,11 +32,11 @@ if (parsedApiUrl.protocol !== 'https:') {
 const productionEnvironmentPath = path.join(root, '.env.production');
 try {
   const productionEnvironment = await readFile(productionEnvironmentPath, 'utf8');
-  const environmentApiUrl = productionEnvironment
-    .split(/\r?\n/u)
-    .find((line) => line.startsWith('EXPO_PUBLIC_API_URL='))
-    ?.slice('EXPO_PUBLIC_API_URL='.length)
-    .trim();
+  const parsedEnvironment = parseEnvironment(productionEnvironment);
+  const environmentApiUrl = parsedEnvironment.EXPO_PUBLIC_API_URL;
+  Object.assign(productionPublicEnvironment, Object.fromEntries(
+    Object.entries(parsedEnvironment).filter(([key]) => key.startsWith('EXPO_PUBLIC_')),
+  ));
 
   if (!environmentApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL tidak ditemukan di .env.production.');
@@ -38,7 +52,7 @@ try {
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const build = spawnSync(npmCommand, ['run', 'build:pwa'], {
   cwd: root,
-  env: {...process.env, EXPO_PUBLIC_API_URL: productionApiUrl},
+  env: {...process.env, ...productionPublicEnvironment, EXPO_PUBLIC_API_URL: productionApiUrl},
   shell: process.platform === 'win32',
   stdio: 'inherit',
 });

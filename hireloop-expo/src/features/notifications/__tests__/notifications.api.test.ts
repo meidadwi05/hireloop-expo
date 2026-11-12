@@ -2,12 +2,13 @@ import {httpClient} from '../../../core/api/http-client';
 import {notificationsApi} from '../api/notifications.api';
 
 jest.mock('../../../core/api/http-client', () => ({
-  httpClient: {get: jest.fn(), post: jest.fn()},
+  httpClient: {delete: jest.fn(), get: jest.fn(), post: jest.fn()},
 }));
 
 describe('notificationsApi', () => {
   const get = jest.mocked(httpClient.get);
   const post = jest.mocked(httpClient.post);
+  const remove = jest.mocked(httpClient.delete);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -39,6 +40,17 @@ describe('notificationsApi', () => {
 
     await expect(notificationsApi.unreadCount()).resolves.toBe(7);
     expect(get).toHaveBeenCalledWith('/notifications/unread-count');
+  });
+
+  it('registers and revokes the current device token', async () => {
+    post.mockResolvedValueOnce({data: {}});
+    remove.mockResolvedValueOnce({data: {}});
+
+    await notificationsApi.registerDeviceToken('device-token');
+    await notificationsApi.revokeDeviceToken('device-token');
+
+    expect(post).toHaveBeenCalledWith('/fcm/token', {token: 'device-token'});
+    expect(remove).toHaveBeenCalledWith('/fcm/token', {data: {token: 'device-token'}});
   });
 
   it('keeps blacklist tier metadata from NotificationHistory', async () => {

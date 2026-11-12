@@ -6,6 +6,11 @@ import {subscribeUnauthorized} from '../../core/api/http-client';
 import {authApi} from './api/auth.api';
 import {completeGoogleLogin as completeGoogleSession, startGoogleLogin} from './google-auth.service';
 import type {CandidateUser, LoginInput} from './auth.types';
+import {
+  clearLocalPushToken,
+  registerPushNotifications,
+  revokePushNotifications,
+} from '../notifications/push-notifications';
 
 export type AuthStatus = 'loading' | 'authenticating' | 'authenticated' | 'unauthenticated';
 
@@ -25,8 +30,10 @@ export function AuthProvider({children}: PropsWithChildren) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<CandidateUser | null>(null);
+  const authenticatedUserId = user?.id;
 
   const clearSession = useCallback(() => {
+    clearLocalPushToken();
     setUser(null);
     setStatus('unauthenticated');
     queryClient.clear();
@@ -56,6 +63,24 @@ export function AuthProvider({children}: PropsWithChildren) {
     void Promise.resolve().then(refreshUser);
     return subscribeUnauthorized(clearSession);
   }, [clearSession, refreshUser]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !authenticatedUserId) return undefined;
+
+    let disposed = false;
+    let unsubscribe: () => void = () => undefined;
+    void registerPushNotifications()
+      .then(cleanup => {
+        if (disposed) cleanup();
+        else unsubscribe = cleanup;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [authenticatedUserId, status]);
 
   const login = useCallback(async (input: LoginInput) => {
     setStatus('authenticating');
@@ -104,6 +129,7 @@ export function AuthProvider({children}: PropsWithChildren) {
   }, []);
 
   const logout = useCallback(async () => {
+    await revokePushNotifications().catch(clearLocalPushToken);
     await authApi.logout().catch(() => tokenStorage.remove());
     clearSession();
   }, [clearSession]);

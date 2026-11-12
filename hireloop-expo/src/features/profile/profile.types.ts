@@ -38,6 +38,7 @@ export type ProfileExperience = {
   description: string;
   workSetting: WorkSetting;
   workType: WorkType;
+  skills: {id: number; name: string}[];
 };
 
 export type ProfileSkill = {

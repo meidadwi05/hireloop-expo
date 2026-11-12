@@ -5,7 +5,6 @@ import React, {useMemo, useState} from 'react';
 import {
   Alert,
   Image,
-  Linking,
   Modal,
   Pressable,
   StyleSheet,
@@ -17,7 +16,8 @@ import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
 import {profileApi} from '../api/profile.api';
 import {calculateProfileCompletion, formatAddress} from '../profile.mapper';
-import {useProfile, useProfileFiles, useProfileMutation} from '../hooks/use-profile';
+import {useProfile, useProfileMutation} from '../hooks/use-profile';
+import {exportAtsCv} from '../ats-cv';
 import {
   PrimaryButton,
   ProfileCard,
@@ -45,7 +45,6 @@ function initials(name: string) {
 export function ProfileScreen() {
   const feedback = useActionFeedback();
   const profile = useProfile();
-  const profileFiles = useProfileFiles();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [about, setAbout] = useState('');
   const updateDescription = useProfileMutation(profileApi.updateDescription);
@@ -77,28 +76,14 @@ export function ProfileScreen() {
   };
 
   const openCv = async () => {
-    const cv = (profileFiles.data ?? []).find(item => item.type === 'document' && /(^|\s)(cv|resume)(\s|$)/i.test(`${item.name} ${item.originalName}`));
-    if (!cv) {
-      Alert.alert('CV belum tersedia', 'Tambahkan dokumen CV terlebih dahulu melalui menu Dokumen & Sertifikat.', [
-        {text: 'Batal', style: 'cancel'},
-        {text: 'Tambah CV', onPress: () => router.push('/(candidate)/profile/documents' as never)},
-      ]);
-      return;
-    }
-    const rawUrl = cv.url || cv.path;
-    const server = process.env.EXPO_PUBLIC_API_URL?.replace(/\/api\/?$/, '');
-    const url = /^https?:\/\//i.test(rawUrl) ? rawUrl : server ? `${server}/storage/${rawUrl.replace(/^\/?storage\//, '')}` : '';
-    if (!url) {
-      Alert.alert('CV tidak dapat dibuka', 'URL CV tidak tersedia dari server.');
-      return;
-    }
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (!supported) throw new Error('Perangkat tidak dapat membuka URL CV dari server.');
-      await Linking.openURL(url);
-    } catch (error) {
-      Alert.alert('CV Tidak Dapat Dibuka', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
-    }
+    if (!data) return;
+    await feedback.runAction({
+      loadingMessage: 'Menyusun CV ATS...',
+      successTitle: 'CV ATS Siap',
+      successMessage: 'CV ATS berhasil dibuat dari data profil terbaru.',
+      errorTitle: 'CV ATS Gagal Dibuat',
+      operation: () => exportAtsCv(data),
+    });
   };
 
   const openAbout = () => {

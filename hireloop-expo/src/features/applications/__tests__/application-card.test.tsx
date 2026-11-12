@@ -30,10 +30,10 @@ const model: ApplicationCardModel = {
     isTransferred: false,
     transferNote: null,
     stages: [
-      {index: 0, value: 'applied', label: 'Applied', type: null, status: 'Completed', isCurrent: false, isCompleted: true, startedAt: '2026-09-30T11:13:00+07:00', completedAt: '2026-09-30T11:13:00+07:00', note: null},
-      {index: 1, value: 'screening', label: 'Screening', type: null, status: 'Completed', isCurrent: false, isCompleted: true, startedAt: null, completedAt: '2026-09-30T11:14:00+07:00', note: null},
-      {index: 2, value: 'offering', label: 'Offering', type: null, status: 'In Progress', isCurrent: true, isCompleted: false, startedAt: '2026-09-30T11:14:00+07:00', completedAt: null, note: null},
-      {index: 3, value: 'medical', label: 'Medical', type: null, status: 'Pending', isCurrent: false, isCompleted: false, startedAt: null, completedAt: null, note: null},
+      {index: 0, value: 'applied', label: 'Applied', type: null, status: 'Completed', isCurrent: false, isCompleted: true, startedAt: '2026-09-30T11:13:00+07:00', completedAt: '2026-09-30T11:13:00+07:00', note: null, icon: null, color: null, histories: [], results: [], schedules: [], offerings: []},
+      {index: 1, value: 'screening', label: 'Screening', type: null, status: 'Completed', isCurrent: false, isCompleted: true, startedAt: null, completedAt: '2026-09-30T11:14:00+07:00', note: null, icon: null, color: null, histories: [], results: [], schedules: [], offerings: []},
+      {index: 2, value: 'offering', label: 'Offering', type: null, status: 'In Progress', isCurrent: true, isCompleted: false, startedAt: '2026-09-30T11:14:00+07:00', completedAt: null, note: null, icon: null, color: null, histories: [], results: [], schedules: [], offerings: []},
+      {index: 3, value: 'medical', label: 'Medical', type: null, status: 'Pending', isCurrent: false, isCompleted: false, startedAt: null, completedAt: null, note: null, icon: null, color: null, histories: [], results: [], schedules: [], offerings: []},
     ],
   },
   job: {

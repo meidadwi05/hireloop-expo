@@ -29,7 +29,7 @@ import {applicationsKeys} from '../applications.keys';
 import {canCancelApplication, mergeRecruitmentProcess} from '../applications.mapper';
 import type {CandidateApplication} from '../applications.types';
 import {useApplications} from '../hooks/use-applications';
-import {ApplicationVerticalTimeline} from '../components/ApplicationTimeline';
+import {ApplicationRecruitmentProgress} from '../components/ApplicationRecruitmentProgress';
 import {ApplicationDetailSkeleton, ApplicationTimelineSkeleton} from '../components/ApplicationSkeletons';
 import {CancelApplicationModal} from '../components/CancelApplicationModal';
 import {CompleteRequirementsModal} from '../components/CompleteRequirementsModal';
@@ -290,7 +290,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Progres Seleksi</Text>
+            <Text style={styles.sectionTitle}>Tahapan Proses Rekrutmen</Text>
             {!!processError && (
               <View style={styles.partialError}>
                 <Ionicons name="information-circle-outline" size={19} color="#A96C00" />
@@ -300,7 +300,12 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
             )}
             {processQuery.isFetching && !processQuery.data
               ? <ApplicationTimelineSkeleton />
-              : <ApplicationVerticalTimeline stages={application.stages} />}
+              : (
+                <ApplicationRecruitmentProgress
+                  stages={application.stages}
+                  currentStageIndex={processQuery.data?.currentStage.index ?? application.currentStageIndex}
+                />
+              )}
           </View>
 
           <View style={styles.sectionCard}>

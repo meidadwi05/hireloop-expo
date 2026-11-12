@@ -20,4 +20,12 @@ export const notificationsApi = {
   async markAllRead(): Promise<void> {
     await httpClient.post('/notifications/read-all');
   },
+
+  async registerDeviceToken(token: string): Promise<void> {
+    await httpClient.post('/fcm/token', {token});
+  },
+
+  async revokeDeviceToken(token: string): Promise<void> {
+    await httpClient.delete('/fcm/token', {data: {token}});
+  },
 };

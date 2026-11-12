@@ -32,6 +32,14 @@ describe('profile mapper', () => {
           job_preferences: [{role_taxonomy_id: 9, role_name: 'Data Analyst'}],
           expected_locations: ['Jakarta'],
           educations: [{id: 2, education_level: 'S1', school_name: 'Universitas HireLoop'}],
+          experiences: [{
+            id: 4,
+            position: 'Frontend Developer',
+            company_name: 'HireLoop',
+            start_date: '2025-01-01',
+            is_current: true,
+            skills: [{id: 9, name: 'React'}],
+          }],
         },
       },
     });
@@ -42,6 +50,7 @@ describe('profile mapper', () => {
     expect(profile.preferredWorkTypes).toEqual(['full_time', 'kontrak']);
     expect(profile.jobPreferences).toEqual([{id: 9, name: 'Data Analyst'}]);
     expect(profile.educations[0].educationLevel).toBe('S1');
+    expect(profile.experiences[0].skills).toEqual([{id: 9, name: 'React'}]);
     expect(formatAddress(profile.ktpAddress)).toContain('Bekasi');
   });
 

@@ -66,7 +66,48 @@ describe('applications mapper', () => {
         final_decision: null,
         stages: [
           {index: 0, value: 'applied', label: 'Applied', status: 'Completed', is_current: false, is_completed: true, started_at: '2026-09-30T11:13:00+07:00'},
-          {index: 1, value: 'screening', label: 'Screening', status: 'In Progress', is_current: true, is_completed: false, started_at: '2026-09-30T11:14:00+07:00'},
+          {
+            index: 1,
+            value: 'interview-hr-user',
+            label: 'Interview HR & User',
+            type: 'interview',
+            status: 'In Progress',
+            is_current: true,
+            is_completed: false,
+            started_at: '2026-09-30T11:14:00+07:00',
+            histories: [{
+              id: 3,
+              action_type: 'STAGE_MOVED',
+              from_stage: {index: 0, value: 'applied', label: 'Applied', status: 'Completed'},
+              to_stage: {index: 1, value: 'interview-hr-user', label: 'Interview HR & User', status: 'In Progress'},
+              note: 'Lanjut interview',
+              metadata: {},
+              occurred_at: '2026-09-30T11:14:00+07:00',
+            }],
+            results: [{
+              id: 8,
+              stage_index: 1,
+              type: 'interview',
+              execution_status: 'Hadir',
+              status: 'Passed',
+              score: 88,
+              note: 'Komunikasi baik',
+              created_at: '2026-10-01T09:00:00+07:00',
+            }],
+            schedules: [{
+              id: 5,
+              stage_index: 1,
+              type: 'interview',
+              agenda: 'Interview HRss',
+              date: '2026-12-08',
+              start_time: '10:21:00',
+              method: 'Online',
+              location_platform: 'Zoom',
+              address_link: 'https://zoom.example.test',
+              status: 'Scheduled',
+            }],
+            offerings: [],
+          },
         ],
       },
     });
@@ -76,5 +117,8 @@ describe('applications mapper', () => {
     expect(result.currentStage.label).toBe('Screening');
     expect(result.stages[0].isCompleted).toBe(true);
     expect(result.stages[1].isCurrent).toBe(true);
+    expect(result.stages[1].schedules[0]).toMatchObject({agenda: 'Interview HRss', locationPlatform: 'Zoom'});
+    expect(result.stages[1].results[0]).toMatchObject({executionStatus: 'Hadir', score: 88});
+    expect(result.stages[1].histories[0]).toMatchObject({actionType: 'STAGE_MOVED', note: 'Lanjut interview'});
   });
 });

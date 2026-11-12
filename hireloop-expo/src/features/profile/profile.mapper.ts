@@ -77,6 +77,10 @@ function education(value: unknown): ProfileEducation {
 
 function experience(value: unknown): ProfileExperience {
   const raw = asRecord(value);
+  const experienceSkills = array(raw.skills).map(item => {
+    const skillRecord = asRecord(item);
+    return {id: number(skillRecord.id ?? item), name: text(skillRecord.name)};
+  }).filter(item => item.id > 0);
   return {
     id: number(raw.id),
     experienceListId: raw.experience_list_id === null || raw.experience_list_id === undefined ? null : number(raw.experience_list_id),
@@ -88,6 +92,7 @@ function experience(value: unknown): ProfileExperience {
     description: text(raw.description),
     workSetting: normalizeWorkSystem(raw.job_type_expected) || 'on_site',
     workType: normalizeEmploymentStatus(raw.work_type) || 'full_time',
+    skills: experienceSkills,
   };
 }
 

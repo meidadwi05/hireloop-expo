@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {useQuery} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
 import {Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -7,13 +8,18 @@ import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {DateField} from '../../onboarding/components/DateField';
 import {CheckboxField, SelectField, TextField} from '../../onboarding/components/FormControls';
+import {SkillMultiSelect} from '../../onboarding/components/SkillMultiSelect';
+import {normalizeExperienceOptions} from '../../onboarding/onboarding.mapper';
 import {employmentStatusOptions, workSystemOptions} from '../../onboarding/onboarding.options';
+import type {SelectedSkill} from '../../onboarding/onboarding.types';
+import {masterDataApi} from '../../master-data/api/master-data.api';
 import {profileApi} from '../api/profile.api';
 import {useExperiences, useProfileMutation} from '../hooks/use-profile';
 import type {ExperienceInput, ProfileExperience, WorkSetting, WorkType} from '../profile.types';
 import {PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
 
 type Draft = {
+  experienceListId: number | null;
   position: string;
   company: string;
   startDate: string;
@@ -22,11 +28,12 @@ type Draft = {
   workSetting: WorkSetting;
   workType: WorkType;
   description: string;
+  skills: SelectedSkill[];
 };
 
 const emptyDraft = (): Draft => ({
-  position: '', company: '', startDate: '', endDate: '', current: false,
-  workSetting: 'on_site', workType: 'full_time', description: '',
+  experienceListId: null, position: '', company: '', startDate: '', endDate: '', current: false,
+  workSetting: 'on_site', workType: 'full_time', description: '', skills: [],
 });
 const CURRENT_TIMESTAMP = Date.now();
 
@@ -38,7 +45,18 @@ function monthYear(value: string | null) {
 
 function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | null; visible: boolean; onClose: () => void}) {
   const feedback = useActionFeedback();
+  const experienceOptionsQuery = useQuery({
+    queryKey: ['master-data', 'experience-list'],
+    queryFn: async () => normalizeExperienceOptions(await masterDataApi.list('experience-list')),
+    staleTime: 30 * 60 * 1000,
+  });
+  const skillsQuery = useQuery({
+    queryKey: ['master-data', 'skills', 'experience-form'],
+    queryFn: () => profileApi.listMasterSkills(),
+    staleTime: 30 * 60 * 1000,
+  });
   const [draft, setDraft] = useState<Draft>(() => item ? {
+    experienceListId: item.experienceListId,
     position: item.position,
     company: item.companyName,
     startDate: item.startDate,
@@ -47,6 +65,7 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
     workSetting: item.workSetting,
     workType: item.workType,
     description: item.description,
+    skills: item.skills.map(skill => ({skillId: skill.id, customName: null, name: skill.name})),
   } : emptyDraft());
   const [error, setError] = useState('');
   const mutation = useProfileMutation(
@@ -71,7 +90,7 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
       successMessage: item ? 'Riwayat pengalaman berhasil diperbarui.' : 'Riwayat pengalaman berhasil ditambahkan.',
       errorTitle: 'Gagal Menyimpan Pengalaman',
       operation: () => mutation.mutateAsync({
-        experience_list_id: item?.experienceListId ?? null,
+        experience_list_id: draft.experienceListId,
         position,
         posisi: position,
         company_name: draft.company.trim(),
@@ -81,7 +100,7 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
         description: draft.description.trim() || null,
         job_type_expected: draft.workSetting,
         work_type: draft.workType,
-        skill_ids: [],
+        skill_ids: draft.skills.flatMap(skill => skill.skillId === null ? [] : [skill.skillId]),
       }),
       onSuccessExit: onClose,
     });
@@ -96,13 +115,46 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
             <Pressable accessibilityLabel="Tutup form pengalaman" disabled={mutation.isPending} onPress={onClose} style={styles.closeButton}><Ionicons name="close" size={25} color={profileColors.ink} /></Pressable>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formContent}>
-            <TextField tone="light" required label="Posisi Pekerjaan" value={draft.position} onChangeText={value => setDraft(current => ({...current, position: value}))} placeholder="Contoh: Product Designer" />
+            <SelectField
+              tone="light"
+              searchable
+              required
+              label="Posisi Pekerjaan"
+              value={draft.experienceListId === null ? '__manual__' : String(draft.experienceListId)}
+              onChange={value => {
+                if (value === '__manual__') {
+                  setDraft(current => ({...current, experienceListId: null, position: ''}));
+                  return;
+                }
+                const selectedPosition = (experienceOptionsQuery.data ?? []).find(option => String(option.id) === value);
+                setDraft(current => ({...current, experienceListId: Number(value), position: selectedPosition?.name ?? current.position}));
+              }}
+              options={[
+                ...(experienceOptionsQuery.data ?? []).map(option => ({value: String(option.id), label: option.name})),
+                {value: '__manual__', label: 'Posisi lainnya (isi manual)'},
+              ]}
+              placeholder={experienceOptionsQuery.isLoading ? 'Memuat posisi...' : 'Pilih posisi pekerjaan'}
+              disabled={experienceOptionsQuery.isLoading}
+            />
+            {draft.experienceListId === null ? <TextField tone="light" required label="Nama Posisi" value={draft.position} onChangeText={value => setDraft(current => ({...current, position: value}))} placeholder="Contoh: Product Designer" /> : null}
             <TextField tone="light" required label="Nama Perusahaan" value={draft.company} onChangeText={value => setDraft(current => ({...current, company: value}))} placeholder="Nama perusahaan" />
             <DateField tone="light" presentation="inline" required label="Tanggal Mulai" value={draft.startDate} onChange={value => setDraft(current => ({...current, startDate: value}))} maximumDate={new Date()} />
             <DateField tone="light" presentation="inline" required={!draft.current} disabled={draft.current} label="Tanggal Selesai" value={draft.endDate} onChange={value => setDraft(current => ({...current, endDate: value}))} minimumDate={draft.startDate ? new Date(`${draft.startDate}T00:00:00`) : undefined} />
             <CheckboxField tone="light" label="Saya masih bekerja di sini" checked={draft.current} onChange={value => setDraft(current => ({...current, current: value, endDate: value ? '' : current.endDate}))} />
             <SelectField tone="light" presentation="inline" required label="Sistem Kerja" value={draft.workSetting} onChange={value => setDraft(current => ({...current, workSetting: value as WorkSetting}))} options={workSystemOptions} placeholder="Pilih sistem kerja" />
             <SelectField tone="light" presentation="inline" required label="Status Pekerjaan" value={draft.workType} onChange={value => setDraft(current => ({...current, workType: value as WorkType}))} options={employmentStatusOptions} placeholder="Pilih status pekerjaan" />
+            <SkillMultiSelect
+              allowCustom={false}
+              options={skillsQuery.data ?? []}
+              selected={draft.skills}
+              onToggle={skill => setDraft(current => ({
+                ...current,
+                skills: current.skills.some(itemSkill => itemSkill.skillId === skill.id)
+                  ? current.skills.filter(itemSkill => itemSkill.skillId !== skill.id)
+                  : [...current.skills, {skillId: skill.id, customName: null, name: skill.name}],
+              }))}
+              onToggleCustom={() => undefined}
+            />
             <TextField tone="light" multiline label="Deskripsi Pekerjaan" value={draft.description} onChangeText={value => setDraft(current => ({...current, description: value}))} placeholder="Jelaskan tanggung jawab atau pencapaian" maxLength={1000} />
             {error ? <View style={styles.errorBox}><Ionicons name="alert-circle-outline" size={19} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}
             <PrimaryButton disabled={mutation.isPending} label={mutation.isPending ? 'Menyimpan...' : 'Simpan Pengalaman'} onPress={() => void save()} />
@@ -155,6 +207,7 @@ export function ExperienceScreen() {
                 <View style={styles.cardTop}><View style={styles.cardHeading}><Text style={styles.position}>{item.position || 'Posisi belum diisi'}</Text><Text style={styles.company}>{item.companyName}</Text></View><View style={styles.actions}><Pressable accessibilityLabel={`Ubah ${item.position}`} onPress={() => openForm(item)} style={styles.action}><Ionicons name="pencil-outline" size={19} color={profileColors.blue} /></Pressable><Pressable accessibilityLabel={`Hapus ${item.position}`} onPress={() => remove(item)} style={[styles.action, styles.deleteAction]}><Ionicons name="trash-outline" size={19} color={profileColors.red} /></Pressable></View></View>
                 <Text style={styles.dates}>{monthYear(item.startDate)} – {item.isCurrent ? 'Sekarang' : monthYear(item.endDate)}</Text>
                 <View style={styles.badges}><Text style={styles.badge}>{workSystemOptions.find(option => option.value === item.workSetting)?.label}</Text><Text style={styles.badge}>{employmentStatusOptions.find(option => option.value === item.workType)?.label}</Text></View>
+                {item.skills.length ? <View style={styles.badges}>{item.skills.map(skill => <Text key={skill.id} style={[styles.badge, styles.skillBadge]}>{skill.name}</Text>)}</View> : null}
                 {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               </View>
             </ProfileCard>
@@ -175,5 +228,5 @@ const styles = StyleSheet.create({
   errorBox: {flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: 10, backgroundColor: '#FEF3F2', padding: 12, marginBottom: 16}, errorText: {flex: 1, fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 17, color: '#B42318'},
   summary: {flexDirection: 'row', alignItems: 'center', gap: 12}, summaryIcon: {width: 52, height: 52, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center'}, summaryCopy: {flex: 1, minWidth: 0}, summaryValue: {fontFamily: profileFonts.bold, fontSize: 15, color: profileColors.ink}, summaryText: {fontFamily: profileFonts.regular, fontSize: 10.5, lineHeight: 16, color: profileColors.muted, marginTop: 3},
   empty: {alignItems: 'center', paddingVertical: 28}, emptyTitle: {fontFamily: profileFonts.bold, fontSize: 16, color: profileColors.ink, marginTop: 12}, emptyText: {fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 17, color: profileColors.muted, textAlign: 'center', marginVertical: 7, marginBottom: 18},
-  experienceCard: {flexDirection: 'row', paddingLeft: 12, overflow: 'hidden'}, timeline: {width: 24, alignItems: 'center'}, node: {width: 12, height: 12, borderRadius: 6, backgroundColor: profileColors.blue, marginTop: 5, zIndex: 1}, nodeCurrent: {backgroundColor: profileColors.green}, line: {position: 'absolute', top: 16, bottom: 12, width: 2, backgroundColor: '#DCE5F2'}, cardCopy: {flex: 1, minWidth: 0, paddingLeft: 8}, cardTop: {flexDirection: 'row', alignItems: 'flex-start', gap: 8}, cardHeading: {flex: 1, minWidth: 0}, position: {fontFamily: profileFonts.bold, fontSize: 14, lineHeight: 19, color: profileColors.ink}, company: {fontFamily: profileFonts.medium, fontSize: 11.5, lineHeight: 17, color: '#475467', marginTop: 2}, actions: {flexDirection: 'row', gap: 5}, action: {width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center'}, deleteAction: {backgroundColor: '#FFF0F2'}, dates: {fontFamily: profileFonts.regular, fontSize: 10.5, color: profileColors.muted, marginTop: 6}, badges: {flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10}, badge: {fontFamily: profileFonts.medium, fontSize: 9.5, color: '#1B5FC8', backgroundColor: '#EEF5FF', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5}, description: {fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 18, color: '#344054', marginTop: 11},
+  experienceCard: {flexDirection: 'row', paddingLeft: 12, overflow: 'hidden'}, timeline: {width: 24, alignItems: 'center'}, node: {width: 12, height: 12, borderRadius: 6, backgroundColor: profileColors.blue, marginTop: 5, zIndex: 1}, nodeCurrent: {backgroundColor: profileColors.green}, line: {position: 'absolute', top: 16, bottom: 12, width: 2, backgroundColor: '#DCE5F2'}, cardCopy: {flex: 1, minWidth: 0, paddingLeft: 8}, cardTop: {flexDirection: 'row', alignItems: 'flex-start', gap: 8}, cardHeading: {flex: 1, minWidth: 0}, position: {fontFamily: profileFonts.bold, fontSize: 14, lineHeight: 19, color: profileColors.ink}, company: {fontFamily: profileFonts.medium, fontSize: 11.5, lineHeight: 17, color: '#475467', marginTop: 2}, actions: {flexDirection: 'row', gap: 5}, action: {width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center'}, deleteAction: {backgroundColor: '#FFF0F2'}, dates: {fontFamily: profileFonts.regular, fontSize: 10.5, color: profileColors.muted, marginTop: 6}, badges: {flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10}, badge: {fontFamily: profileFonts.medium, fontSize: 9.5, color: '#1B5FC8', backgroundColor: '#EEF5FF', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5}, skillBadge: {color: '#344054', backgroundColor: '#F2F4F7'}, description: {fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 18, color: '#344054', marginTop: 11},
 });

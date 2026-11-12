@@ -38,6 +38,10 @@ function mapExperiences(payload: unknown): ProfileExperience[] {
     workType: ['full_time', 'paruh_waktu', 'kontrak', 'freelance', 'internship', 'outsourcing', 'kasual'].includes(String(item.work_type))
       ? item.work_type as ProfileExperience['workType']
       : 'full_time',
+    skills: Array.isArray(item.skills) ? item.skills.map(value => {
+      const skill = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+      return {id: Number(skill.id), name: String(skill.name ?? '')};
+    }).filter(skill => skill.id > 0 && skill.name) : [],
   })).filter(item => item.id > 0);
 }
 

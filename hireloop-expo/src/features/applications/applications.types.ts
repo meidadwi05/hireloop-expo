@@ -22,6 +22,74 @@ export type ApplicationStage = {
   startedAt: string | null;
   completedAt: string | null;
   note: string | null;
+  icon: string | null;
+  color: string | null;
+  histories: RecruitmentProcessHistory[];
+  results: RecruitmentProcessResult[];
+  schedules: RecruitmentProcessSchedule[];
+  offerings: RecruitmentProcessOffering[];
+};
+
+export type RecruitmentProcessHistory = {
+  id: number;
+  actionType: string;
+  fromStage: {index: number | null; value: string | null; label: string | null; status: string | null};
+  toStage: {index: number | null; value: string | null; label: string | null; status: string | null};
+  note: string | null;
+  metadata: unknown;
+  occurredAt: string | null;
+};
+
+export type RecruitmentProcessResult = {
+  id: number;
+  stageIndex: number | null;
+  stageValue: string | null;
+  stageLabel: string | null;
+  type: string | null;
+  executionStatus: string | null;
+  status: string | null;
+  score: number | null;
+  scorecard: unknown;
+  note: string | null;
+  attachmentPath: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type RecruitmentProcessSchedule = {
+  id: number;
+  stageIndex: number | null;
+  stageValue: string | null;
+  stageLabel: string | null;
+  type: string | null;
+  agenda: string | null;
+  date: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  method: string | null;
+  locationPlatform: string | null;
+  addressLink: string | null;
+  addressMapsUrl: string | null;
+  sessionId: number | null;
+  note: string | null;
+  status: string | null;
+  rescheduleCount: number;
+  medicalResult: string | null;
+  cancellationReason: string | null;
+  cancellationAfterAction: string | null;
+  cancellationNote: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type RecruitmentProcessOffering = {
+  id: number;
+  status: string | null;
+  effectiveDate: string | null;
+  note: string | null;
+  confirmationSource: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 export type CandidateApplication = {
