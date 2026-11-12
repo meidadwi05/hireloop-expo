@@ -21,9 +21,9 @@ import type {CandidateUser} from '../features/auth/auth.types';
 import {isCandidateTier2Banned} from '../features/auth/candidate-apply-access';
 import type {CandidateApplication} from '../features/applications/applications.types';
 import {applicationStatePresentation, formatApplicationDate} from '../features/applications/components/applications.ui';
-import {InterviewDetailModal} from '../features/dashboard/components/InterviewDetailModal';
 import type {DashboardInterview} from '../features/dashboard/dashboard.types';
 import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
+import {openInterviewApplication} from '../features/dashboard/interview-application-route';
 import {openInterviewDestination} from '../features/dashboard/interview-linking';
 import {useSavedJobs} from '../features/jobs/saved-jobs-provider';
 import type {JobCardModel} from '../features/jobs/jobs.types';
@@ -417,12 +417,16 @@ export function NearestInterviewCard({containerWidth = 390, interviews, onOpenAl
   onOpenAll?: () => void;
 }) {
   const responsive = getDashboardResponsiveLayout(containerWidth);
-  const [selectedInterview, setSelectedInterview] = useState<DashboardInterview | null>(null);
   const joinInterview = async (interview: DashboardInterview) => {
     try {
       await openInterviewDestination(interview);
     } catch (error) {
       Alert.alert('Tautan Tidak Dapat Dibuka', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+    }
+  };
+  const openDetail = (interview: DashboardInterview) => {
+    if (!openInterviewApplication(interview)) {
+      Alert.alert('Detail Lamaran Belum Tersedia', 'Jadwal ini belum terhubung dengan data lamaran. Muat ulang setelah backend terbaru aktif.');
     }
   };
 
@@ -434,11 +438,10 @@ export function NearestInterviewCard({containerWidth = 390, interviews, onOpenAl
           compact={responsive.compact}
           dateWidth={responsive.interviewDateWidth}
           interview={interviews[0]}
-          onDetail={setSelectedInterview}
+          onDetail={openDetail}
           onJoin={interview => void joinInterview(interview)}
         />
       </View>
-      <InterviewDetailModal interview={selectedInterview} onClose={() => setSelectedInterview(null)} />
     </View>
   );
 }
@@ -750,7 +753,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
             width={cardWidth}
             saved={isSaved(job.key)}
             applyBlocked={applyBlocked}
-            onApply={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id), intent: 'apply'}} as never)}
+            onApply={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id)}} as never)}
             onOpen={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id)}} as never)}
             onShare={() => void Share.share({message: `${job.title} di ${job.company} - ${job.location}`})}
             onToggleSaved={() => toggleSaved(job)}

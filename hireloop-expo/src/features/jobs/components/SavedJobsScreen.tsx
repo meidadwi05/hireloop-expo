@@ -102,11 +102,10 @@ export function SavedJobsScreen() {
     });
   };
 
-  const openJob = (job: CandidateJobCard, intent?: 'apply') => {
-    if (intent === 'apply' && applyAccess.isTier2Banned) return;
+  const openJob = (job: CandidateJobCard) => {
     router.push({
       pathname: '/(candidate)/jobs/[source]/[id]',
-      params: {source: job.source, id: String(job.id), ...(intent ? {intent} : {})},
+      params: {source: job.source, id: String(job.id)},
     } as never);
   };
 
@@ -200,7 +199,7 @@ export function SavedJobsScreen() {
               job={item}
               saved={isSaved(item.key)}
               applyBlocked={applyAccess.isTier2Banned}
-              onApply={() => openJob(item, 'apply')}
+              onApply={() => openJob(item)}
               onOpen={() => openJob(item)}
               onShare={() => void Share.share({message: `${item.title} di ${item.company} - ${item.location}`}).catch(error => {
                 Alert.alert('Gagal Membagikan Lowongan', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');

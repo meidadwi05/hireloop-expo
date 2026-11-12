@@ -39,13 +39,12 @@ export function JobsScreen() {
   const pagePadding = containerWidth <= 350 ? 14 : 20;
   const iconLayout = getJobsIconLayout(containerWidth);
 
-  const openJob = useCallback((job: CandidateJobCard, intent?: 'apply') => {
-    if (intent === 'apply' && applyAccess.isTier2Banned) return;
+  const openJob = useCallback((job: CandidateJobCard) => {
     router.push({
       pathname: '/(candidate)/jobs/[source]/[id]',
-      params: {source: job.source, id: String(job.id), ...(intent ? {intent} : {})},
+      params: {source: job.source, id: String(job.id)},
     } as never);
-  }, [applyAccess.isTier2Banned]);
+  }, []);
 
   const reset = useCallback(() => {
     jobs.setSearch('');
@@ -89,7 +88,7 @@ export function JobsScreen() {
               job={item}
               saved={isSaved(item.key)}
               applyBlocked={applyAccess.isTier2Banned}
-              onApply={() => openJob(item, 'apply')}
+              onApply={() => openJob(item)}
               onOpen={() => openJob(item)}
               onShare={() => void Share.share({message: `${item.title} di ${item.company} - ${item.location}`}).catch(error => {
                 Alert.alert('Gagal Membagikan Lowongan', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');

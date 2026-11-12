@@ -5,7 +5,7 @@ import {JobDetailScreen} from '../../../../features/jobs/components/JobDetailScr
 import type {CandidateJobSource} from '../../../../features/jobs/jobs.types';
 
 export default function CandidateJobDetailRoute() {
-  const params = useLocalSearchParams<{source?: string; id?: string; intent?: string}>();
+  const params = useLocalSearchParams<{source?: string; id?: string}>();
   const source: CandidateJobSource | null = params.source === 'job-posting' || params.source === 'project-lowongan'
     ? params.source
     : null;
@@ -15,5 +15,5 @@ export default function CandidateJobDetailRoute() {
     return <Redirect href="/(candidate)/(tabs)/jobs" />;
   }
 
-  return <JobDetailScreen source={source} id={id} autoOpenApply={params.intent === 'apply'} />;
+  return <JobDetailScreen source={source} id={id} />;
 }

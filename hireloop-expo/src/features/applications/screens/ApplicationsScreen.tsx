@@ -81,6 +81,7 @@ function fallbackJob(application: CandidateApplication): CandidateJobDetail {
     experience: 'Tidak ditentukan',
     documentRequirements: [],
     familyDeclarationRequired: false,
+    familyRequirements: [],
     policies: [],
   };
 }

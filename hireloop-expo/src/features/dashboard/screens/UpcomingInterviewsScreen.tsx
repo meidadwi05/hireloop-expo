@@ -20,11 +20,10 @@ import {ShimmerBlock, ShimmerGroup} from '../../../shared/components/shimmer';
 import {dashboardApi} from '../api/dashboard.api';
 import {InterviewCalendarCard} from '../components/interview-calendar/InterviewCalendarCard';
 import {interviewsForDate} from '../components/interview-calendar/interview-calendar.utils';
-import {InterviewDetailModal} from '../components/InterviewDetailModal';
 import {InterviewScheduleCard} from '../components/InterviewScheduleCard';
 import {selectUpcomingInterviews} from '../dashboard.interviews';
 import {dashboardKeys} from '../dashboard.keys';
-import {openInterviewDestination} from '../interview-linking';
+import {openInterviewApplication} from '../interview-application-route';
 import type {DashboardInterview} from '../dashboard.types';
 
 const F = {
@@ -137,7 +136,6 @@ export function UpcomingInterviewsScreen() {
   const [visibleMonth, setVisibleMonth] = useState(today.getMonth());
   const [visibleYear, setVisibleYear] = useState(today.getFullYear());
   const [openDropdown, setOpenDropdown] = useState<'month' | 'year' | null>(null);
-  const [selectedInterview, setSelectedInterview] = useState<DashboardInterview | null>(null);
   const visibleInterviews = useMemo(() => interviewsForDate(interviews, selectedDate), [interviews, selectedDate]);
 
   const goBack = () => {
@@ -145,11 +143,9 @@ export function UpcomingInterviewsScreen() {
     else router.replace('/(candidate)/(tabs)/home' as never);
   };
 
-  const joinInterview = async (interview: DashboardInterview) => {
-    try {
-      await openInterviewDestination(interview);
-    } catch (error) {
-      Alert.alert('Tautan Tidak Dapat Dibuka', error instanceof Error ? error.message : 'Coba lagi beberapa saat lagi.');
+  const openDetail = (interview: DashboardInterview) => {
+    if (!openInterviewApplication(interview)) {
+      Alert.alert('Detail Lamaran Belum Tersedia', 'Jadwal ini belum terhubung dengan data lamaran. Muat ulang setelah backend terbaru aktif.');
     }
   };
 
@@ -233,15 +229,13 @@ export function UpcomingInterviewsScreen() {
               <InterviewScheduleCard
                 compact={compact}
                 interview={item}
-                onDetail={() => setSelectedInterview(item)}
-                onJoin={() => void joinInterview(item)}
+                onDetail={() => openDetail(item)}
               />
             )}
             showsVerticalScrollIndicator={false}
           />
         )}
       </View>
-      <InterviewDetailModal interview={selectedInterview} onClose={() => setSelectedInterview(null)} />
     </SafeAreaView>
   );
 }

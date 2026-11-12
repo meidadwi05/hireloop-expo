@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {LinearGradient} from 'expo-linear-gradient';
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
@@ -7,7 +6,6 @@ import {
   interviewClock,
   interviewCompany,
   interviewPosition,
-  isSafeExternalUrl,
 } from '../dashboard.interviews';
 import type {DashboardInterview} from '../dashboard.types';
 
@@ -58,15 +56,12 @@ export function InterviewScheduleCard({
   compact,
   interview,
   onDetail,
-  onJoin,
 }: {
   compact: boolean;
   interview: DashboardInterview;
   onDetail: () => void;
-  onJoin: () => void;
 }) {
   const online = interview.mode === 'online';
-  const canJoin = online && isSafeExternalUrl(interview.meeting_link);
   const modeText = online
     ? interview.location_platform || interview.method || 'Online Interview'
     : interview.location || 'Lokasi menyusul';
@@ -104,31 +99,12 @@ export function InterviewScheduleCard({
           </View>
         </View>
         <View style={styles.actions}>
-          {canJoin ? (
-            <Pressable
-              accessibilityLabel={`Gabung interview ${interviewPosition(interview)}`}
-              accessibilityRole="button"
-              hitSlop={3}
-              onPress={onJoin}
-              style={({pressed}) => [styles.joinButton, pressed && styles.pressed]}
-            >
-              <LinearGradient
-                colors={['#0145C0', '#00205A']}
-                end={{x: 1, y: 0}}
-                start={{x: 0, y: 0}}
-                style={styles.joinGradient}
-                testID="interview-join-gradient"
-              >
-                <Text style={styles.joinText}>Gabung Interview</Text>
-              </LinearGradient>
-            </Pressable>
-          ) : null}
           <Pressable
             accessibilityLabel={`${online ? 'Lihat detail' : 'Lihat detail lokasi'} ${interviewPosition(interview)}`}
             accessibilityRole="button"
             hitSlop={3}
             onPress={onDetail}
-            style={({pressed}) => [styles.detailButton, !canJoin && styles.detailButtonFull, pressed && styles.pressed]}
+            style={({pressed}) => [styles.detailButton, styles.detailButtonFull, pressed && styles.pressed]}
           >
             <Text style={styles.detailText}>{online ? 'Detail' : 'Detail Lokasi'}</Text>
           </Pressable>
@@ -171,9 +147,6 @@ const styles = StyleSheet.create({
   stageBadge: {maxWidth: '100%', alignSelf: 'flex-start', borderRadius: 9, backgroundColor: '#EAF2FF', paddingHorizontal: 7, paddingVertical: 3, marginTop: 5},
   stageText: {fontFamily: F.semibold, fontSize: 7.5, color: '#1F63D8'},
   actions: {minHeight: 38, flexDirection: 'row', gap: 6, marginTop: 6},
-  joinButton: {flex: 1.5, minHeight: 38, overflow: 'hidden', borderRadius: 9},
-  joinGradient: {flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6},
-  joinText: {fontFamily: F.semibold, fontSize: 9, color: '#FFFFFF'},
   detailButton: {flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#EDF3FC', paddingHorizontal: 6},
   detailButtonFull: {flex: 1, backgroundColor: '#F1ECFF'},
   detailText: {fontFamily: F.semibold, fontSize: 9, color: '#0B56B4'},

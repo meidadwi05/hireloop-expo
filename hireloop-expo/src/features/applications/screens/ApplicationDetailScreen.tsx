@@ -20,7 +20,6 @@ import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {dashboardKeys} from '../../dashboard/dashboard.keys';
 import {jobsApi} from '../../jobs/api/jobs.api';
-import {JobInformationSections} from '../../jobs/components/JobInformationSections';
 import {jobsKeys} from '../../jobs/jobs.keys';
 import {useSavedJobs} from '../../jobs/saved-jobs-provider';
 import type {CandidateJobDetail, CandidateJobSource} from '../../jobs/jobs.types';
@@ -74,6 +73,7 @@ function fallbackJob(application: CandidateApplication): CandidateJobDetail {
     experience: 'Tidak ditentukan',
     documentRequirements: [],
     familyDeclarationRequired: false,
+    familyRequirements: [],
     policies: [],
   };
 }
@@ -321,8 +321,6 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
               <Pressable accessibilityRole="button" onPress={() => void jobQuery.refetch()}><Text style={styles.retryText}>Coba lagi</Text></Pressable>
             </View>
           )}
-
-          <JobInformationSections job={job} />
 
           {application.state === 'temporary' && application.storageKind === 'applicant-data' ? (
             <Pressable accessibilityRole="button" onPress={() => setRequirementsOpen(true)} style={styles.requirementsButton}>

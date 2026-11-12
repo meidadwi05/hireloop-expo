@@ -67,6 +67,7 @@ const model: ApplicationCardModel = {
     experience: '1 tahun',
     documentRequirements: [],
     familyDeclarationRequired: false,
+    familyRequirements: [],
     policies: [],
   },
 };

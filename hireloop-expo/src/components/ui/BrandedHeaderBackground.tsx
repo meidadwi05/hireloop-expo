@@ -19,6 +19,7 @@ type BrandedHeaderPreset = {
   backgroundColor: string;
   minimumContentHeight: number;
   maximumArtworkWidth: number;
+  useContainerWidth?: boolean;
   resizeMode?: ImageResizeMode;
 };
 
@@ -45,6 +46,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#00419E',
     minimumContentHeight: 72,
     maximumArtworkWidth: 430,
+    useContainerWidth: true,
     resizeMode: 'contain',
   },
   notifications: {
@@ -76,7 +78,9 @@ export function getBrandedHeaderLayout(
   const preset = PRESETS[variant];
   const safeWidth = Math.max(1, containerWidth);
   const safeInset = Math.max(0, topInset);
-  const artworkWidth = Math.min(safeWidth, preset.maximumArtworkWidth);
+  const artworkWidth = preset.useContainerWidth
+    ? safeWidth
+    : Math.min(safeWidth, preset.maximumArtworkWidth);
   const artworkHeight = artworkWidth / BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
   const height = Math.max(minimumContentHeight, artworkHeight);

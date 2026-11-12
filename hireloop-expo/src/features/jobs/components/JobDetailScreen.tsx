@@ -15,7 +15,7 @@ import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-acce
 import {jobsApi} from '../api/jobs.api';
 import {jobsKeys} from '../jobs.keys';
 import type {CandidateJobSource} from '../jobs.types';
-import {ApplyConfirmationModal} from './ApplyConfirmationModal';
+import {JobApplicationRequirementsSheet, type JobApplicationRequirementsValue} from './JobApplicationRequirementsSheet';
 import {JobInformationSections} from './JobInformationSections';
 import {JobDetailSkeleton} from './JobDetailSkeleton';
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
@@ -23,17 +23,16 @@ import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
 type JobDetailScreenProps = {
   source: CandidateJobSource;
   id: number;
-  autoOpenApply: boolean;
 };
 
-export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProps) {
+export function JobDetailScreen({source, id}: JobDetailScreenProps) {
   const actionFeedback = useActionFeedback();
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
   const queryClient = useQueryClient();
   const applyAccess = useCandidateApplyAccess();
-  const [confirmVisible, setConfirmVisible] = useState(autoOpenApply && !applyAccess.isTier2Banned);
+  const [requirementsVisible, setRequirementsVisible] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [requiresNik, setRequiresNik] = useState(false);
   const detail = useQuery({
@@ -44,6 +43,58 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
 
   const job = detail.data;
   const error = detail.isError ? toAppApiError(detail.error).message : '';
+
+  const submitApplication = (value: JobApplicationRequirementsValue) => {
+    if (!job || apply.isPending) return;
+    if (applyAccess.isTier2Banned) {
+      setRequirementsVisible(false);
+      setFeedback('Akun Anda masuk daftar blacklist permanen dan tidak dapat melamar pekerjaan.');
+      return;
+    }
+
+    setFeedback('');
+    setRequirementsVisible(false);
+    void (async () => {
+      const result = await actionFeedback.runAction({
+        loadingMessage: 'Mengirim lamaran...',
+        successTitle: 'Lamaran Berhasil Dikirim',
+        successMessage: 'Anda dapat memantau proses rekrutmen dari detail lamaran.',
+        errorTitle: 'Gagal Mengirim Lamaran',
+        operation: async () => {
+          const response = await apply.mutateAsync({
+            job_reference_type: job.source,
+            job_reference_id: job.id,
+            job_title: job.title,
+            company_name: job.company,
+            location: job.location,
+            documents: value.documents,
+            family_declaration: value.familyDeclaration,
+            statements: value.statements,
+            referral: value.referral,
+            agreed: true,
+          });
+          await Promise.all([
+            queryClient.invalidateQueries({queryKey: jobsKeys.all}),
+            queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
+          ]);
+          return response;
+        },
+        onSuccessExit: () => router.replace({
+          pathname: '/(candidate)/applications/[source]/[id]',
+          params: {source: job.source, id: String(job.id)},
+        } as never),
+      });
+
+      if (!result.ok) {
+        const apiError = toAppApiError(result.error);
+        const nikIncomplete = apiError.status === 422 && /nik|nomor induk/i.test(apiError.message);
+        setRequiresNik(nikIncomplete);
+        setFeedback(apiError.message);
+        if (apiError.status === 403) void applyAccess.refetch();
+        else if (!nikIncomplete) setRequirementsVisible(true);
+      }
+    })();
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -128,7 +179,7 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
                 accessibilityLabel={applyAccess.isTier2Banned ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
                 accessibilityRole="button"
                 disabled={!job.active || apply.isPending || applyAccess.isTier2Banned}
-                onPress={() => setConfirmVisible(true)}
+                onPress={() => setRequirementsVisible(true)}
                 style={[styles.applyButton, applyAccess.isTier2Banned && styles.blockedApplyButton, !job.active && styles.disabled]}
               >
                 {applyAccess.isTier2Banned && <Ionicons name="shield-checkmark-outline" size={18} color="white" />}
@@ -140,39 +191,13 @@ export function JobDetailScreen({source, id, autoOpenApply}: JobDetailScreenProp
         </View>
       </ScrollView>
       {job && (
-        <ApplyConfirmationModal
+        <JobApplicationRequirementsSheet
           job={job}
-          visible={confirmVisible && !applyAccess.isTier2Banned}
-          loading={apply.isPending}
-          onCancel={() => setConfirmVisible(false)}
-          onConfirm={() => {
-            if (apply.isPending) return;
-            if (applyAccess.isTier2Banned) {
-              setConfirmVisible(false);
-              setFeedback('Akun Anda masuk daftar blacklist permanen dan tidak dapat melamar pekerjaan.');
-              return;
-            }
-            setFeedback('');
-            setConfirmVisible(false);
-            void (async () => {
-              const result = await actionFeedback.runAction({
-                loadingMessage: 'Mengirim lamaran...', successTitle: 'Lamaran Berhasil Dikirim',
-                successMessage: 'Anda dapat memantau prosesnya dari menu Lamaran.', errorTitle: 'Gagal Mengirim Lamaran',
-                operation: async () => {
-                  const response = await apply.mutateAsync({job_reference_type: job.source, job_reference_id: job.id, job_title: job.title, company_name: job.company, location: job.location, agreed: true});
-                  await Promise.all([queryClient.invalidateQueries({queryKey: jobsKeys.all}), queryClient.invalidateQueries({queryKey: applicationsKeys.all})]);
-                  return response;
-                },
-                onSuccessExit: () => router.replace('/(candidate)/(tabs)/career'),
-              });
-              if (!result.ok) {
-                const apiError = toAppApiError(result.error);
-                setRequiresNik(apiError.status === 422 && /nik|nomor induk/i.test(apiError.message));
-                setFeedback(apiError.message);
-                if (apiError.status === 403) void applyAccess.refetch();
-              }
-            })();
-          }}
+          visible={requirementsVisible && !applyAccess.isTier2Banned}
+          submitting={apply.isPending}
+          error={feedback || undefined}
+          onClose={() => setRequirementsVisible(false)}
+          onSubmit={submitApplication}
         />
       )}
     </SafeAreaView>

@@ -39,6 +39,7 @@ function detail(overrides: Partial<CandidateJobDetail> = {}): CandidateJobDetail
     experience: 'Tanpa pengalaman',
     documentRequirements: [],
     familyDeclarationRequired: false,
+    familyRequirements: [],
     policies: [],
     ...overrides,
   };

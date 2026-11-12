@@ -54,7 +54,18 @@ export type CandidateJobDetail = CandidateJobCard & {
   experience: string;
   documentRequirements: {label: string; group: 'dokumen' | 'sertifikasi'; required: boolean}[];
   familyDeclarationRequired: boolean;
-  policies: {name: string; required: boolean}[];
+  familyRequirements: {key: string; label: string; required: boolean}[];
+  policies: {key: string; name: string; required: boolean}[];
+};
+
+export type CandidateApplicationUpload = {
+  label: string;
+  group: 'dokumen' | 'sertifikasi';
+  required: boolean;
+  uri?: string;
+  name?: string;
+  mimeType?: string;
+  file?: Blob;
 };
 
 export type ApplyCandidateJobPayload = {
@@ -63,5 +74,9 @@ export type ApplyCandidateJobPayload = {
   job_title: string;
   company_name: string;
   location: string;
+  documents: CandidateApplicationUpload[];
+  family_declaration?: Record<string, string>;
+  statements?: Record<string, 'Ya' | 'Tidak'>;
+  referral?: string;
   agreed: true;
 };

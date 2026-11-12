@@ -51,11 +51,14 @@ describe('jobsApi', () => {
       job_title: 'Operator',
       company_name: 'PT Contoh',
       location: 'Karawang',
+      documents: [],
       agreed: true as const,
     };
 
     await jobsApi.apply(payload);
 
-    expect(post).toHaveBeenCalledWith('/applicant-data', payload);
+    expect(post).toHaveBeenCalledWith('/applicant-data', expect.any(FormData), {
+      headers: {'Content-Type': 'multipart/form-data'},
+    });
   });
 });

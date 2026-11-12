@@ -137,4 +137,36 @@ describe('mapJobCard', () => {
     expect(result.additionalQualifications).toEqual([]);
     expect(result.benefits).toEqual([]);
   });
+
+  it('maps dynamic application requirements from the production vacancy contract', () => {
+    const result = mapJobDetail({
+      data: {
+        id: 20,
+        nama_lowongan: 'Operator Produksi',
+        persyaratan_dokumen: JSON.stringify([
+          {dokumen: 'CV', status: 'Wajib'},
+          {dokumen: 'Ijazah', status: 'Opsional'},
+        ]),
+        sertifikasi_list: [{sertifikasi: 'Sertifikat K3', status: 'Wajib'}],
+        cek_hubungan_keluarga: 'Ya',
+        deteksi_hubungan_ayah_ibu: true,
+        deteksi_hubungan_suami_istri: true,
+        kebijakan_lainnya: [{pertanyaan: 'Bersedia bekerja shift?', status: 'Wajib'}],
+      },
+    }, 'project-lowongan');
+
+    expect(result.documentRequirements).toEqual([
+      {label: 'CV', group: 'dokumen', required: true},
+      {label: 'Ijazah', group: 'dokumen', required: false},
+      {label: 'Sertifikat K3', group: 'sertifikasi', required: true},
+    ]);
+    expect(result.familyRequirements).toEqual([
+      {key: 'nama_ayah', label: 'Nama Lengkap Bapak', required: true},
+      {key: 'nama_ibu', label: 'Nama Lengkap Ibu', required: true},
+      {key: 'nama_pasangan', label: 'Nama Lengkap Suami/Istri', required: false},
+    ]);
+    expect(result.policies).toEqual([
+      {key: 'policy-0', name: 'Bersedia bekerja shift?', required: true},
+    ]);
+  });
 });

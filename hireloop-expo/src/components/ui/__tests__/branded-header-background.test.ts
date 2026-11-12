@@ -21,7 +21,7 @@ describe('getBrandedHeaderLayout', () => {
     expect(artwork.left).toBeGreaterThanOrEqual(0);
     expect(artwork.top).toBeGreaterThanOrEqual(0);
     expect(artwork.width).toBeLessThanOrEqual(width);
-    expect(artwork.width).toBeLessThanOrEqual(430);
+    expect(artwork.width).toBeLessThanOrEqual(variant === 'jobs-list' ? width : 430);
     expect((artwork.left as number) + (artwork.width as number)).toBeCloseTo(width, 5);
     expect(artwork.height).toBeLessThanOrEqual(layout.height);
     expect((artwork.top as number) + (artwork.height as number)).toBeCloseTo(layout.height, 5);
@@ -73,6 +73,15 @@ describe('getBrandedHeaderLayout', () => {
     expect(wide.artworkStyle.width).toBe(430);
     expect(wide.artworkStyle.height).toBe(phone.artworkStyle.height);
     expect(wide.resizeMode).toBe('contain');
+  });
+
+  it('uses the complete jobs artwork across a wide candidate viewport', () => {
+    const layout = getBrandedHeaderLayout('jobs-list', 720, 24);
+
+    expect(layout.artworkStyle.left).toBe(0);
+    expect(layout.artworkStyle.width).toBe(720);
+    expect(layout.artworkStyle.height).toBeCloseTo(720 / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
+    expect(layout.resizeMode).toBe('contain');
   });
 
   it.each(['account', 'jobs-list', 'saved-list'] satisfies BrandedHeaderVariant[])(

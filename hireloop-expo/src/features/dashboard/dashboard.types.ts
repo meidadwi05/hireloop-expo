@@ -1,6 +1,10 @@
 export type DashboardInterview = {
   id: number | string;
   session_id?: number | string | null;
+  applicant_data_id?: number | string | null;
+  job_reference_type?: 'job-posting' | 'project-lowongan' | null;
+  job_reference_id?: number | string | null;
+  project_production_lowongan_id?: number | string | null;
   date: string;
   agenda: string;
   time: string | null;

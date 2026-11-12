@@ -332,8 +332,9 @@ export function mapJobDetail(payload: unknown, source: CandidateJobSource): Cand
       required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
     })),
   ];
-  const policies = asObjectArray(rawJob.kebijakan_lainnya).map(item => ({
-    name: asText(item.nama, item.label, item.name) || 'Pernyataan',
+  const policies = asObjectArray(rawJob.kebijakan_lainnya).map((item, index) => ({
+    key: `policy-${index}`,
+    name: asText(item.pertanyaan, item.nama, item.label, item.name) || 'Pernyataan',
     required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
   }));
   const familyDeclarationRequired = asText(rawJob.cek_hubungan_keluarga).toLowerCase() !== 'tidak' && [
@@ -341,6 +342,16 @@ export function mapJobDetail(payload: unknown, source: CandidateJobSource): Cand
     rawJob.deteksi_hubungan_saudara,
     rawJob.deteksi_hubungan_suami_istri,
   ].some(asBoolean);
+  const needsParentNames = asBoolean(rawJob.deteksi_hubungan_ayah_ibu) || asBoolean(rawJob.deteksi_hubungan_saudara);
+  const familyRequirements = familyDeclarationRequired ? [
+    ...(needsParentNames ? [
+      {key: 'nama_ayah', label: 'Nama Lengkap Bapak', required: true},
+      {key: 'nama_ibu', label: 'Nama Lengkap Ibu', required: true},
+    ] : []),
+    ...(asBoolean(rawJob.deteksi_hubungan_suami_istri)
+      ? [{key: 'nama_pasangan', label: 'Nama Lengkap Suami/Istri', required: false}]
+      : []),
+  ] : [];
 
   return {
     ...card,
@@ -355,6 +366,7 @@ export function mapJobDetail(payload: unknown, source: CandidateJobSource): Cand
       : humanize(rawJob.min_experience ?? rawJob.pengalaman, 'Tidak ditentukan'),
     documentRequirements,
     familyDeclarationRequired,
+    familyRequirements,
     policies,
   };
 }

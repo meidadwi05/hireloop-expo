@@ -3,6 +3,10 @@ import {z} from 'zod';
 const interviewSchema = z.object({
   id: z.union([z.number(), z.string()]),
   session_id: z.union([z.number(), z.string()]).nullable().optional(),
+  applicant_data_id: z.union([z.number(), z.string()]).nullable().optional(),
+  job_reference_type: z.enum(['job-posting', 'project-lowongan']).nullable().optional(),
+  job_reference_id: z.union([z.number(), z.string()]).nullable().optional(),
+  project_production_lowongan_id: z.union([z.number(), z.string()]).nullable().optional(),
   date: z.string(),
   agenda: z.string().default('Interview'),
   time: z.string().nullable().default(null),
