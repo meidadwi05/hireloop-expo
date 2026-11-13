@@ -81,6 +81,8 @@ describe('ApplicationRecruitmentProgress', () => {
 
     expect(screen.getByText('Interview HRss')).toBeTruthy();
     expect(screen.getByText('Zoom')).toBeTruthy();
+    expect(screen.getByTestId('application-progress-vertical')).toBeTruthy();
+    expect(screen.getByTestId('application-progress-detail-scroll').props.nestedScrollEnabled).toBe(true);
 
     fireEvent.press(screen.getByLabelText('Lihat tahap Applied'));
     expect(screen.getByText('Detail aktivitas tahap ini belum tersedia.')).toBeTruthy();

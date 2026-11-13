@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {Linking, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import type {
@@ -12,8 +12,6 @@ import {
   APPLICATION_FONTS,
   formatApplicationDate,
 } from './applications.ui';
-
-const STAGE_WIDTH = 112;
 
 function stageKind(stage: ApplicationStage): string {
   const raw = `${stage.type ?? ''} ${stage.value} ${stage.label}`.toLowerCase();
@@ -271,7 +269,6 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
   stages: ApplicationStage[];
   currentStageIndex?: number;
 }) {
-  const scrollRef = useRef<ScrollView>(null);
   const resolvedCurrentIndex = useMemo(() => {
     const byFlag = stages.findIndex(stage => stage.isCurrent);
     if (byFlag >= 0) return byFlag;
@@ -288,13 +285,6 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
     return resolvedCurrentIndex;
   }, [resolvedCurrentIndex, selectedStageKey, stages]);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      scrollRef.current?.scrollTo({x: Math.max(0, resolvedCurrentIndex * STAGE_WIDTH - STAGE_WIDTH), animated: true});
-    }, 0);
-    return () => clearTimeout(timeout);
-  }, [resolvedCurrentIndex, stages.length]);
-
   const terminalSourceIndex = isTerminal(stages[resolvedCurrentIndex] ?? stages[0]) ? resolvedCurrentIndex - 1 : -1;
   const selectedStage = stages[selectedIndex] ?? stages[resolvedCurrentIndex] ?? stages[0];
 
@@ -302,12 +292,7 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
 
   return (
     <View>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.progressContent}
-      >
+      <View style={styles.progressContent} testID="application-progress-vertical">
         {stages.map((stage, index) => {
           const active = stage.isCurrent || index === resolvedCurrentIndex;
           const completed = stage.isCompleted && !active;
@@ -318,50 +303,73 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
           const connectorReached = completed || (stage.isCompleted && active);
           return (
             <View key={`${stage.value}-${stage.index}`} style={styles.progressStage}>
-              {index < stages.length - 1 ? (
-                <View style={[styles.progressLine, connectorReached && styles.progressLineReached]} />
-              ) : null}
+              <View style={styles.progressRail}>
+                {index < stages.length - 1 ? (
+                  <View style={[styles.progressLine, connectorReached && styles.progressLineReached]} />
+                ) : null}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Lihat tahap ${stage.label}`}
+                  accessibilityState={{disabled: !enabled, selected}}
+                  disabled={!enabled}
+                  onPress={() => setSelectedStageKey(`${stage.value}-${stage.index}`)}
+                  style={({pressed}) => [
+                    styles.progressNode,
+                    completed && styles.progressNodeCompleted,
+                    active && styles.progressNodeActive,
+                    active && terminalFailure && styles.progressNodeDanger,
+                    terminalSource && styles.progressNodeActive,
+                    selected && enabled && styles.progressNodeSelected,
+                    pressed && enabled && styles.progressNodePressed,
+                  ]}
+                >
+                  {completed ? <Ionicons name="checkmark" size={15} color="white" /> : null}
+                  {active && terminalFailure ? <Ionicons name="close" size={15} color="white" /> : null}
+                  {(active && !terminalFailure) || terminalSource ? <View style={styles.progressCurrentDot} /> : null}
+                </Pressable>
+              </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Lihat tahap ${stage.label}`}
+                accessibilityLabel={`Buka detail tahap ${stage.label}`}
                 accessibilityState={{disabled: !enabled, selected}}
                 disabled={!enabled}
                 onPress={() => setSelectedStageKey(`${stage.value}-${stage.index}`)}
-                style={({pressed}) => [
-                  styles.progressNode,
-                  completed && styles.progressNodeCompleted,
-                  active && styles.progressNodeActive,
-                  active && terminalFailure && styles.progressNodeDanger,
-                  terminalSource && styles.progressNodeActive,
-                  selected && enabled && styles.progressNodeSelected,
-                  pressed && enabled && styles.progressNodePressed,
-                ]}
+                style={({pressed}) => [styles.progressCopy, pressed && enabled && styles.progressCopyPressed]}
               >
-                {completed ? <Ionicons name="checkmark" size={15} color="white" /> : null}
-                {active && terminalFailure ? <Ionicons name="close" size={15} color="white" /> : null}
-                {(active && !terminalFailure) || terminalSource ? <View style={styles.progressCurrentDot} /> : null}
+                <Text numberOfLines={2} style={[
+                  styles.progressLabel,
+                  enabled && styles.progressLabelReached,
+                  selected && enabled && styles.progressLabelSelected,
+                ]}>
+                  {stage.label}
+                </Text>
+                <Text style={styles.progressStatus}>
+                  {stage.status || (completed ? 'Completed' : active ? 'In Progress' : 'Belum dimulai')}
+                </Text>
               </Pressable>
-              <Text numberOfLines={2} style={[
-                styles.progressLabel,
-                enabled && styles.progressLabelReached,
-                selected && enabled && styles.progressLabelSelected,
-              ]}>
-                {stage.label}
-              </Text>
             </View>
           );
         })}
-      </ScrollView>
+      </View>
       <View style={styles.detailDivider} />
-      <StageDetails stage={selectedStage} />
+      <ScrollView
+        contentContainerStyle={styles.detailScrollContent}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+        style={styles.detailScroll}
+        testID="application-progress-detail-scroll"
+      >
+        <StageDetails stage={selectedStage} />
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  progressContent: {paddingHorizontal: 3, paddingTop: 4, paddingBottom: 9},
-  progressStage: {width: STAGE_WIDTH, minHeight: 76, alignItems: 'center', position: 'relative', paddingHorizontal: 6},
-  progressLine: {position: 'absolute', top: 13, left: '61%', width: '89%', height: 2, backgroundColor: APPLICATION_COLORS.future},
+  progressContent: {paddingHorizontal: 3, paddingTop: 4, paddingBottom: 2},
+  progressStage: {minHeight: 58, flexDirection: 'row', alignItems: 'stretch'},
+  progressRail: {width: 42, alignItems: 'center', alignSelf: 'stretch'},
+  progressLine: {position: 'absolute', top: 28, bottom: 0, width: 2, backgroundColor: APPLICATION_COLORS.future},
   progressLineReached: {backgroundColor: APPLICATION_COLORS.green},
   progressNode: {width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: APPLICATION_COLORS.future, backgroundColor: '#EEF2F7', alignItems: 'center', justifyContent: 'center', zIndex: 2},
   progressNodeCompleted: {borderColor: APPLICATION_COLORS.green, backgroundColor: APPLICATION_COLORS.green},
@@ -370,10 +378,15 @@ const styles = StyleSheet.create({
   progressNodeSelected: {shadowColor: APPLICATION_COLORS.blue, shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.32, shadowRadius: 6, elevation: 5, borderWidth: 3},
   progressNodePressed: {transform: [{scale: 0.92}]},
   progressCurrentDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: 'white'},
-  progressLabel: {width: 102, marginTop: 7, fontFamily: APPLICATION_FONTS.semibold, fontSize: 10.5, lineHeight: 14, textAlign: 'center', color: APPLICATION_COLORS.muted},
+  progressCopy: {flex: 1, minWidth: 0, justifyContent: 'flex-start', paddingLeft: 4, paddingRight: 6, paddingBottom: 12},
+  progressCopyPressed: {opacity: 0.72},
+  progressLabel: {fontFamily: APPLICATION_FONTS.semibold, fontSize: 11, lineHeight: 15, textAlign: 'left', color: APPLICATION_COLORS.muted},
   progressLabelReached: {color: APPLICATION_COLORS.navy},
   progressLabelSelected: {color: APPLICATION_COLORS.blue},
+  progressStatus: {marginTop: 2, fontFamily: APPLICATION_FONTS.regular, fontSize: 9, lineHeight: 13, color: APPLICATION_COLORS.muted},
   detailDivider: {height: 1, backgroundColor: '#EDF1F7', marginTop: 6, marginBottom: 14},
+  detailScroll: {maxHeight: 390},
+  detailScrollContent: {paddingBottom: 2},
   stageDetailCard: {borderRadius: 14, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', padding: 13},
   stageDetailHeader: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10},
   stageDetailIdentity: {flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9},

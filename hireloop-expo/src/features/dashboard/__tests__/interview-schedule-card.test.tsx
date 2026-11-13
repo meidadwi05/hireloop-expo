@@ -1,5 +1,6 @@
 import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
+import {StyleSheet} from 'react-native';
 
 import {InterviewScheduleCard} from '../components/InterviewScheduleCard';
 import type {DashboardInterview} from '../dashboard.types';
@@ -31,6 +32,7 @@ describe('InterviewScheduleCard', () => {
 
     expect(screen.getByTestId('interview-card-chevron')).toBeTruthy();
     expect(screen.queryByText('Gabung Interview')).toBeNull();
+    expect(StyleSheet.flatten(screen.getByTestId('interview-card-actions').props.style).justifyContent).toBe('flex-end');
     expect(onDetail).toHaveBeenCalledTimes(1);
   });
 

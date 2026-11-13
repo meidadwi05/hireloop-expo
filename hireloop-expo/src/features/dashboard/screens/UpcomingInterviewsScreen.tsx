@@ -81,8 +81,7 @@ function InterviewSkeleton() {
               <ShimmerBlock height={10} width="55%" />
               <ShimmerBlock height={11} width="65%" />
               <View style={styles.skeletonButtons}>
-                <ShimmerBlock height={38} width="58%" />
-                <ShimmerBlock height={38} width="36%" />
+                <ShimmerBlock height={36} width={112} />
               </View>
             </View>
           </View>
@@ -269,7 +268,7 @@ const styles = StyleSheet.create({
   skeletonList: {gap: 14},
   skeletonCard: {minHeight: 150, flexDirection: 'row', borderRadius: 17, backgroundColor: '#FFFFFF', padding: 9},
   skeletonBody: {flex: 1, gap: 9, paddingLeft: 12, paddingVertical: 3},
-  skeletonButtons: {flexDirection: 'row', justifyContent: 'space-between', gap: 7, marginTop: 'auto'},
+  skeletonButtons: {flexDirection: 'row', justifyContent: 'flex-end', marginTop: 'auto'},
   stateCard: {...shadow, flex: 1, minHeight: 300, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: '#FFFFFF', padding: 28, marginBottom: 18},
   filteredEmpty: {...shadow, minHeight: 220, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: '#FFFFFF', padding: 24, marginBottom: 18},
   emptyImage: {width: 145, height: 118},

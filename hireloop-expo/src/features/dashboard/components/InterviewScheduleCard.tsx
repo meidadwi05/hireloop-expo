@@ -98,13 +98,14 @@ export function InterviewScheduleCard({
             {stage ? <View style={styles.stageBadge}><Text numberOfLines={1} style={styles.stageText}>{stage}</Text></View> : null}
           </View>
         </View>
-        <View style={styles.actions}>
+        <View style={styles.actions} testID="interview-card-actions">
           <Pressable
             accessibilityLabel={`${online ? 'Lihat detail' : 'Lihat detail lokasi'} ${interviewPosition(interview)}`}
             accessibilityRole="button"
             hitSlop={3}
             onPress={onDetail}
-            style={({pressed}) => [styles.detailButton, styles.detailButtonFull, pressed && styles.pressed]}
+            style={({pressed}) => [styles.detailButton, compact && styles.detailButtonCompact, pressed && styles.pressed]}
+            testID="interview-detail-button"
           >
             <Text style={styles.detailText}>{online ? 'Detail' : 'Detail Lokasi'}</Text>
           </Pressable>
@@ -146,9 +147,9 @@ const styles = StyleSheet.create({
   modeText: {flex: 1, minWidth: 0, fontFamily: F.medium, fontSize: 8.5, lineHeight: 12, color: '#344054'},
   stageBadge: {maxWidth: '100%', alignSelf: 'flex-start', borderRadius: 9, backgroundColor: '#EAF2FF', paddingHorizontal: 7, paddingVertical: 3, marginTop: 5},
   stageText: {fontFamily: F.semibold, fontSize: 7.5, color: '#1F63D8'},
-  actions: {minHeight: 38, flexDirection: 'row', gap: 6, marginTop: 6},
-  detailButton: {flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#EDF3FC', paddingHorizontal: 6},
-  detailButtonFull: {flex: 1, backgroundColor: '#F1ECFF'},
+  actions: {minHeight: 38, flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6},
+  detailButton: {width: 112, minHeight: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#F1ECFF', paddingHorizontal: 12},
+  detailButtonCompact: {width: 98, minHeight: 34},
   detailText: {fontFamily: F.semibold, fontSize: 9, color: '#0B56B4'},
   pressed: {opacity: 0.82},
 });
