@@ -83,6 +83,7 @@ describe('alur onboarding intro', () => {
     for (let index = 0; index < slideIds.length; index += 1) {
       settleOnSlide(screen, index);
       const slide = activeSlide(screen, index);
+      expect(slide.getByTestId('intro-vertical-scroll')).toBeTruthy();
       expect(slide.getByLabelText('Lewati onboarding')).toBeTruthy();
       expect(slide.getByTestId('intro-hero-image')).toBeTruthy();
       expect(slide.getByTestId('intro-dots')).toBeTruthy();

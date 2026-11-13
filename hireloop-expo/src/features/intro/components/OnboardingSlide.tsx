@@ -60,10 +60,17 @@ export function OnboardingSlide({
       <View
         accessibilityElementsHidden={activeIndex !== index}
         importantForAccessibility={activeIndex === index ? 'yes' : 'no-hide-descendants'}
-        style={[styles.content, {maxWidth: metrics.contentMaxWidth, paddingHorizontal: metrics.horizontalPadding}]}
+        style={[
+          styles.content,
+          {
+            maxWidth: metrics.contentMaxWidth,
+            paddingBottom: metrics.contentBottomPadding,
+            paddingHorizontal: metrics.horizontalPadding,
+          },
+        ]}
       >
-        <View style={styles.header}>
-          <SkipButton onPress={onFinish} theme={slide.theme} />
+        <View style={[styles.header, {height: metrics.headerHeight}]}>
+          <SkipButton fontSize={metrics.skipFontSize} onPress={onFinish} theme={slide.theme} />
         </View>
 
         <Animated.View
@@ -117,11 +124,19 @@ export function OnboardingSlide({
         </View>
 
         <Animated.View style={[styles.indicator, {marginTop: metrics.indicatorGap}, reveal(12, 0.25)]}>
-          <PageIndicator activeIndex={index} count={slideCount} theme={slide.theme} />
+          <PageIndicator
+            activeIndex={index}
+            count={slideCount}
+            dotGap={metrics.indicatorDotGap}
+            dotSize={metrics.indicatorDotSize}
+            theme={slide.theme}
+          />
         </Animated.View>
 
-        <Animated.View style={[styles.cta, reveal(10, 0.35)]}>
+        <Animated.View style={[styles.cta, {paddingTop: metrics.buttonTopGap}, reveal(10, 0.35)]}>
           <GradientNextButton
+            arrowFontSize={metrics.buttonArrowFontSize}
+            fontSize={metrics.buttonFontSize}
             height={metrics.buttonHeight}
             isLast={isLast}
             onPress={isLast ? onFinish : onNext}
@@ -134,12 +149,12 @@ export function OnboardingSlide({
 }
 
 const styles = StyleSheet.create({
-  content: {alignSelf: 'center', flex: 1, width: '100%', paddingBottom: 8},
-  header: {height: 48, alignItems: 'flex-end', justifyContent: 'center'},
+  content: {alignSelf: 'center', flex: 1, minHeight: '100%', width: '100%'},
+  header: {alignItems: 'flex-end', justifyContent: 'center'},
   hero: {alignItems: 'center', alignSelf: 'center', justifyContent: 'center'},
   copy: {width: '100%'},
   title: {fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'left'},
   body: {fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'left'},
   indicator: {width: '100%'},
-  cta: {marginTop: 'auto', paddingTop: 16, width: '100%'},
+  cta: {marginTop: 'auto', width: '100%'},
 });

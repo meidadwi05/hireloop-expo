@@ -11,20 +11,22 @@ describe('responsive metrics onboarding', () => {
   ])('menjaga ukuran dalam batas aman pada viewport %ix%i', (width, height) => {
     const metrics = getIntroLayoutMetrics(width, height);
 
-    expect(metrics.horizontalPadding).toBeGreaterThanOrEqual(20);
+    expect(metrics.horizontalPadding).toBeGreaterThanOrEqual(18);
     expect(metrics.horizontalPadding).toBeLessThanOrEqual(38);
-    expect(metrics.heroHeight).toBeGreaterThanOrEqual(220);
-    expect(metrics.heroHeight).toBeLessThanOrEqual(520);
-    expect(metrics.heroWidth).toBeGreaterThanOrEqual(300);
-    expect(metrics.heroWidth).toBeLessThanOrEqual(Math.min(width * 1.1, 570));
-    expect(metrics.heroCopyGap).toBeGreaterThanOrEqual(24);
-    expect(metrics.heroCopyGap).toBeLessThanOrEqual(42);
-    expect(metrics.heroTopOffset).toBeGreaterThanOrEqual(4);
-    expect(metrics.heroTopOffset).toBeLessThanOrEqual(12);
-    expect(metrics.titleFontSize).toBeGreaterThanOrEqual(26);
+    expect(metrics.heroHeight).toBeGreaterThanOrEqual(168);
+    expect(metrics.heroHeight).toBeLessThanOrEqual(420);
+    expect(metrics.heroWidth).toBeGreaterThanOrEqual(270);
+    expect(metrics.heroWidth).toBeLessThanOrEqual(Math.min(width, 480));
+    expect(metrics.heroCopyGap).toBeGreaterThanOrEqual(8);
+    expect(metrics.heroCopyGap).toBeLessThanOrEqual(20);
+    expect(metrics.heroTopOffset).toBeGreaterThanOrEqual(0);
+    expect(metrics.heroTopOffset).toBeLessThanOrEqual(4);
+    expect(metrics.titleFontSize).toBeGreaterThanOrEqual(24);
     expect(metrics.titleFontSize).toBeLessThanOrEqual(36);
-    expect(metrics.bodyFontSize).toBeGreaterThanOrEqual(14);
-    expect(metrics.buttonHeight).toBeGreaterThanOrEqual(52);
+    expect(metrics.bodyFontSize).toBeGreaterThanOrEqual(13);
+    expect(metrics.buttonHeight).toBeGreaterThanOrEqual(48);
+    expect(metrics.buttonTopGap).toBeLessThanOrEqual(16);
+    expect(metrics.indicatorDotSize).toBeGreaterThanOrEqual(7);
   });
 
   it('memperkecil hero lebih dahulu pada layar pendek', () => {
@@ -34,6 +36,15 @@ describe('responsive metrics onboarding', () => {
     expect(short.heroHeight).toBeLessThan(tall.heroHeight);
     expect(short.heroCopyGap).toBeLessThan(tall.heroCopyGap);
     expect(short.heroTopOffset).toBeLessThan(tall.heroTopOffset);
-    expect(short.titleFontSize).toBeGreaterThanOrEqual(26);
+    expect(short.titleFontSize).toBeGreaterThanOrEqual(24);
+    expect(short.buttonHeight).toBeLessThan(tall.buttonHeight);
+  });
+
+  it('membatasi lebar konten pada tablet tanpa membesarkan ilustrasi berlebihan', () => {
+    const tablet = getIntroLayoutMetrics(834, 1194);
+
+    expect(tablet.contentMaxWidth).toBe(480);
+    expect(tablet.heroWidth).toBe(480);
+    expect(tablet.heroHeight).toBeLessThanOrEqual(420);
   });
 });

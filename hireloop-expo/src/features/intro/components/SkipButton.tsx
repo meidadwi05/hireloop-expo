@@ -3,7 +3,7 @@ import {Pressable, StyleSheet, Text} from 'react-native';
 
 import type {IntroSlide} from '../intro.types';
 
-export function SkipButton({onPress, theme}: {onPress: () => void; theme: IntroSlide['theme']}) {
+export function SkipButton({fontSize, onPress, theme}: {fontSize: number; onPress: () => void; theme: IntroSlide['theme']}) {
   return (
     <Pressable
       accessibilityLabel="Lewati onboarding"
@@ -11,12 +11,12 @@ export function SkipButton({onPress, theme}: {onPress: () => void; theme: IntroS
       onPress={onPress}
       style={styles.button}
     >
-      <Text style={[styles.text, {color: theme === 'light' ? '#00195E' : '#FFFFFF'}]}>Lewati</Text>
+      <Text style={[styles.text, {color: theme === 'light' ? '#00195E' : '#FFFFFF', fontSize}]}>Lewati</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {alignSelf: 'flex-end', minHeight: 44, minWidth: 44, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center'},
-  text: {fontFamily: 'PlusJakartaSans_500Medium', fontSize: 15},
+  text: {fontFamily: 'PlusJakartaSans_500Medium'},
 });

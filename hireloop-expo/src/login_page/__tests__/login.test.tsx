@@ -29,8 +29,17 @@ describe('LoginPage', () => {
 
     expect(screen.getByTestId('login-background')).toBeTruthy();
     expect(screen.getByTestId('google-login-logo')).toBeTruthy();
+    expect(screen.getByTestId('login-lock-image')).toBeTruthy();
     expect(screen.getByTestId('login-welcome-gradient')).toBeTruthy();
     expect(LOGIN_WELCOME_GRADIENT_COLORS).toEqual(['#0051FD', '#00DAFD']);
+  });
+
+  it('menampilkan fallback keamanan jika decoder gambar iOS gagal', () => {
+    const screen = render(<LoginPage {...baseProps} />);
+
+    fireEvent(screen.getByTestId('login-lock-image'), 'error');
+
+    expect(screen.getByTestId('login-lock-fallback')).toBeTruthy();
   });
 
   it('tidak menampilkan copy debug atau akses kembali ke onboarding', () => {

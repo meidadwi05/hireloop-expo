@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {LinearGradient} from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ const F = {
 } as const;
 
 const C = {blue: '#0865FF', cyan: '#00CBEA', ink: '#12224B', muted: '#7B869D'};
+const LOGIN_LOCK_IMAGE = require('../assets/lockcheck.png');
 
 type LoginPageProps = {
   email: string;
@@ -151,6 +153,15 @@ export default function LoginPage({
   onForgotPassword,
   onRegister,
 }: LoginPageProps) {
+  const {height, width} = useWindowDimensions();
+  const [lockImageFailed, setLockImageFailed] = useState(false);
+  const narrow = width < 360;
+  const compactHeight = height < 720;
+  const pagePadding = narrow ? 16 : Math.min(Math.max(width * 0.06, 20), 28);
+  const cardPadding = narrow ? 18 : 24;
+  const lockSize = narrow ? 44 : 52;
+  const logoWidth = Math.min(width - (pagePadding * 2) - 32, 235);
+
   return (
     <View style={styles.screen}>
       <Image
@@ -160,30 +171,50 @@ export default function LoginPage({
         style={styles.backgroundImage}
         testID="login-background"
       />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.loginScroll}>
-      <View style={styles.brand}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.loginScroll,
+          {paddingHorizontal: pagePadding, paddingVertical: compactHeight ? 20 : 35},
+        ]}
+      >
+      <View style={[styles.brand, {marginBottom: compactHeight ? 18 : 30}]}>
         <Image
           source={require('../assets/HireLoopLogo.png')}
-          style={styles.logo}
+          style={[styles.logo, {height: logoWidth * (61 / 235), width: logoWidth}]}
           resizeMode="contain"
           accessibilityLabel="Logo HireLoop"
         />
         <Text style={styles.tagline}>Temukan pekerjaan terbaik dan{ '\n'}pantau proses lamaranmu</Text>
       </View>
 
-      <View style={styles.loginCard}>
+      <View style={[styles.loginCard, {padding: cardPadding}]}>
         <View style={styles.row}>
-          <View>
+          <View style={styles.headingGroup}>
             <GradientWelcomeText />
             <Text style={styles.sub}>Masuk untuk melanjutkan</Text>
           </View>
-          <View style={styles.iconBox}>
-            <Image
-              source={require('../assets/lockcheck.png')}
-              style={styles.loginLockImage}
-              resizeMode="contain"
-              accessibilityLabel="Ikon keamanan akun"
-            />
+          <View style={[styles.iconBox, {height: lockSize, width: lockSize}]}>
+            {lockImageFailed ? (
+              <Ionicons
+                accessibilityLabel="Ikon keamanan akun"
+                color={C.blue}
+                name="shield-checkmark"
+                size={lockSize - 4}
+                testID="login-lock-fallback"
+              />
+            ) : (
+              <Image
+                accessibilityIgnoresInvertColors
+                accessibilityLabel="Ikon keamanan akun"
+                defaultSource={LOGIN_LOCK_IMAGE}
+                onError={() => setLockImageFailed(true)}
+                resizeMode="contain"
+                source={LOGIN_LOCK_IMAGE}
+                style={{height: lockSize, width: lockSize}}
+                testID="login-lock-image"
+              />
+            )}
           </View>
         </View>
 
@@ -251,15 +282,15 @@ export default function LoginPage({
 const styles = StyleSheet.create({
   screen: {flex: 1, overflow: 'hidden', backgroundColor: '#050D49'},
   backgroundImage: {position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%'},
-  loginScroll: {flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 35},
-  brand: {alignItems: 'center', marginBottom: 30},
-  logo: {width: 235, height: 61, alignSelf: 'center'},
+  loginScroll: {flexGrow: 1, justifyContent: 'center'},
+  brand: {alignItems: 'center'},
+  logo: {alignSelf: 'center'},
   tagline: {fontFamily: F.regular, fontSize: 12, lineHeight: 18, color: '#D1DAF4', textAlign: 'center', marginTop: 12},
-  loginCard: {backgroundColor: 'white', borderRadius: 22, padding: 24},
+  loginCard: {alignSelf: 'center', backgroundColor: 'white', borderRadius: 22, maxWidth: 480, width: '100%'},
   row: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+  headingGroup: {flex: 1, minWidth: 0, paddingRight: 12},
   sub: {fontFamily: F.regular, fontSize: 12, color: C.muted, marginTop: 6},
-  iconBox: {width: 52, height: 52, justifyContent: 'center', alignItems: 'center'},
-  loginLockImage: {width: 52, height: 52},
+  iconBox: {flexShrink: 0, justifyContent: 'center', alignItems: 'center'},
   fields: {gap: 19, marginTop: 28},
   field: {gap: 8},
   label: {fontFamily: F.medium, fontSize: 12, color: '#49536A'},
