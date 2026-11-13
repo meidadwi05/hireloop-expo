@@ -14,11 +14,11 @@ describe('responsive metrics onboarding', () => {
     expect(metrics.horizontalPadding).toBeGreaterThanOrEqual(18);
     expect(metrics.horizontalPadding).toBeLessThanOrEqual(38);
     expect(metrics.heroHeight).toBeGreaterThanOrEqual(168);
-    expect(metrics.heroHeight).toBeLessThanOrEqual(420);
-    expect(metrics.heroWidth).toBeGreaterThanOrEqual(270);
+    expect(metrics.heroHeight).toBeLessThanOrEqual(440);
+    expect(metrics.heroWidth).toBeGreaterThanOrEqual(300);
     expect(metrics.heroWidth).toBeLessThanOrEqual(Math.min(width, 480));
-    expect(metrics.heroCopyGap).toBeGreaterThanOrEqual(8);
-    expect(metrics.heroCopyGap).toBeLessThanOrEqual(20);
+    expect(metrics.heroCopyGap).toBeGreaterThanOrEqual(18);
+    expect(metrics.heroCopyGap).toBeLessThanOrEqual(36);
     expect(metrics.heroTopOffset).toBeGreaterThanOrEqual(0);
     expect(metrics.heroTopOffset).toBeLessThanOrEqual(4);
     expect(metrics.titleFontSize).toBeGreaterThanOrEqual(24);
@@ -45,6 +45,6 @@ describe('responsive metrics onboarding', () => {
 
     expect(tablet.contentMaxWidth).toBe(480);
     expect(tablet.heroWidth).toBe(480);
-    expect(tablet.heroHeight).toBeLessThanOrEqual(420);
+    expect(tablet.heroHeight).toBeLessThanOrEqual(440);
   });
 });

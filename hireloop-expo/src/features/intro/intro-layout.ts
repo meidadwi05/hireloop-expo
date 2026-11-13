@@ -35,13 +35,12 @@ export function getIntroLayoutMetrics(width: number, height: number): IntroLayou
   const short = safeHeight < 640;
 
   const horizontalPadding = clamp(safeWidth * 0.068, narrow ? 18 : 22, 38);
-  const contentWidth = Math.min(safeWidth - (horizontalPadding * 2), 480);
   const titleFontSize = clamp(safeWidth * 0.078, short ? 24 : compact ? 26 : 29, compact ? 31 : 36);
   const titleLineHeight = Math.round(titleFontSize * 1.22);
   const bodyFontSize = clamp(safeWidth * 0.043, short ? 13 : compact ? 14 : 16, compact ? 17 : 19);
   const bodyLineHeight = Math.round(bodyFontSize * 1.45);
   const headerHeight = short ? 38 : compact ? 42 : 46;
-  const heroCopyGap = short ? 8 : compact ? 14 : 20;
+  const heroCopyGap = short ? 18 : compact ? 28 : 36;
   const sectionGap = short ? 7 : compact ? 10 : 14;
   const indicatorGap = short ? 8 : compact ? 12 : 16;
   const buttonTopGap = short ? 8 : compact ? 12 : 16;
@@ -64,10 +63,12 @@ export function getIntroLayoutMetrics(width: number, height: number): IntroLayou
     + buttonHeight
     + contentBottomPadding;
   const heroBudget = Math.max(safeHeight - fixedContentHeight, 168);
+  const heroWidth = Math.min(safeWidth * 0.96, 480);
+  const heroTargetHeight = heroWidth * (short ? 0.92 : compact ? 1.02 : 1.08);
   const heroHeight = Math.min(
-    heroBudget,
-    contentWidth * (short ? 0.78 : compact ? 0.88 : 0.98),
-    420,
+    heroTargetHeight,
+    heroBudget + 56,
+    440,
   );
 
   return {
@@ -85,7 +86,7 @@ export function getIntroLayoutMetrics(width: number, height: number): IntroLayou
     heroCopyGap,
     heroHeight,
     heroTopOffset: short ? 0 : compact ? 2 : 4,
-    heroWidth: contentWidth,
+    heroWidth,
     indicatorDotGap: short ? 7 : 9,
     indicatorDotSize,
     indicatorGap,
