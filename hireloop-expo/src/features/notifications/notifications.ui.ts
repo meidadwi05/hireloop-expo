@@ -24,6 +24,37 @@ export type NotificationSection = {
   title: string;
 };
 
+export type NotificationTextSegment = {
+  bold: boolean;
+  text: string;
+};
+
+const boldTagPattern = /<BOLD>([\s\S]*?)<\/BOLD>/gi;
+const anyBoldTagPattern = /<\/?BOLD>/gi;
+
+export function parseNotificationText(value: string): NotificationTextSegment[] {
+  const segments: NotificationTextSegment[] = [];
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+  boldTagPattern.lastIndex = 0;
+
+  while ((match = boldTagPattern.exec(value)) !== null) {
+    if (match.index > cursor) {
+      segments.push({bold: false, text: value.slice(cursor, match.index).replace(anyBoldTagPattern, '')});
+    }
+    if (match[1]) segments.push({bold: true, text: match[1]});
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < value.length) segments.push({bold: false, text: value.slice(cursor).replace(anyBoldTagPattern, '')});
+  if (segments.length === 0) segments.push({bold: false, text: value.replace(anyBoldTagPattern, '')});
+  return segments.filter(segment => segment.text.length > 0);
+}
+
+export function notificationPlainText(value: string): string {
+  return parseNotificationText(value).map(segment => segment.text).join('');
+}
+
 export function notificationPresentation(notification: CandidateNotification): NotificationPresentation {
   const type = notification.type;
   if (type === 'blacklist' && notification.meta.tier === 'tier_2') {

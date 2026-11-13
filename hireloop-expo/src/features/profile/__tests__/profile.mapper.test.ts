@@ -46,12 +46,18 @@ describe('profile mapper', () => {
 
     expect(profile.userId).toBe(25);
     expect(profile.fullName).toBe('Zaki Wirawan');
-    expect(profile.birthDate).toBe('13/12/2000');
+    expect(profile.birthDate).toBe('2000-12-13');
     expect(profile.preferredWorkTypes).toEqual(['full_time', 'kontrak']);
     expect(profile.jobPreferences).toEqual([{id: 9, name: 'Data Analyst'}]);
     expect(profile.educations[0].educationLevel).toBe('S1');
     expect(profile.experiences[0].skills).toEqual([{id: 9, name: 'React'}]);
     expect(formatAddress(profile.ktpAddress)).toContain('Bekasi');
+  });
+
+  it('normalizes profile birth dates for the edit date field', () => {
+    expect(mapCandidateProfile({data: {job_seeker: {birth_date: '2001-02-18T00:00:00.000Z'}}}).birthDate).toBe('2001-02-18');
+    expect(mapCandidateProfile({data: {job_seeker: {birth_date: '18/02/2001'}}}).birthDate).toBe('2001-02-18');
+    expect(mapCandidateProfile({data: {job_seeker: {birth_date: '31/02/2001'}}}).birthDate).toBeNull();
   });
 
   it('maps mixed document and certification responses', () => {

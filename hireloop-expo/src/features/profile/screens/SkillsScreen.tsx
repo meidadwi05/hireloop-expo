@@ -7,24 +7,23 @@ import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {profileApi} from '../api/profile.api';
-import {useLanguages, useProfile, useProfileMutation, useSkillTools} from '../hooks/use-profile';
-import type {ProfileLanguage, ProfileSkill, ProfileSkillTool} from '../profile.types';
-import {PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
+import {useLanguages, useProfile, useProfileMutation} from '../hooks/use-profile';
+import type {ProfileLanguage, ProfileSkill} from '../profile.types';
+import {ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
 
-type EditorMode = 'skill' | 'tool' | 'language' | null;
+type EditorMode = 'skill' | 'language' | null;
 type MasterItem = {id: number; name: string};
 type DeleteRequest = {title: string; message: string; action: () => Promise<unknown>};
 
-function EditorModal({mode, tool, existingLanguageIds, onClose}: {mode: EditorMode; tool: ProfileSkillTool | null; existingLanguageIds: number[]; onClose: () => void}) {
+function EditorModal({mode, existingLanguageIds, onClose}: {mode: EditorMode; existingLanguageIds: number[]; onClose: () => void}) {
   const feedback = useActionFeedback();
-  const [value, setValue] = useState(() => mode === 'tool' ? tool?.name ?? '' : '');
+  const [value, setValue] = useState('');
   const [results, setResults] = useState<MasterItem[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
   const [error, setError] = useState('');
   const skillMutation = useProfileMutation((payload: {skill_id: number} | {custom_name: string}) => profileApi.addSkill(payload));
-  const toolMutation = useProfileMutation((name: string) => tool ? profileApi.updateSkillTool(tool.id, name) : profileApi.createSkillTool(name), {refreshTools: true});
   const languageMutation = useProfileMutation(profileApi.addLanguage, {refreshLanguages: true});
-  const pending = skillMutation.isPending || toolMutation.isPending || languageMutation.isPending;
+  const pending = skillMutation.isPending || languageMutation.isPending;
 
   useEffect(() => {
     if (mode !== 'skill' && mode !== 'language') return;
@@ -48,32 +47,25 @@ function EditorModal({mode, tool, existingLanguageIds, onClose}: {mode: EditorMo
     if (!item && custom.length < 2) return setError('Masukkan minimal 2 karakter.');
     await feedback.runAction({loadingMessage: 'Menambahkan keahlian...', successTitle: 'Keahlian Ditambahkan', successMessage: 'Keahlian berhasil ditambahkan ke profil.', errorTitle: 'Gagal Menambahkan Keahlian', operation: () => skillMutation.mutateAsync(item ? {skill_id: item.id} : {custom_name: custom}), onSuccessExit: onClose});
   };
-  const saveTool = async () => {
-    const name = value.trim().replace(/\s+/g, ' ');
-    if (!name) return setError('Nama tool wajib diisi.');
-    await feedback.runAction({loadingMessage: tool ? 'Memperbarui tool...' : 'Menambahkan tool...', successTitle: tool ? 'Tool Diperbarui' : 'Tool Ditambahkan', successMessage: tool ? 'Tool berhasil diperbarui.' : 'Tool berhasil ditambahkan.', errorTitle: 'Gagal Menyimpan Tool', operation: () => toolMutation.mutateAsync(name), onSuccessExit: onClose});
-  };
   const addLanguage = async (item: MasterItem) => {
     await feedback.runAction({loadingMessage: 'Menambahkan bahasa...', successTitle: 'Bahasa Ditambahkan', successMessage: 'Bahasa berhasil ditambahkan ke profil.', errorTitle: 'Gagal Menambahkan Bahasa', operation: () => languageMutation.mutateAsync(item.id), onSuccessExit: onClose});
   };
 
-  const title = mode === 'skill' ? 'Tambah Keahlian' : mode === 'language' ? 'Tambah Bahasa' : tool ? 'Ubah Tool' : 'Tambah Tool';
+  const title = mode === 'skill' ? 'Tambah Keahlian' : 'Tambah Bahasa';
   return (
     <Modal animationType="slide" visible={Boolean(mode)} onRequestClose={() => !pending && onClose()}>
       <SafeAreaView style={styles.modalSafe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalSafe}>
           <View style={styles.modalHeader}><Text style={styles.modalTitle}>{title}</Text><Pressable accessibilityLabel="Tutup editor" onPress={onClose} style={styles.close}><Ionicons name="close" size={25} color={profileColors.ink} /></Pressable></View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
-            <Text style={styles.inputLabel}>{mode === 'language' ? 'Cari bahasa' : mode === 'skill' ? 'Cari atau tulis keahlian' : 'Nama tool'}</Text>
-            <FormTextInput accessibilityLabel={mode === 'language' ? 'Cari bahasa' : mode === 'skill' ? 'Cari atau tulis keahlian' : 'Nama tool'} autoFocus containerStyle={styles.inputFrame} editable={!pending} inputStyle={styles.input} leftAccessory={<Ionicons name="search-outline" size={20} color="#667085" />} value={value} onChangeText={setValue} placeholder={mode === 'tool' ? 'Contoh: Figma' : 'Mulai mengetik...'} placeholderTextColor="#98A2B3" />
+            <Text style={styles.inputLabel}>{mode === 'language' ? 'Cari bahasa' : 'Cari atau tulis keahlian'}</Text>
+            <FormTextInput accessibilityLabel={mode === 'language' ? 'Cari bahasa' : 'Cari atau tulis keahlian'} autoFocus containerStyle={styles.inputFrame} editable={!pending} inputStyle={styles.input} leftAccessory={<Ionicons name="search-outline" size={20} color="#667085" />} value={value} onChangeText={setValue} placeholder="Mulai mengetik..." placeholderTextColor="#98A2B3" />
             {error ? <View style={styles.errorBox}><Ionicons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}
-            {mode === 'tool' ? <PrimaryButton disabled={pending} label={pending ? 'Menyimpan...' : 'Simpan Tool'} onPress={() => void saveTool()} /> : (
-              <View style={styles.results}>
+            <View style={styles.results}>
                 {mode === 'skill' && value.trim().length >= 2 && !results.some(item => item.name.toLowerCase() === value.trim().toLowerCase()) ? <Pressable disabled={pending} onPress={() => void addSkill()} style={styles.resultRow}><View style={styles.addResultIcon}><Ionicons name="add" size={20} color="white" /></View><Text style={styles.resultText}>Tambahkan “{value.trim()}”</Text></Pressable> : null}
                 {loadingResults ? <Text style={styles.resultEmpty}>Mencari data...</Text> : results.map(item => <Pressable disabled={pending} key={item.id} onPress={() => void (mode === 'skill' ? addSkill(item) : addLanguage(item))} style={styles.resultRow}><Text style={styles.resultText}>{item.name}</Text><Ionicons name="add-circle-outline" size={22} color={profileColors.blue} /></Pressable>)}
                 {!loadingResults && results.length === 0 && (mode === 'language' || value.trim().length > 0) ? <Text style={styles.resultEmpty}>Data tidak ditemukan.</Text> : null}
-              </View>
-            )}
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -110,10 +102,8 @@ function DeleteConfirmationModal({request, pending, error, onCancel, onConfirm}:
 export function SkillsScreen() {
   const feedback = useActionFeedback();
   const profile = useProfile();
-  const tools = useSkillTools();
   const languages = useLanguages();
   const [mode, setMode] = useState<EditorMode>(null);
-  const [selectedTool, setSelectedTool] = useState<ProfileSkillTool | null>(null);
   const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
   const [deleteError, setDeleteError] = useState('');
   const removeSkill = useProfileMutation(async (item: ProfileSkill) => {
@@ -121,15 +111,13 @@ export function SkillsScreen() {
     if (item.skillId) return profileApi.deleteDatasetSkill(item.skillId);
     throw new Error('ID keahlian tidak tersedia. Muat ulang profil lalu coba lagi.');
   });
-  const removeTool = useProfileMutation(profileApi.deleteSkillTool, {refreshTools: true});
   const removeLanguage = useProfileMutation(profileApi.deleteLanguage, {refreshLanguages: true});
   const skills = profile.data?.skillItems ?? [];
-  const toolItems = tools.data ?? [];
   const languageItems = useMemo(() => languages.data ?? [], [languages.data]);
-  const loading = profile.isLoading || tools.isLoading || languages.isLoading;
-  const error = profile.error ?? tools.error ?? languages.error;
+  const loading = profile.isLoading || languages.isLoading;
+  const error = profile.error ?? languages.error;
 
-  const removing = removeSkill.isPending || removeTool.isPending || removeLanguage.isPending;
+  const removing = removeSkill.isPending || removeLanguage.isPending;
   const requestDelete = (title: string, message: string, action: () => Promise<unknown>) => {
     setDeleteError('');
     setDeleteRequest({title, message, action});
@@ -150,21 +138,16 @@ export function SkillsScreen() {
       operation: request.action,
     });
   };
-  const openTool = (item: ProfileSkillTool | null) => { setSelectedTool(item); setMode('tool'); };
   const existingLanguageIds = useMemo(() => languageItems.map(item => item.id), [languageItems]);
 
   return (
     <View style={styles.screen}>
       <ProfileHeader title="Keahlian" fallback="/profile" />
-      {loading || error ? <ScreenState loading={loading} loadingVariant="skills" error={error ? toAppApiError(error).message : undefined} onRetry={() => void Promise.all([profile.refetch(), tools.refetch(), languages.refetch()])} /> : (
+      {loading || error ? <ScreenState loading={loading} loadingVariant="skills" error={error ? toAppApiError(error).message : undefined} onRetry={() => void Promise.all([profile.refetch(), languages.refetch()])} /> : (
         <ProfilePage>
           <ProfileCard>
             <SectionHeader icon="sparkles-outline" title="Keahlian" action={() => setMode('skill')} />
             <View style={styles.chips}>{skills.length ? skills.map((item: ProfileSkill) => <View key={`${item.source}:${item.entryId ?? item.skillId}:${item.name}`} style={styles.chip}><Text style={styles.chipText}>{item.name}</Text><Pressable accessibilityLabel={`Hapus ${item.name}`} onPress={() => requestDelete('Hapus keahlian?', `Keahlian ${item.name} akan dihapus.`, () => removeSkill.mutateAsync(item))} style={styles.chipAction}><Ionicons name="close" size={17} color="#B42318" /></Pressable></View>) : <Text style={styles.empty}>Belum ada keahlian ditambahkan.</Text>}</View>
-          </ProfileCard>
-          <ProfileCard>
-            <SectionHeader icon="construct-outline" title="Tools" action={() => openTool(null)} />
-            {toolItems.length ? toolItems.map((item: ProfileSkillTool, index) => <View key={item.id} style={[styles.listRow, index === toolItems.length - 1 && styles.listRowLast]}><View style={styles.listIcon}><Ionicons name="hammer-outline" size={20} color={profileColors.blue} /></View><Text style={styles.listText}>{item.name}</Text><Pressable accessibilityLabel={`Ubah ${item.name}`} onPress={() => openTool(item)} style={styles.rowAction}><Ionicons name="pencil-outline" size={19} color={profileColors.blue} /></Pressable><Pressable accessibilityLabel={`Hapus ${item.name}`} onPress={() => requestDelete('Hapus tool?', `Tool ${item.name} akan dihapus.`, () => removeTool.mutateAsync(item.id))} style={styles.rowAction}><Ionicons name="trash-outline" size={19} color={profileColors.red} /></Pressable></View>) : <Text style={styles.empty}>Belum ada tool ditambahkan.</Text>}
           </ProfileCard>
           <ProfileCard>
             <SectionHeader icon="language-outline" title="Bahasa" action={() => setMode('language')} />
@@ -172,7 +155,7 @@ export function SkillsScreen() {
           </ProfileCard>
         </ProfilePage>
       )}
-      {mode ? <EditorModal mode={mode} tool={selectedTool} existingLanguageIds={existingLanguageIds} onClose={() => {setMode(null); setSelectedTool(null);}} /> : null}
+      {mode ? <EditorModal mode={mode} existingLanguageIds={existingLanguageIds} onClose={() => setMode(null)} /> : null}
       <DeleteConfirmationModal request={deleteRequest} pending={removing} error={deleteError} onCancel={cancelDelete} onConfirm={() => void confirmDelete()} />
     </View>
   );

@@ -103,7 +103,6 @@ export const workStepSchema = z.object({
     customName: z.string().nullable(),
     name: z.string().min(1),
   })).min(1, 'Pilih minimal satu keahlian'),
-  tools: z.string().trim(),
   certifications: z.array(z.object({
     id: z.string(),
     type: z.enum(['document', 'certification']),
@@ -124,7 +123,7 @@ export const workStepSchema = z.object({
       context.addIssue({code: 'custom', path: ['expiredDate'], message: 'Tanggal kedaluwarsa harus setelah tanggal terbit'});
     }
   })),
-  availability: z.enum(['available', 'actively_looking', 'not_available'], {message: 'Status ketersediaan wajib dipilih'}),
+  availability: z.enum(['available', 'actively_looking'], {message: 'Status ketersediaan wajib dipilih'}),
   acceptedTerms: z.literal(true, {message: 'Persetujuan wajib dicentang'}),
   acceptedMatching: z.literal(true, {message: 'Persetujuan wajib dicentang'}),
 }).superRefine((data, context) => {

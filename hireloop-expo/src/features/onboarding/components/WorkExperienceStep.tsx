@@ -6,7 +6,7 @@ import {Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-nati
 import type {CertificationDraft, ExperienceDraft, ExperienceOption, OnboardingAction, OnboardingDraft, RunOnboardingAction, SkillOption} from '../onboarding.types';
 import {CertificationModal} from './CertificationModal';
 import {ExperienceModal} from './ExperienceModal';
-import {AddField, CheckboxField, SelectField, TextField} from './FormControls';
+import {AddField, CheckboxField, SelectField} from './FormControls';
 import {SkillMultiSelect} from './SkillMultiSelect';
 import {availabilityOptions} from '../onboarding.options';
 import {ConfirmActionModal} from './ConfirmActionModal';
@@ -73,7 +73,6 @@ export function WorkExperienceStep({draft, dispatch, skills, experienceOptions, 
       <View style={styles.compactCheckbox}><CheckboxField label="Belum memiliki pengalaman kerja" checked={draft.hasNoExperience} onChange={value => setField('hasNoExperience', value)} /></View>
 
       <SkillMultiSelect options={skills} selected={draft.skills} onToggle={skill => dispatch({type: 'toggle-skill', skill})} onToggleCustom={name => dispatch({type: 'toggle-custom-skill', name})} error={errors.skills} />
-      <TextField label="Pengalaman mesin / tools (Opsional)" value={draft.tools} onChangeText={value => setField('tools', value)} placeholder="Contoh: Mesin CNC, Forklift" />
 
       <AddField label="Dokumen & Sertifikasi (Opsional)" placeholder={draft.certifications.length ? 'Tambah berkas lainnya' : 'Belum ada berkas ditambahkan'} onPress={() => openCertification()} />
       {draft.certifications.map(item => (

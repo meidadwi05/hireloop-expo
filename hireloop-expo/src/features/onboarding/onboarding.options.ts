@@ -33,7 +33,6 @@ export const employmentStatusOptions: {value: EmploymentStatus; label: string}[]
 export const availabilityOptions: {value: Exclude<AvailabilityStatus, ''>; label: string}[] = [
   {value: 'available', label: 'Siap Bekerja'},
   {value: 'actively_looking', label: 'Terbuka untuk Peluang'},
-  {value: 'not_available', label: 'Belum Tersedia'},
 ];
 
 export function isNoFormalEducation(value: string): boolean {

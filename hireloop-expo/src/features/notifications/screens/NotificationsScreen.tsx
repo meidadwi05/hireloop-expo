@@ -25,7 +25,9 @@ import {
   formatNotificationTime,
   groupNotifications,
   NOTIFICATION_FONTS as F,
+  notificationPlainText,
   notificationPresentation,
+  parseNotificationText,
 } from '../notifications.ui';
 
 type NotificationFilter = 'all' | 'unread';
@@ -33,11 +35,13 @@ type NotificationFilter = 'all' | 'unread';
 export function NotificationRow({item, onPress}: {item: CandidateNotification; onPress: () => void}) {
   const presentation = notificationPresentation(item);
   const destination = resolveNotificationDestination(item);
+  const bodySegments = parseNotificationText(item.body);
+  const plainBody = notificationPlainText(item.body);
 
   return (
     <Pressable
       accessibilityHint={destination ? 'Membuka detail terkait' : 'Menandai notifikasi sebagai dibaca'}
-      accessibilityLabel={`${item.isRead ? '' : 'Belum dibaca. '}${item.title}. ${item.body}`}
+      accessibilityLabel={`${item.isRead ? '' : 'Belum dibaca. '}${item.title}. ${plainBody}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({pressed}) => [styles.notificationRow, !item.isRead && styles.unreadRow, pressed && styles.pressed]}
@@ -56,7 +60,13 @@ export function NotificationRow({item, onPress}: {item: CandidateNotification; o
           {!item.isRead && <View accessibilityLabel="Belum dibaca" style={styles.unreadDot} />}
         </View>
         <Text style={[styles.notificationTitle, !item.isRead && styles.unreadTitle]}>{item.title}</Text>
-        <Text style={styles.notificationBody}>{item.body}</Text>
+        <Text style={styles.notificationBody}>
+          {bodySegments.length === 1 && !bodySegments[0].bold
+            ? bodySegments[0].text
+            : bodySegments.map((segment, index) => (
+              <Text key={`${index}-${segment.bold ? 'bold' : 'regular'}`} style={segment.bold ? styles.notificationBodyBold : undefined}>{segment.text}</Text>
+            ))}
+        </Text>
         {destination && (
           <View style={styles.notificationActionArea}>
             <Text style={styles.notificationActionText}>Lihat Detail</Text>
@@ -284,6 +294,7 @@ const styles = StyleSheet.create({
   unreadTitle: {fontFamily: F.bold, color: '#071A45'},
   unreadDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: '#1267E8', marginLeft: 'auto'},
   notificationBody: {fontFamily: F.regular, fontSize: 11.5, lineHeight: 18, color: '#59657A', marginTop: 6},
+  notificationBodyBold: {fontFamily: F.bold, color: '#28344D'},
   notificationTime: {flexShrink: 1, fontFamily: F.medium, fontSize: 10, lineHeight: 16, color: '#7D899E'},
   notificationActionArea: {minHeight: 42, borderTopWidth: 1, borderTopColor: '#E6EBF2', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 14, paddingTop: 12},
   notificationActionText: {fontFamily: F.bold, fontSize: 12, lineHeight: 18, color: '#1267E8'},

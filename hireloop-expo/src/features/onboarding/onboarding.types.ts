@@ -102,7 +102,6 @@ export type OnboardingDraft = {
   experiences: ExperienceDraft[];
   hasNoExperience: boolean;
   skills: SelectedSkill[];
-  tools: string;
   certifications: CertificationDraft[];
   availability: AvailabilityStatus;
   acceptedTerms: boolean;
@@ -164,7 +163,6 @@ export type OnboardingPayload = {
   skills: Record<string, unknown>[];
   pengalaman_kerja: Record<string, unknown>[];
   no_pengalaman_kerja: boolean;
-  pengalaman_mesin: string;
   sertifikasi: Record<string, unknown>[];
   profile_files: Record<string, unknown>[];
   persetujuan: true;
@@ -207,7 +205,6 @@ export function createEmptyOnboardingDraft(fullName = ''): OnboardingDraft {
     experiences: [],
     hasNoExperience: false,
     skills: [],
-    tools: '',
     certifications: [],
     availability: '',
     acceptedTerms: false,

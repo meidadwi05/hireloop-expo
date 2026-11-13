@@ -33,7 +33,6 @@ function completeDraft(): OnboardingDraft {
     educations: [{id: 'education-1', educationLevel: 'S1', schoolName: 'Universitas Indonesia', majorId: 17, majorName: 'Manajemen', startDate: '2012-08-01', endDate: '2016-07-01', ongoing: false}],
     hasNoExperience: true,
     skills: [{skillId: 12, customName: null, name: 'Kanban'}],
-    tools: 'Mesin CNC',
     certifications: [{id: 'certification-1', type: 'certification', name: 'Data Analytics', issuer: 'Google', issuedDate: '2025-01-01', expiredDate: '', noExpiry: true, credentialId: 'CERT-1', remotePath: '/uploads/cert-1.pdf'}],
     availability: 'available',
     acceptedTerms: true,
@@ -58,8 +57,8 @@ describe('onboarding domain', () => {
     expect(validateWorkStep(draft).success).toBe(false);
   });
 
-  test('menerima tools dan sertifikasi kosong sesuai kontrak web/backend', () => {
-    const draft = {...completeDraft(), tools: '', certifications: []};
+  test('menerima sertifikasi kosong sesuai kontrak web/backend', () => {
+    const draft = {...completeDraft(), certifications: []};
     expect(validateWorkStep(draft).success).toBe(true);
   });
 
@@ -95,6 +94,7 @@ describe('onboarding domain', () => {
     expect(payload.no_pengalaman_kerja).toBe(true);
     expect(payload.skills[0]).toMatchObject({skill_id: 12, name: 'Kanban'});
     expect(payload.educations[0]).toMatchObject({major_id: 17, major_name: 'Manajemen'});
+    expect(payload).not.toHaveProperty('pengalaman_mesin');
   });
 
   test('mapper current onboarding memakai field backend', () => {

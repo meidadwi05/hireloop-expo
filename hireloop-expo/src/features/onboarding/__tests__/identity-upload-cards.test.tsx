@@ -1,4 +1,5 @@
-import {fireEvent, render} from '@testing-library/react-native';
+import {fireEvent, render, waitFor} from '@testing-library/react-native';
+import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import {StyleSheet} from 'react-native';
 
@@ -37,6 +38,12 @@ jest.mock('../api/onboarding.api', () => ({
 }));
 
 describe('card upload identitas onboarding', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValue({granted: true});
+    (ImagePicker.launchCameraAsync as jest.Mock).mockResolvedValue({canceled: true, assets: null});
+  });
+
   it('menampilkan card KTP dan foto profil sebelum informasi pribadi', () => {
     const dispatch = jest.fn();
     const screen = render(
@@ -62,7 +69,7 @@ describe('card upload identitas onboarding', () => {
     expect(screen.getByTestId('personal-information-card')).toBeTruthy();
   });
 
-  it('membuka pilihan Galeri dan Batal ketika ikon KTP ditekan', () => {
+  it('membuka kamera langsung ketika ikon KTP ditekan', async () => {
     const screen = render(
       <PersonalDataStep
         draft={createEmptyOnboardingDraft('Andi Permana')}
@@ -75,20 +82,11 @@ describe('card upload identitas onboarding', () => {
 
     fireEvent.press(screen.getByTestId('ktp-photo-trigger'));
 
-    const modalCardStyle = StyleSheet.flatten(screen.getByTestId('photo-source-modal-card').props.style);
-    expect(modalCardStyle).toMatchObject({
-      alignSelf: 'center',
-      borderRadius: 22,
-      maxWidth: 420,
-      width: '100%',
-    });
-    expect(screen.getByText('Galeri')).toBeTruthy();
-    expect(screen.getByText('Batal')).toBeTruthy();
-    fireEvent.press(screen.getByText('Batal'));
-    expect(screen.queryByText('Galeri')).toBeNull();
+    await waitFor(() => expect(ImagePicker.launchCameraAsync).toHaveBeenCalledTimes(1));
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   });
 
-  it('membuka pilihan Galeri dan Batal ketika ikon foto profil ditekan', () => {
+  it('membuka kamera langsung ketika ikon foto profil ditekan', async () => {
     const screen = render(
       <PersonalDataStep
         draft={createEmptyOnboardingDraft('Andi Permana')}
@@ -101,9 +99,8 @@ describe('card upload identitas onboarding', () => {
 
     fireEvent.press(screen.getByTestId('avatar-photo-trigger'));
 
-    expect(screen.getByText('Unggah Foto Profil')).toBeTruthy();
-    expect(screen.getByText('Galeri')).toBeTruthy();
-    expect(screen.getByText('Batal')).toBeTruthy();
+    await waitFor(() => expect(ImagePicker.launchCameraAsync).toHaveBeenCalledTimes(1));
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   });
 
   it('menampilkan NIK wajib sebagai field lokal 16 digit', () => {

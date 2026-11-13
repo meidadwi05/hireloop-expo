@@ -14,7 +14,7 @@ import {emptyAddress, type AddressDetail, type MasterOption} from '../../onboard
 import {profileApi} from '../api/profile.api';
 import {CardTitle, DataRow, PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
-import {formatAddress} from '../profile.mapper';
+import {formatAddress, normalizeProfileDate} from '../profile.mapper';
 import type {CandidateProfile, EducationInput, ProfileAddress, ProfileEducation} from '../profile.types';
 
 function maskNik(value: string, visible: boolean) {
@@ -84,7 +84,7 @@ function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfi
     nik: profile.nik,
     fullName: profile.fullName,
     birthPlace: profile.birthPlace,
-    birthDate: profile.birthDate?.split('T')[0] ?? '',
+    birthDate: normalizeProfileDate(profile.birthDate) ?? '',
     phone: profile.phone,
     gender: profile.gender || 'male',
     maritalStatus: profile.maritalStatus || 'single',

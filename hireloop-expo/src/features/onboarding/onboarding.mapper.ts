@@ -170,7 +170,6 @@ export function mapCurrentOnboarding(input: unknown, fallbackName = ''): Onboard
       const name = asText(record.name, record.skill_name, skill.name, customName);
       return {skillId: Number.isFinite(skillId) && !customName ? skillId : null, customName: customName || null, name};
     }).filter(item => item.name),
-    tools: asText(seeker.pengalaman_mesin),
     certifications: certifications.map((item, index) => {
       const record = asRecord(item);
       const media = Array.isArray(record.media) ? asRecord(record.media[0]) : {};
@@ -282,7 +281,6 @@ export function toProductionWorkPayload(draft: OnboardingDraft): Record<string, 
     pengalaman_kerja: payload.pengalaman_kerja,
     no_pengalaman_kerja: payload.no_pengalaman_kerja,
     skills: payload.skills,
-    pengalaman_mesin: payload.pengalaman_mesin,
     sertifikasi: payload.sertifikasi,
     profile_files: payload.profile_files,
     availability: payload.availability,
@@ -348,7 +346,6 @@ export function toOnboardingPayload(draft: OnboardingDraft): OnboardingPayload {
       deskripsi: item.description.trim(),
     })),
     no_pengalaman_kerja: draft.hasNoExperience,
-    pengalaman_mesin: draft.tools.trim(),
     sertifikasi: [],
     profile_files: profileFiles,
     persetujuan: true,

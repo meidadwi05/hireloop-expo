@@ -32,7 +32,7 @@ import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvid
 const menuItems = [
   {label: 'Data Diri', subtitle: 'Identitas, kontak & pendidikan', icon: 'id-card-outline' as const, route: '/(candidate)/profile/personal-data'},
   {label: 'Pengalaman', subtitle: 'Pengalaman kerja kandidat', icon: 'briefcase-outline' as const, route: '/(candidate)/profile/experience'},
-  {label: 'Keahlian', subtitle: 'Keahlian, tools & bahasa', icon: 'construct-outline' as const, route: '/(candidate)/profile/skills'},
+  {label: 'Keahlian', subtitle: 'Keahlian & bahasa', icon: 'construct-outline' as const, route: '/(candidate)/profile/skills'},
   {label: 'Preferensi Kerja', subtitle: 'Posisi, lokasi & gaji', icon: 'options-outline' as const, route: '/(candidate)/profile/work-preferences'},
   {label: 'Dokumen & Sertifikat', subtitle: 'CV dan sertifikasi', icon: 'document-text-outline' as const, route: '/(candidate)/profile/documents'},
   {label: 'Pengaturan Akun', subtitle: 'Kelola akun Anda', icon: 'settings-outline' as const, route: '/(candidate)/(tabs)/account'},

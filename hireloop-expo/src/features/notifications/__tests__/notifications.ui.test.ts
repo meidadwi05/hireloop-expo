@@ -1,11 +1,23 @@
 import type {CandidateNotification} from '../notifications.types';
-import {formatNotificationTime, groupNotifications, notificationPresentation} from '../notifications.ui';
+import {formatNotificationTime, groupNotifications, notificationPlainText, notificationPresentation, parseNotificationText} from '../notifications.ui';
 
 function notification(id: string, createdAt: string, type = 'system'): CandidateNotification {
   return {id, createdAt, type, level: 'info', title: 'Info', body: 'Body', isRead: false, meta: {}};
 }
 
 describe('notification UI helpers', () => {
+  it('parses backend BOLD markers into styled segments without exposing tags', () => {
+    const source = 'Proses ini <BOLD>GRATIS</BOLD> dan <bold>TIDAK DIPUNGUT BIAYA</bold>.';
+    expect(parseNotificationText(source)).toEqual([
+      {bold: false, text: 'Proses ini '},
+      {bold: true, text: 'GRATIS'},
+      {bold: false, text: ' dan '},
+      {bold: true, text: 'TIDAK DIPUNGUT BIAYA'},
+      {bold: false, text: '.'},
+    ]);
+    expect(notificationPlainText(source)).toBe('Proses ini GRATIS dan TIDAK DIPUNGUT BIAYA.');
+  });
+
   const now = new Date('2026-10-30T12:00:00+07:00');
 
   it('groups notifications using local calendar days', () => {

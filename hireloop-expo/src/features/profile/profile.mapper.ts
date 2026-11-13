@@ -42,6 +42,24 @@ function optionalDate(value: unknown): string | null {
   return result || null;
 }
 
+export function normalizeProfileDate(value: unknown): string | null {
+  const source = text(value);
+  if (!source) return null;
+
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(source);
+  const local = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(source);
+  const parts = iso
+    ? {year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3])}
+    : local
+      ? {year: Number(local[3]), month: Number(local[2]), day: Number(local[1])}
+      : null;
+  if (!parts) return null;
+
+  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  if (date.getUTCFullYear() !== parts.year || date.getUTCMonth() !== parts.month - 1 || date.getUTCDate() !== parts.day) return null;
+  return `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
+}
+
 function address(value: unknown): ProfileAddress | null {
   const raw = asRecord(value);
   const addressLine = text(raw.address_line);
@@ -167,7 +185,7 @@ export function mapCandidateProfile(payload: unknown): CandidateProfile {
     nik: text(seeker.nik),
     gender: enumValue(seeker.gender, ['male', 'female'] as const, ''),
     birthPlace: text(seeker.birth_place),
-    birthDate: optionalDate(seeker.birth_date),
+    birthDate: normalizeProfileDate(seeker.birth_date),
     maritalStatus: enumValue(seeker.marital_status, ['single', 'married', 'other'] as const, ''),
     phone: text(seeker.phone),
     selfDescription: text(seeker.self_description),

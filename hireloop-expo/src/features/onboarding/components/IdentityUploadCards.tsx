@@ -1,7 +1,7 @@
 import {Ionicons} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, {useState} from 'react';
-import {ActivityIndicator, Image, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
 import {ActionOverlayModal, type ActionOverlay} from '../../../shared/components/ActionOverlayModal';
@@ -35,13 +35,12 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
   const {width} = useWindowDimensions();
   const compact = width < 390;
   const [uploading, setUploading] = useState<UploadTarget | null>(null);
-  const [sourceTarget, setSourceTarget] = useState<UploadTarget | null>(null);
   const [ktpFeedback, setKtpFeedback] = useState('');
   const [overlay, setOverlay] = useState<ActionOverlay | null>(null);
 
   const selectImage = async (target: UploadTarget, source: 'camera' | 'library') => {
     try {
-      if (source === 'camera' && Platform.OS !== 'web') {
+      if (source === 'camera') {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
         if (!permission.granted) {
           setOverlay({kind: 'error', title: 'Izin Kamera Diperlukan', message: 'Aktifkan izin kamera pada pengaturan perangkat untuk mengambil foto langsung.'});
@@ -54,7 +53,7 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
         aspect: target === 'avatar' ? [1, 1] : undefined,
         quality: target === 'ktp' ? 0.75 : 0.7,
       };
-      const result = source === 'camera' && Platform.OS !== 'web'
+      const result = source === 'camera'
         ? await ImagePicker.launchCameraAsync(options)
         : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled) return;
@@ -84,12 +83,6 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
     }
   };
 
-  const chooseFromGallery = () => {
-    const target = sourceTarget;
-    setSourceTarget(null);
-    if (target) void selectImage(target, 'library');
-  };
-
   return (
     <View testID="identity-upload-cards" style={styles.stack}>
       <View testID="ktp-upload-card" style={[styles.card, compact && styles.cardCompact]}>
@@ -98,11 +91,11 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
           <View style={styles.headerCopy}><Text style={styles.title}>Upload KTP</Text><Text style={styles.subtitle}>Isi data diri otomatis dari foto KTP</Text></View>
         </View>
         <Pressable
-          accessibilityHint="Membuka pilihan galeri foto"
-          accessibilityLabel={ktpPath ? 'Ganti foto KTP dari galeri' : 'Unggah foto KTP dari galeri'}
+          accessibilityHint="Membuka kamera untuk mengambil foto KTP"
+          accessibilityLabel={ktpPath ? 'Ambil ulang foto KTP' : 'Ambil foto KTP'}
           accessibilityRole="button"
           disabled={Boolean(uploading)}
-          onPress={() => setSourceTarget('ktp')}
+          onPress={() => void selectImage('ktp', 'camera')}
           style={({pressed}) => [styles.dropZone, pressed && styles.pressed, Boolean(uploading) && styles.disabled]}
           testID="ktp-photo-trigger"
         >
@@ -124,11 +117,11 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
           <View style={styles.headerCopy}><Text style={styles.title}>Foto Profil</Text><Text style={styles.subtitle}>Foto profil akan digunakan pada profil Anda</Text></View>
         </View>
         <Pressable
-          accessibilityHint="Membuka pilihan galeri foto"
-          accessibilityLabel={avatarUrl ? 'Ganti foto profil dari galeri' : 'Unggah foto profil dari galeri'}
+          accessibilityHint="Membuka kamera untuk mengambil foto profil"
+          accessibilityLabel={avatarUrl ? 'Ambil ulang foto profil' : 'Ambil foto profil'}
           accessibilityRole="button"
           disabled={Boolean(uploading)}
-          onPress={() => setSourceTarget('avatar')}
+          onPress={() => void selectImage('avatar', 'camera')}
           style={({pressed}) => [styles.avatar, pressed && styles.pressed, Boolean(uploading) && styles.disabled]}
           testID="avatar-photo-trigger"
         >
@@ -142,26 +135,6 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
         <View style={styles.singleAction}><CameraAction disabled={Boolean(uploading)} label="Ambil Foto Profil" onPress={() => void selectImage('avatar', 'camera')} /></View>
       </View>
 
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setSourceTarget(null)}
-        presentationStyle="overFullScreen"
-        transparent
-        visible={sourceTarget !== null}
-      >
-        <View style={styles.modalRoot}>
-          <Pressable accessibilityLabel="Batal memilih foto" onPress={() => setSourceTarget(null)} style={StyleSheet.absoluteFill} />
-          <View accessibilityViewIsModal style={styles.sourceModalCard} testID="photo-source-modal-card">
-            <Text style={styles.sourceTitle}>{sourceTarget === 'ktp' ? 'Unggah Foto KTP' : 'Unggah Foto Profil'}</Text>
-            <Pressable accessibilityRole="button" onPress={chooseFromGallery} style={({pressed}) => [styles.sourceOption, pressed && styles.pressed]}>
-              <Ionicons name="images-outline" size={21} color="#087BFF" /><Text style={styles.sourceOptionText}>Galeri</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => setSourceTarget(null)} style={({pressed}) => [styles.cancelOption, pressed && styles.pressed]}>
-              <Text style={styles.cancelText}>Batal</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
       {overlay ? <ActionOverlayModal overlay={overlay} onClose={() => setOverlay(null)} /> : null}
     </View>
   );
@@ -191,11 +164,4 @@ const styles = StyleSheet.create({
   editBadge: {position: 'absolute', right: 1, bottom: 1, width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.blue, borderWidth: 2, borderColor: COLORS.white, alignItems: 'center', justifyContent: 'center'},
   successMessage: {marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: '#073B45', flexDirection: 'row', alignItems: 'flex-start', gap: 8},
   successText: {flex: 1, fontFamily: 'PlusJakartaSans_400Regular', color: '#B9F6DE', fontSize: 10, lineHeight: 15},
-  modalRoot: {flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 20},
-  sourceModalCard: {width: '100%', maxWidth: 420, alignSelf: 'center', backgroundColor: COLORS.white, borderRadius: 22, padding: 20, gap: 12},
-  sourceTitle: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#101828', fontSize: 17, marginBottom: 2, textAlign: 'center'},
-  sourceOption: {minHeight: 52, borderRadius: 12, backgroundColor: '#EDF5FF', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12},
-  sourceOptionText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#0A58C7', fontSize: 14},
-  cancelOption: {minHeight: 50, borderRadius: 12, borderWidth: 1, borderColor: '#D8DEE9', alignItems: 'center', justifyContent: 'center'},
-  cancelText: {fontFamily: 'PlusJakartaSans_600SemiBold', color: '#344054', fontSize: 14},
 });
