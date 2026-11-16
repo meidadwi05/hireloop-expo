@@ -16,7 +16,6 @@ export const httpClient = create({
   timeout: 15_000,
   headers: {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
   },
 });
 
@@ -51,6 +50,12 @@ async function refreshAccessToken(currentToken: string): Promise<string> {
 
 httpClient.interceptors.request.use(async config => {
   const token = await tokenStorage.get();
+
+  // Never force a content type for FormData. Axios/the platform must generate
+  // multipart/form-data together with its boundary, especially in browsers.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    config.headers.delete('Content-Type');
+  }
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;

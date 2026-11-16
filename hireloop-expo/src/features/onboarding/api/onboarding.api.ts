@@ -1,3 +1,5 @@
+import {Platform} from 'react-native';
+
 import {httpClient} from '../../../core/api/http-client';
 import type {OnboardingPayload} from '../onboarding.types';
 
@@ -47,9 +49,42 @@ function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
 }
 
-function appendUpload(body: FormData, field: string, input: ImageUploadInput) {
-  if (input.file) body.append(field, input.file, input.name);
-  else body.append(field, {uri: input.uri, name: input.name, type: input.mimeType} as unknown as Blob);
+function assertUploadInput(input: ImageUploadInput) {
+  if (!input.uri && !input.file) {
+    throw new Error('Foto tidak ditemukan. Silakan pilih ulang foto yang akan diunggah.');
+  }
+  if (!input.name.trim()) {
+    throw new Error('Nama file foto tidak tersedia. Silakan pilih ulang foto.');
+  }
+}
+
+async function webBlobFromUri(input: ImageUploadInput): Promise<Blob> {
+  try {
+    const response = await fetch(input.uri);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (blob.size === 0) throw new Error('Blob foto kosong');
+    return blob.type || !input.mimeType ? blob : blob.slice(0, blob.size, input.mimeType);
+  } catch {
+    throw new Error('Foto KTP gagal diproses oleh browser. Silakan pilih ulang foto.');
+  }
+}
+
+async function appendUpload(body: FormData, field: string, input: ImageUploadInput) {
+  assertUploadInput(input);
+
+  if (input.file) {
+    if (input.file.size === 0) throw new Error('File foto kosong. Silakan pilih ulang foto.');
+    body.append(field, input.file, input.name);
+    return;
+  }
+
+  if (Platform.OS === 'web') {
+    body.append(field, await webBlobFromUri(input), input.name);
+    return;
+  }
+
+  body.append(field, {uri: input.uri, name: input.name, type: input.mimeType} as unknown as Blob);
 }
 
 export const onboardingApi = {
@@ -80,14 +115,8 @@ export const onboardingApi = {
 
   async uploadCertification(input: CertificationUploadInput): Promise<CertificationUploadResult> {
     const body = new FormData();
-    if (input.file) {
-      body.append('file', input.file, input.name);
-    } else {
-      body.append('file', {uri: input.uri, name: input.name, type: input.mimeType} as unknown as Blob);
-    }
-    const response = await httpClient.post('/prod-candidate/onboarding/certification-media', body, {
-      headers: {'Content-Type': 'multipart/form-data'},
-    });
+    await appendUpload(body, 'file', input);
+    const response = await httpClient.post('/prod-candidate/onboarding/certification-media', body);
     const root = record(response.data);
     const data = record(root.data ?? root);
     const path = String(data.path ?? data.file_path ?? data.url ?? '');
@@ -102,7 +131,7 @@ export const onboardingApi = {
 
   async uploadKtp(input: ImageUploadInput, previousPath?: string): Promise<KtpUploadResult> {
     const body = new FormData();
-    appendUpload(body, 'image', input);
+    await appendUpload(body, 'image', input);
     if (previousPath) body.append('previous_ktp_path', previousPath);
     const response = await httpClient.post('/ocr/ktp', body, {
       // OCR can legitimately take longer than the shared 15-second API timeout.
@@ -116,8 +145,8 @@ export const onboardingApi = {
 
   async uploadAvatar(input: ImageUploadInput): Promise<AvatarUploadResult> {
     const body = new FormData();
-    appendUpload(body, 'avatar', input);
-    const response = await httpClient.post('/job-seeker/avatar', body, {headers: {'Content-Type': 'multipart/form-data'}});
+    await appendUpload(body, 'avatar', input);
+    const response = await httpClient.post('/job-seeker/avatar', body);
     const root = record(response.data);
     const data = record(root.data ?? root);
     return {path: String(data.avatar_path ?? ''), url: String(data.avatar_url ?? '')};
