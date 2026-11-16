@@ -22,6 +22,7 @@ import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {DateField} from '../../onboarding/components/DateField';
 import {profileApi} from '../api/profile.api';
+import {hasFormChanges} from '../profile-form-state';
 import type {ProfileFileItem, UploadInput, UploadedProfileFile} from '../profile.types';
 import {useProfileFiles, useProfileMutation} from '../hooks/use-profile';
 import {
@@ -44,6 +45,17 @@ type Draft = {
   expiredDate: string;
   credentialId: string;
 };
+
+function fileDraftFromItem(item: ProfileFileItem | null): Draft {
+  return {
+    type: item?.type ?? 'document',
+    name: item?.name ?? '',
+    issuer: item?.issuer ?? '',
+    issuedDate: item?.issuedDate ?? '',
+    expiredDate: item?.expiredDate ?? '',
+    credentialId: item?.credentialId ?? '',
+  };
+}
 
 const allowedMime = ['application/pdf', 'image/jpeg', 'image/png'];
 
@@ -225,10 +237,8 @@ function FileCard({item, onMenu, onDeleteMedia}: {item: ProfileFileItem; onMenu:
 
 function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; visible: boolean; onClose: () => void}) {
   const feedback = useActionFeedback();
-  const [draft, setDraft] = useState<Draft>(() => ({
-    type: item?.type ?? 'document', name: item?.name ?? '', issuer: item?.issuer ?? '',
-    issuedDate: item?.issuedDate ?? '', expiredDate: item?.expiredDate ?? '', credentialId: item?.credentialId ?? '',
-  }));
+  const [initialDraft] = useState<Draft>(() => fileDraftFromItem(item));
+  const [draft, setDraft] = useState<Draft>(() => initialDraft);
   const [picked, setPicked] = useState<UploadInput[]>([]);
   const saveMutation = useProfileMutation(async (_: void) => {
     const uploaded: UploadedProfileFile[] = [];
@@ -253,6 +263,16 @@ function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; 
     }
   }, {refreshFiles: true});
 
+  const isDirty = picked.length > 0 || hasFormChanges(initialDraft, draft);
+  const hasSource = picked.length > 0 || Boolean(item?.media.length || item?.path);
+  const hasValidCertificationDates = !draft.expiredDate || !draft.issuedDate || draft.expiredDate >= draft.issuedDate;
+  const isValid = Boolean(
+    draft.name.trim()
+    && hasSource
+    && (draft.type === 'document' || (draft.issuer.trim() && draft.issuedDate.trim() && hasValidCertificationDates)),
+  );
+  const saveDisabled = !isDirty || !isValid || saveMutation.isPending;
+
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft(current => ({...current, [key]: value}));
   const pick = async () => {
     const result = await DocumentPicker.getDocumentAsync({type: allowedMime, copyToCacheDirectory: true, multiple: draft.type === 'certification'});
@@ -263,6 +283,7 @@ function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; 
   };
 
   const save = async () => {
+    if (saveDisabled) return;
     if (!draft.name.trim()) return Alert.alert('Nama wajib diisi', 'Masukkan nama dokumen atau sertifikat.');
     if (draft.type === 'certification' && (!draft.issuer.trim() || !draft.issuedDate.trim())) return Alert.alert('Data sertifikat belum lengkap', 'Penerbit dan tanggal terbit wajib diisi.');
     const label = draft.type === 'document' ? 'Dokumen' : 'Sertifikat';
@@ -288,7 +309,7 @@ function FileFormModal({item, visible, onClose}: {item: ProfileFileItem | null; 
               <FormField label="ID Kredensial" value={draft.credentialId} onChangeText={value => set('credentialId', value)} />
             </> : null}
             <View style={styles.uploadBox}><Ionicons name="cloud-upload-outline" size={31} color={profileColors.blue} /><Text style={styles.uploadTitle}>{picked.length ? `${picked.length} file dipilih` : item?.media.length ? `${item.media.length} file tersimpan` : item?.originalName || 'Pilih file pendukung'}</Text>{picked.map(file => <Text numberOfLines={1} key={`${file.uri}:${file.name}`} style={styles.pickedName}>{file.name} · {humanSize(file.size ?? 0)}</Text>)}<Text style={styles.uploadHint}>PDF, JPG, JPEG, PNG · Maksimal 2 MB per file{draft.type === 'certification' ? ' · dapat memilih beberapa file' : ''}</Text><Pressable onPress={() => void pick()} style={styles.pickButton}><Text style={styles.pickText}>{picked.length || item?.path ? 'Ganti File' : 'Pilih File'}</Text></Pressable></View>
-            <PrimaryButton disabled={saveMutation.isPending} label={saveMutation.isPending ? 'Mengunggah...' : 'Simpan Berkas'} onPress={() => void save()} />
+            <PrimaryButton disabled={saveDisabled} label={saveMutation.isPending ? 'Mengunggah...' : 'Simpan Berkas'} onPress={() => void save()} />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

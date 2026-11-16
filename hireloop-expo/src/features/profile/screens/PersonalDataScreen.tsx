@@ -13,6 +13,7 @@ import {educationLevelOptions, isNoFormalEducation} from '../../onboarding/onboa
 import {emptyAddress, type AddressDetail, type MasterOption} from '../../onboarding/onboarding.types';
 import {profileApi} from '../api/profile.api';
 import {CardTitle, DataRow, PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
+import {hasFormChanges} from '../profile-form-state';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
 import {formatAddress, normalizeProfileDate} from '../profile.mapper';
 import type {CandidateProfile, EducationInput, ProfileAddress, ProfileEducation} from '../profile.types';
@@ -78,9 +79,8 @@ type PersonalDraft = {
   sameAsKtp: boolean;
 };
 
-function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfile; visible: boolean; onClose: () => void}) {
-  const feedback = useActionFeedback();
-  const [draft, setDraft] = useState<PersonalDraft>(() => ({
+function personalDraftFromProfile(profile: CandidateProfile): PersonalDraft {
+  return {
     nik: profile.nik,
     fullName: profile.fullName,
     birthPlace: profile.birthPlace,
@@ -91,8 +91,38 @@ function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfi
     ktpAddress: profile.ktpAddress ? {...profile.ktpAddress} : emptyAddress(),
     domicileAddress: profile.domicileAddress ? {...profile.domicileAddress} : emptyAddress(),
     sameAsKtp: profile.sameAsKtp,
-  }));
+  };
+}
+
+function hasRequiredAddress(value: AddressDetail) {
+  return Boolean(value.addressLine.trim() && value.provinceCode && value.regencyCode && value.districtCode && value.villageCode);
+}
+
+function personalComparable(draft: PersonalDraft) {
+  return {
+    ...draft,
+    domicileAddress: draft.sameAsKtp ? null : draft.domicileAddress,
+  };
+}
+
+function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfile; visible: boolean; onClose: () => void}) {
+  const feedback = useActionFeedback();
+  const [initialDraft] = useState<PersonalDraft>(() => personalDraftFromProfile(profile));
+  const [draft, setDraft] = useState<PersonalDraft>(() => initialDraft);
   const mutation = useProfileMutation(profileApi.updatePersonalInfo);
+  const isDirty = hasFormChanges(personalComparable(initialDraft), personalComparable(draft));
+  const isValid = Boolean(
+    draft.fullName.trim()
+    && draft.birthPlace.trim()
+    && draft.birthDate
+    && draft.phone.trim()
+    && draft.gender
+    && draft.maritalStatus
+    && (profile.nik || /^\d{16}$/.test(draft.nik))
+    && hasRequiredAddress(draft.ktpAddress)
+    && (draft.sameAsKtp || hasRequiredAddress(draft.domicileAddress)),
+  );
+  const saveDisabled = !isDirty || !isValid || mutation.isPending;
   const set = <K extends keyof PersonalDraft>(key: K, value: PersonalDraft[K]) => setDraft(current => {
     const next = {...current, [key]: value};
     if (key === 'sameAsKtp' && value === true) next.domicileAddress = {...current.ktpAddress};
@@ -101,10 +131,10 @@ function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfi
   });
 
   const save = async () => {
+    if (saveDisabled) return;
     if (!draft.fullName.trim()) return Alert.alert('Nama wajib diisi', 'Masukkan nama lengkap kandidat.');
     if (!profile.nik && !/^\d{16}$/.test(draft.nik)) return Alert.alert('NIK tidak valid', 'NIK harus tepat 16 digit angka.');
-    const requiredAddress = (value: AddressDetail) => value.addressLine && value.provinceCode && value.regencyCode && value.districtCode && value.villageCode;
-    if (!requiredAddress(draft.ktpAddress) || (!draft.sameAsKtp && !requiredAddress(draft.domicileAddress))) return Alert.alert('Alamat belum lengkap', 'Lengkapi seluruh wilayah dan detail alamat.');
+    if (!hasRequiredAddress(draft.ktpAddress) || (!draft.sameAsKtp && !hasRequiredAddress(draft.domicileAddress))) return Alert.alert('Alamat belum lengkap', 'Lengkapi seluruh wilayah dan detail alamat.');
     await feedback.runAction({
       loadingMessage: 'Menyimpan data diri...', successTitle: 'Data Diri Tersimpan',
       successMessage: 'Informasi pribadi Anda berhasil diperbarui.', errorTitle: 'Gagal Menyimpan Data Diri',
@@ -135,7 +165,7 @@ function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfi
             <SelectField tone="light" label="Status Pernikahan" required value={draft.maritalStatus} onChange={value => set('maritalStatus', value as PersonalDraft['maritalStatus'])} options={[{value: 'single', label: 'Belum menikah'}, {value: 'married', label: 'Menikah'}, {value: 'other', label: 'Lainnya'}]} placeholder="Pilih status" />
             <AddressFields tone="light" label="Alamat KTP" value={draft.ktpAddress} onChange={value => set('ktpAddress', value)} />
             <AddressFields tone="light" label="Alamat Domisili" disabled={draft.sameAsKtp} value={draft.domicileAddress} onChange={value => set('domicileAddress', value)} afterAddressLine={<CheckboxField tone="light" label="Sama dengan alamat KTP" checked={draft.sameAsKtp} onChange={value => set('sameAsKtp', value)} />} />
-            <PrimaryButton disabled={mutation.isPending} label={mutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'} onPress={() => void save()} />
+            <PrimaryButton disabled={saveDisabled} label={mutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'} onPress={() => void save()} />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -145,18 +175,36 @@ function PersonalEditModal({profile, visible, onClose}: {profile: CandidateProfi
 
 type EducationDraft = {level: string; school: string; majorId: string; startDate: string; endDate: string; info: string; ongoing: boolean};
 
+function educationDraftFromItem(item: ProfileEducation | null): EducationDraft {
+  return {
+    level: item?.educationLevel ?? '',
+    school: item?.schoolName ?? '',
+    majorId: item?.majorId ? String(item.majorId) : '',
+    startDate: item?.startDate ?? '',
+    endDate: item?.endDate ?? '',
+    info: item?.additionalInfo ?? '',
+    ongoing: Boolean(item?.startDate && !item?.endDate),
+  };
+}
+
 function EducationModal({item, visible, onClose}: {item: ProfileEducation | null; visible: boolean; onClose: () => void}) {
   const feedback = useActionFeedback();
-  const [draft, setDraft] = useState<EducationDraft>(() => ({level: item?.educationLevel ?? '', school: item?.schoolName ?? '', majorId: item?.majorId ? String(item.majorId) : '', startDate: item?.startDate ?? '', endDate: item?.endDate ?? '', info: item?.additionalInfo ?? '', ongoing: Boolean(item?.startDate && !item?.endDate)}));
+  const [initialDraft] = useState<EducationDraft>(() => educationDraftFromItem(item));
+  const [draft, setDraft] = useState<EducationDraft>(() => initialDraft);
   const majors = useQuery({queryKey: ['master-data', 'majors'], queryFn: () => masterDataApi.list('majors'), staleTime: 30 * 60 * 1000});
   const majorOptions = useMemo(() => normalizeMasterOptions(majors.data), [majors.data]);
   const saveMutation = useProfileMutation(async (payload: EducationInput) => item ? profileApi.updateEducation(item.id, payload) : profileApi.createEducation(payload));
   const deleteMutation = useProfileMutation((id: number) => profileApi.deleteEducation(id));
   const set = <K extends keyof EducationDraft>(key: K, value: EducationDraft[K]) => setDraft(current => ({...current, [key]: value}));
   const noFormal = isNoFormalEducation(draft.level);
+  const isDirty = hasFormChanges(initialDraft, draft);
+  const hasValidDates = draft.ongoing || !draft.startDate || !draft.endDate || draft.endDate >= draft.startDate;
+  const isValid = Boolean(draft.level && hasValidDates);
+  const saveDisabled = !isDirty || !isValid || saveMutation.isPending;
   const setLevel = (level: string) => setDraft(current => isNoFormalEducation(level) ? {...current, level, school: '', majorId: '', startDate: '', endDate: '', ongoing: false} : {...current, level});
 
   const save = async () => {
+    if (saveDisabled) return;
     if (!draft.level) return Alert.alert('Pendidikan wajib diisi', 'Pilih tingkat pendidikan terakhir.');
     if (!draft.ongoing && draft.startDate && draft.endDate && draft.endDate < draft.startDate) return Alert.alert('Tanggal tidak valid', 'Tanggal selesai harus setelah tanggal mulai.');
     await feedback.runAction({
@@ -183,7 +231,7 @@ function EducationModal({item, visible, onClose}: {item: ProfileEducation | null
             <DateField tone="light" disabled={noFormal || draft.ongoing} label="Tanggal Selesai" value={draft.endDate} onChange={value => set('endDate', value)} minimumDate={isoToLocalDate(draft.startDate) ?? undefined} maximumDate={new Date()} />
             {!noFormal ? <CheckboxField tone="light" label="Sedang berlangsung" checked={draft.ongoing} onChange={value => setDraft(current => ({...current, ongoing: value, endDate: value ? '' : current.endDate}))} /> : null}
             <TextField tone="light" label="Informasi Tambahan" multiline value={draft.info} onChangeText={value => set('info', value)} />
-            <PrimaryButton disabled={saveMutation.isPending} label={saveMutation.isPending ? 'Menyimpan...' : 'Simpan Pendidikan'} onPress={() => void save()} />
+            <PrimaryButton disabled={saveDisabled} label={saveMutation.isPending ? 'Menyimpan...' : 'Simpan Pendidikan'} onPress={() => void save()} />
             {item ? <Pressable disabled={deleteMutation.isPending} onPress={remove} style={styles.deleteButton}><Ionicons name="trash-outline" size={18} color="#D92D20" /><Text style={styles.deleteText}>Hapus Pendidikan</Text></Pressable> : null}
           </ScrollView>
         </View>

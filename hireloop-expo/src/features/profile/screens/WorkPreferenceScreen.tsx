@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQuery} from '@tanstack/react-query';
 import {router} from 'expo-router';
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import {FormTextInput} from '../../../components/forms/FormTextInput';
@@ -10,7 +10,8 @@ import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvid
 import {masterDataApi} from '../../master-data/api/master-data.api';
 import {profileApi} from '../api/profile.api';
 import {asRecord} from '../profile.mapper';
-import type {WorkPeriodStatus, WorkSetting, WorkType} from '../profile.types';
+import {hasFormChanges} from '../profile-form-state';
+import type {CandidateProfile, WorkPeriodStatus, WorkSetting, WorkType} from '../profile.types';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
 import {formatRupiahInput, parseRupiahInput, sanitizeRupiahInput} from '../work-preference.utils';
 import {
@@ -31,6 +32,33 @@ const availabilityOptions: [WorkPeriodStatus, string][] = [
 ];
 
 type Role = {id: number; name: string};
+type PreferenceSnapshot = {
+  roleIds: number[];
+  locations: string[];
+  salary: string;
+  availability: WorkPeriodStatus;
+  workTypes: WorkType[];
+  workSettings: WorkSetting[];
+  shift: boolean;
+  relocate: boolean;
+};
+
+function sortedValues<T extends string | number>(values: T[]) {
+  return [...values].sort((left, right) => String(left).localeCompare(String(right)));
+}
+
+function preferenceSnapshotFromProfile(data: CandidateProfile): PreferenceSnapshot {
+  return {
+    roleIds: sortedValues(data.jobPreferences.map(item => item.id)),
+    locations: sortedValues(data.expectedLocations.map(item => item.trim()).filter(Boolean)),
+    salary: data.expectedSalary ? String(data.expectedSalary) : '',
+    availability: data.workPeriodStatus,
+    workTypes: sortedValues(data.preferredWorkTypes.length ? data.preferredWorkTypes : [data.workType]),
+    workSettings: sortedValues(data.preferredWorkSettings.length ? data.preferredWorkSettings : [data.jobTypeExpected]),
+    shift: data.willingToWorkShifts,
+    relocate: data.willingToRelocate,
+  };
+}
 
 function mapRoles(payload: unknown): Role[] {
   const root = asRecord(payload);
@@ -77,18 +105,51 @@ export function WorkPreferenceScreen() {
   const [workSettings, setWorkSettings] = useState<WorkSetting[]>(() => data ? (data.preferredWorkSettings.length ? data.preferredWorkSettings : [data.jobTypeExpected]) : ['on_site']);
   const [shift, setShift] = useState(() => data?.willingToWorkShifts ?? false);
   const [relocate, setRelocate] = useState(() => data?.willingToRelocate ?? false);
+  const [baseline, setBaseline] = useState<PreferenceSnapshot | null>(() => data ? preferenceSnapshotFromProfile(data) : null);
+  const hydratedUserId = useRef<number | null>(data?.userId ?? null);
+
+  useEffect(() => {
+    if (!data || hydratedUserId.current === data.userId) return;
+    const initial = preferenceSnapshotFromProfile(data);
+    setSelectedRoles(data.jobPreferences.map(item => ({id: item.id, name: item.name || `Posisi ${item.id}`})));
+    setLocations([...data.expectedLocations]);
+    setSalary(data.expectedSalary ? String(data.expectedSalary) : '');
+    setAvailability(data.workPeriodStatus);
+    setWorkTypes(data.preferredWorkTypes.length ? [...data.preferredWorkTypes] : [data.workType]);
+    setWorkSettings(data.preferredWorkSettings.length ? [...data.preferredWorkSettings] : [data.jobTypeExpected]);
+    setShift(data.willingToWorkShifts);
+    setRelocate(data.willingToRelocate);
+    setBaseline(initial);
+    hydratedUserId.current = data.userId;
+  }, [data]);
+
+  const currentSnapshot = useMemo<PreferenceSnapshot>(() => ({
+    roleIds: sortedValues(selectedRoles.map(role => role.id)),
+    locations: sortedValues(locations.map(item => item.trim()).filter(Boolean)),
+    salary: sanitizeRupiahInput(salary),
+    availability,
+    workTypes: sortedValues(workTypes),
+    workSettings: sortedValues(workSettings),
+    shift,
+    relocate,
+  }), [availability, locations, relocate, salary, selectedRoles, shift, workSettings, workTypes]);
+  const isDirty = baseline !== null && hasFormChanges(baseline, currentSnapshot);
+  const isValid = workTypes.length > 0 && workSettings.length > 0;
+  const saveDisabled = !baseline || !isDirty || !isValid || mutation.isPending;
 
   const reset = () => {
-    if (!profile.data) return;
+    if (!profile.data || !baseline) return;
     const current = profile.data;
     setSelectedRoles(current.jobPreferences.map(item => ({id: item.id, name: item.name || `Posisi ${item.id}`})));
-    setLocations(current.expectedLocations);
-    setSalary(current.expectedSalary ? String(current.expectedSalary) : '');
-    setAvailability(current.workPeriodStatus);
-    setWorkTypes(current.preferredWorkTypes.length ? current.preferredWorkTypes : [current.workType]);
-    setWorkSettings(current.preferredWorkSettings.length ? current.preferredWorkSettings : [current.jobTypeExpected]);
-    setShift(current.willingToWorkShifts);
-    setRelocate(current.willingToRelocate);
+    setLocations([...current.expectedLocations]);
+    setSalary(baseline.salary);
+    setAvailability(baseline.availability);
+    setWorkTypes([...baseline.workTypes]);
+    setWorkSettings([...baseline.workSettings]);
+    setShift(baseline.shift);
+    setRelocate(baseline.relocate);
+    setRoleSearch('');
+    setLocationInput('');
   };
 
   const selectedRoleIds = useMemo(() => new Set(selectedRoles.map(role => role.id)), [selectedRoles]);
@@ -118,6 +179,7 @@ export function WorkPreferenceScreen() {
   };
 
   const save = async () => {
+    if (saveDisabled) return;
     if (workTypes.length === 0 || workSettings.length === 0) return;
     await feedback.runAction({
       loadingMessage: 'Menyimpan preferensi kerja...', successTitle: 'Preferensi Tersimpan',
@@ -183,7 +245,7 @@ export function WorkPreferenceScreen() {
         <BinaryChoice label="Bersedia ditempatkan di luar lokasi pilihan" value={relocate} onChange={setRelocate} />
 
         <View style={styles.infoBox}><Ionicons name="information-circle-outline" size={21} color={profileColors.blue} /><Text style={styles.infoText}>Preferensi membantu rekomendasi. Anda tetap dapat melamar di luar pilihan ini.</Text></View>
-        <View style={styles.actions}><Pressable onPress={reset} style={styles.cancelButton}><Text style={styles.cancelText}>Batal</Text></Pressable><View style={styles.saveWrap}><PrimaryButton disabled={mutation.isPending} label={mutation.isPending ? 'Menyimpan...' : 'Simpan Preferensi'} onPress={() => void save()} /></View></View>
+        <View style={styles.actions}><Pressable onPress={reset} style={styles.cancelButton}><Text style={styles.cancelText}>Batal</Text></Pressable><View style={styles.saveWrap}><PrimaryButton disabled={saveDisabled} label={mutation.isPending ? 'Menyimpan...' : 'Simpan Preferensi'} onPress={() => void save()} /></View></View>
       </ScrollView>
     </View>
   );

@@ -15,6 +15,7 @@ import type {SelectedSkill} from '../../onboarding/onboarding.types';
 import {masterDataApi} from '../../master-data/api/master-data.api';
 import {profileApi} from '../api/profile.api';
 import {useExperiences, useProfileMutation} from '../hooks/use-profile';
+import {hasFormChanges} from '../profile-form-state';
 import type {ExperienceInput, ProfileExperience, WorkSetting, WorkType} from '../profile.types';
 import {PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
 
@@ -35,6 +36,21 @@ const emptyDraft = (): Draft => ({
   experienceListId: null, position: '', company: '', startDate: '', endDate: '', current: false,
   workSetting: 'on_site', workType: 'full_time', description: '', skills: [],
 });
+
+function experienceDraftFromItem(item: ProfileExperience | null): Draft {
+  return item ? {
+    experienceListId: item.experienceListId,
+    position: item.position,
+    company: item.companyName,
+    startDate: item.startDate,
+    endDate: item.endDate ?? '',
+    current: item.isCurrent,
+    workSetting: item.workSetting,
+    workType: item.workType,
+    description: item.description,
+    skills: item.skills.map(skill => ({skillId: skill.id, customName: null, name: skill.name})),
+  } : emptyDraft();
+}
 const CURRENT_TIMESTAMP = Date.now();
 
 function monthYear(value: string | null) {
@@ -55,25 +71,20 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
     queryFn: () => profileApi.listMasterSkills(),
     staleTime: 30 * 60 * 1000,
   });
-  const [draft, setDraft] = useState<Draft>(() => item ? {
-    experienceListId: item.experienceListId,
-    position: item.position,
-    company: item.companyName,
-    startDate: item.startDate,
-    endDate: item.endDate ?? '',
-    current: item.isCurrent,
-    workSetting: item.workSetting,
-    workType: item.workType,
-    description: item.description,
-    skills: item.skills.map(skill => ({skillId: skill.id, customName: null, name: skill.name})),
-  } : emptyDraft());
+  const [initialDraft] = useState<Draft>(() => experienceDraftFromItem(item));
+  const [draft, setDraft] = useState<Draft>(() => initialDraft);
   const [error, setError] = useState('');
   const mutation = useProfileMutation(
     (payload: ExperienceInput) => item ? profileApi.updateExperience(item.id, payload) : profileApi.createExperience(payload),
     {refreshExperiences: true},
   );
+  const isDirty = hasFormChanges(initialDraft, draft);
+  const hasValidDates = draft.current || Boolean(draft.endDate && draft.endDate >= draft.startDate);
+  const isValid = Boolean(draft.position.trim() && draft.company.trim() && draft.startDate && hasValidDates);
+  const saveDisabled = !isDirty || !isValid || mutation.isPending;
 
   const save = async () => {
+    if (saveDisabled) return;
     if (!draft.position.trim() || !draft.company.trim() || !draft.startDate) {
       setError('Posisi, perusahaan, dan tanggal mulai wajib diisi.');
       return;
@@ -157,7 +168,7 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
             />
             <TextField tone="light" multiline label="Deskripsi Pekerjaan" value={draft.description} onChangeText={value => setDraft(current => ({...current, description: value}))} placeholder="Jelaskan tanggung jawab atau pencapaian" maxLength={1000} />
             {error ? <View style={styles.errorBox}><Ionicons name="alert-circle-outline" size={19} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}
-            <PrimaryButton disabled={mutation.isPending} label={mutation.isPending ? 'Menyimpan...' : 'Simpan Pengalaman'} onPress={() => void save()} />
+            <PrimaryButton disabled={saveDisabled} label={mutation.isPending ? 'Menyimpan...' : 'Simpan Pengalaman'} onPress={() => void save()} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

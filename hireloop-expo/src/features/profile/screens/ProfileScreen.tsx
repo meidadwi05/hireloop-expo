@@ -16,6 +16,7 @@ import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
 import {profileApi} from '../api/profile.api';
 import {calculateProfileCompletion, formatAddress} from '../profile.mapper';
+import {hasFormChanges} from '../profile-form-state';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
 import {exportAtsCv} from '../ats-cv';
 import {
@@ -51,6 +52,7 @@ export function ProfileScreen() {
   const uploadAvatar = useProfileMutation(profileApi.uploadAvatar);
   const data = profile.data;
   const completion = useMemo(() => data ? calculateProfileCompletion(data) : 0, [data]);
+  const aboutChanged = hasFormChanges(data?.selfDescription ?? '', about);
 
   const chooseAvatar = async () => {
     const result = await DocumentPicker.getDocumentAsync({type: ['image/jpeg', 'image/png'], copyToCacheDirectory: true});
@@ -92,6 +94,7 @@ export function ProfileScreen() {
   };
 
   const saveAbout = async () => {
+    if (!aboutChanged || updateDescription.isPending) return;
     await feedback.runAction({
       loadingMessage: 'Menyimpan deskripsi profil...',
       successTitle: 'Profil Diperbarui',
@@ -183,7 +186,7 @@ export function ProfileScreen() {
             <Text style={styles.counter}>{about.length}/1000</Text>
             <View style={styles.modalButtons}>
               <Pressable onPress={() => setAboutOpen(false)} style={styles.cancelButton}><Text style={styles.cancelText}>Batal</Text></Pressable>
-              <Pressable disabled={updateDescription.isPending} onPress={() => void saveAbout()} style={styles.saveButton}><Text style={styles.saveText}>{updateDescription.isPending ? 'Menyimpan...' : 'Simpan'}</Text></Pressable>
+              <Pressable accessibilityState={{disabled: !aboutChanged || updateDescription.isPending}} disabled={!aboutChanged || updateDescription.isPending} onPress={() => void saveAbout()} style={[styles.saveButton, (!aboutChanged || updateDescription.isPending) && styles.saveButtonDisabled]}><Text style={styles.saveText}>{updateDescription.isPending ? 'Menyimpan...' : 'Simpan'}</Text></Pressable>
             </View>
           </View>
         </View>
@@ -234,5 +237,6 @@ const styles = StyleSheet.create({
   cancelButton: {flex: 1, minHeight: 46, borderRadius: 10, borderWidth: 1.5, borderColor: profileColors.blue, alignItems: 'center', justifyContent: 'center'},
   cancelText: {fontFamily: profileFonts.semibold, color: profileColors.blue},
   saveButton: {flex: 1, minHeight: 46, borderRadius: 10, backgroundColor: profileColors.blue, alignItems: 'center', justifyContent: 'center'},
+  saveButtonDisabled: {opacity: 0.5},
   saveText: {fontFamily: profileFonts.bold, color: 'white'},
 });
