@@ -13,9 +13,13 @@ import type {CandidateUser, LoginInput, RegisterInput, ResetPasswordInput} from 
 export type AuthClientType = 'web' | 'mobile';
 
 export function resolveAuthClientType(
-  _configuredType: string | undefined = process.env.EXPO_PUBLIC_AUTH_CLIENT_TYPE,
+  configuredType: string | undefined = process.env.EXPO_PUBLIC_AUTH_CLIENT_TYPE,
   platform: string = Platform.OS,
 ): AuthClientType {
+  if (configuredType === 'web' || configuredType === 'mobile') {
+    return configuredType;
+  }
+
   return platform === 'web' ? 'web' : 'mobile';
 }
 

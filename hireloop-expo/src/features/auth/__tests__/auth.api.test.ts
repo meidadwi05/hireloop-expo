@@ -192,15 +192,17 @@ describe('authApi', () => {
     });
   });
 
-  it('uses the mobile token lifecycle for every native Expo target', () => {
+  it('uses the configured mobile token lifecycle for Expo targets', () => {
     expect(resolveAuthClientType(undefined, 'ios')).toBe('mobile');
     expect(resolveAuthClientType('mobile', 'android')).toBe('mobile');
-    expect(resolveAuthClientType('web', 'ios')).toBe('mobile');
+    expect(resolveAuthClientType('mobile', 'web')).toBe('mobile');
+    expect(resolveAuthClientType('web', 'ios')).toBe('web');
     expect(resolveAuthClientType('unknown', 'android')).toBe('mobile');
   });
 
-  it('always isolates PWA sessions as web tokens even when the build env says mobile', () => {
-    expect(resolveAuthClientType('mobile', 'web')).toBe('web');
+  it('isolates Expo PWA as mobile while a regular unconfigured web client stays web', () => {
+    expect(resolveAuthClientType('mobile', 'web')).toBe('mobile');
+    expect(resolveAuthClientType('web', 'web')).toBe('web');
     expect(resolveAuthClientType(undefined, 'web')).toBe('web');
   });
 

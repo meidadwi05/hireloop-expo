@@ -41,6 +41,8 @@ export type NikAvailabilityResult = {
   message: string;
 };
 
+export const KTP_OCR_REQUEST_TIMEOUT_MS = 130_000;
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
 }
@@ -102,7 +104,11 @@ export const onboardingApi = {
     const body = new FormData();
     appendUpload(body, 'image', input);
     if (previousPath) body.append('previous_ktp_path', previousPath);
-    const response = await httpClient.post('/ocr/ktp', body, {headers: {'Content-Type': 'multipart/form-data'}});
+    const response = await httpClient.post('/ocr/ktp', body, {
+      // OCR can legitimately take longer than the shared 15-second API timeout.
+      // Do not set Content-Type manually: Axios must add the multipart boundary.
+      timeout: KTP_OCR_REQUEST_TIMEOUT_MS,
+    });
     const root = record(response.data);
     const data = record(root.data ?? root);
     return {path: String(data.ktp_path ?? ''), url: String(data.ktp_url ?? ''), extracted: record(data.extracted) as KtpExtractedData};

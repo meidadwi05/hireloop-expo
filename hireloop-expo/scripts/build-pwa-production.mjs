@@ -6,6 +6,7 @@ const root = process.cwd();
 const easConfig = JSON.parse(await readFile(path.join(root, 'eas.json'), 'utf8'));
 const productionApiUrl = easConfig?.build?.production?.env?.EXPO_PUBLIC_API_URL;
 const productionPublicEnvironment = {...(easConfig?.build?.production?.env ?? {})};
+const expectedPwaAuthClientType = 'mobile';
 
 function parseEnvironment(source) {
   return Object.fromEntries(source
@@ -22,6 +23,10 @@ function parseEnvironment(source) {
 
 if (typeof productionApiUrl !== 'string' || productionApiUrl.length === 0) {
   throw new Error('EXPO_PUBLIC_API_URL production tidak tersedia di eas.json.');
+}
+
+if (productionPublicEnvironment.EXPO_PUBLIC_AUTH_CLIENT_TYPE !== expectedPwaAuthClientType) {
+  throw new Error('Expo PWA production wajib menggunakan EXPO_PUBLIC_AUTH_CLIENT_TYPE=mobile agar sesi web utama tidak tergantikan.');
 }
 
 const parsedApiUrl = new URL(productionApiUrl);
@@ -47,6 +52,10 @@ try {
   }
 } catch (error) {
   if (error?.code !== 'ENOENT') throw error;
+}
+
+if (productionPublicEnvironment.EXPO_PUBLIC_AUTH_CLIENT_TYPE !== expectedPwaAuthClientType) {
+  throw new Error('.env.production tidak boleh mengganti Expo PWA menjadi client_type web. Gunakan mobile.');
 }
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
