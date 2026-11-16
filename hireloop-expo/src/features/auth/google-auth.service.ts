@@ -8,10 +8,9 @@ import {googleAuthApi} from './api/google-auth.api';
 import {AuthFlowError} from './auth.errors';
 import type {CandidateUser} from './auth.types';
 
-void WebBrowser.maybeCompleteAuthSession();
-
 type GoogleLoginResult =
   | {status: 'cancelled'}
+  | {status: 'redirecting'}
   | {status: 'success'; code: string};
 
 let activeCompletion: {code: string; promise: Promise<CandidateUser>} | null = null;
@@ -46,6 +45,15 @@ export async function startGoogleLogin(): Promise<GoogleLoginResult> {
     authorizationUrl = await googleAuthApi.getAuthorizationUrl(returnUrl, AUTH_CLIENT_TYPE);
   } catch (error) {
     throw new AuthFlowError('google-start', error);
+  }
+
+  if (Platform.OS === 'web' && typeof globalThis.location !== 'undefined') {
+    try {
+      globalThis.location.assign(authorizationUrl);
+      return {status: 'redirecting'};
+    } catch (error) {
+      throw new AuthFlowError('google-browser', error);
+    }
   }
 
   let result: WebBrowser.WebBrowserAuthSessionResult;

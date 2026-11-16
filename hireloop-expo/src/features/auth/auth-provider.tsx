@@ -112,6 +112,7 @@ export function AuthProvider({children}: PropsWithChildren) {
     setStatus('authenticating');
     try {
       const result = await startGoogleLogin();
+      if (result.status === 'redirecting') return false;
       if (result.status === 'cancelled') {
         setStatus('unauthenticated');
         return false;

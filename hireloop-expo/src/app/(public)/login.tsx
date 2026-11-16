@@ -59,7 +59,7 @@ export default function LoginRoute() {
     setNotice('');
     try {
       const completed = await loginWithGoogle();
-      if (!completed) throw new Error('Login Google dibatalkan atau belum selesai.');
+      if (!completed) return;
       router.replace('/');
     } catch (error) {
       setNotice(getGoogleLoginErrorMessage(error, {apiUrl: env.apiUrl, isDevelopment: __DEV__}));

@@ -192,11 +192,16 @@ describe('authApi', () => {
     });
   });
 
-  it('uses the mobile token lifecycle for every Expo target unless explicitly overridden', () => {
-    expect(resolveAuthClientType()).toBe('mobile');
-    expect(resolveAuthClientType('mobile')).toBe('mobile');
-    expect(resolveAuthClientType('web')).toBe('web');
-    expect(resolveAuthClientType('unknown')).toBe('mobile');
+  it('uses the mobile token lifecycle for every native Expo target', () => {
+    expect(resolveAuthClientType(undefined, 'ios')).toBe('mobile');
+    expect(resolveAuthClientType('mobile', 'android')).toBe('mobile');
+    expect(resolveAuthClientType('web', 'ios')).toBe('mobile');
+    expect(resolveAuthClientType('unknown', 'android')).toBe('mobile');
+  });
+
+  it('always isolates PWA sessions as web tokens even when the build env says mobile', () => {
+    expect(resolveAuthClientType('mobile', 'web')).toBe('web');
+    expect(resolveAuthClientType(undefined, 'web')).toBe('web');
   });
 
   it('sends the trusted client type when starting Google OAuth', async () => {
