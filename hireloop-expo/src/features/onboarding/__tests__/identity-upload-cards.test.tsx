@@ -37,11 +37,16 @@ jest.mock('../api/onboarding.api', () => ({
   },
 }));
 
+jest.mock('../ktp-ocr', () => ({
+  resolveKtpAddress: jest.fn(),
+}));
+
 describe('card upload identitas onboarding', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValue({granted: true});
     (ImagePicker.launchCameraAsync as jest.Mock).mockResolvedValue({canceled: true, assets: null});
+    (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValue({canceled: true, assets: null});
   });
 
   it('menampilkan card KTP dan foto profil sebelum informasi pribadi', () => {
@@ -69,7 +74,7 @@ describe('card upload identitas onboarding', () => {
     expect(screen.getByTestId('personal-information-card')).toBeTruthy();
   });
 
-  it('membuka kamera langsung ketika ikon KTP ditekan', async () => {
+  it('membuka galeri ketika ikon KTP ditekan', async () => {
     const screen = render(
       <PersonalDataStep
         draft={createEmptyOnboardingDraft('Andi Permana')}
@@ -82,11 +87,12 @@ describe('card upload identitas onboarding', () => {
 
     fireEvent.press(screen.getByTestId('ktp-photo-trigger'));
 
-    await waitFor(() => expect(ImagePicker.launchCameraAsync).toHaveBeenCalledTimes(1));
-    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
+    await waitFor(() => expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalledTimes(1));
+    expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
+    expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
   });
 
-  it('membuka kamera langsung ketika ikon foto profil ditekan', async () => {
+  it('membuka galeri ketika ikon foto profil ditekan', async () => {
     const screen = render(
       <PersonalDataStep
         draft={createEmptyOnboardingDraft('Andi Permana')}
@@ -99,7 +105,32 @@ describe('card upload identitas onboarding', () => {
 
     fireEvent.press(screen.getByTestId('avatar-photo-trigger'));
 
+    await waitFor(() => expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalledTimes(1));
+    expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
+    expect(ImagePicker.requestCameraPermissionsAsync).not.toHaveBeenCalled();
+  });
+
+  it('tetap membuka kamera ketika tombol ambil foto KTP dan profil ditekan', async () => {
+    const screen = render(
+      <PersonalDataStep
+        draft={createEmptyOnboardingDraft('Andi Permana')}
+        dispatch={jest.fn()}
+        majorOptions={[]}
+        onNext={jest.fn()}
+        runAction={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('ktp-camera-trigger'));
+
     await waitFor(() => expect(ImagePicker.launchCameraAsync).toHaveBeenCalledTimes(1));
+    expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByTestId('avatar-camera-trigger'));
+
+    await waitFor(() => expect(ImagePicker.launchCameraAsync).toHaveBeenCalledTimes(2));
+    expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalledTimes(2);
     expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   });
 

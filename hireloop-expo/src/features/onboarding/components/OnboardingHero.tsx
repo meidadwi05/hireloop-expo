@@ -14,6 +14,8 @@ export const ONBOARDING_HERO_COPY = {
   },
 } as const;
 
+export const ONBOARDING_BACK_TOP = 20;
+
 export function getOnboardingHeroLayout(viewportWidth: number) {
   const pageWidth = Math.min(viewportWidth, 720);
   const narrow = pageWidth < 390;
@@ -59,7 +61,7 @@ export function OnboardingHero({step, onBack}: {step: 1 | 2; onBack: () => void}
 const styles = StyleSheet.create({
   hero: {width: '100%', backgroundColor: '#010934', overflow: 'hidden'},
   heroImage: {position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%'},
-  back: {position: 'absolute', left: 22, top: 12, width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
+  back: {position: 'absolute', left: 22, top: ONBOARDING_BACK_TOP, width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
   backNarrow: {left: 12},
   copy: {position: 'absolute', left: 26, width: '55%', maxWidth: 360, alignItems: 'flex-start'},
   copyNarrow: {left: 18, width: '58%'},

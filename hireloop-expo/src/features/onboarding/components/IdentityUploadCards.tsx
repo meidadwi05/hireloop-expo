@@ -16,9 +16,16 @@ function imageName(asset: ImagePicker.ImagePickerAsset, target: UploadTarget) {
   return asset.fileName || `${target}-${Date.now()}.${asset.mimeType === 'image/png' ? 'png' : 'jpg'}`;
 }
 
-function CameraAction({label, onPress, disabled}: {label: string; onPress: () => void; disabled?: boolean}) {
+function CameraAction({label, onPress, disabled, testID}: {label: string; onPress: () => void; disabled?: boolean; testID: string}) {
   return (
-    <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({pressed}) => [styles.action, pressed && styles.pressed, disabled && styles.disabled]}>
+    <Pressable
+      accessibilityHint="Membuka kamera untuk mengambil foto langsung"
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      style={({pressed}) => [styles.action, pressed && styles.pressed, disabled && styles.disabled]}
+      testID={testID}
+    >
       <Ionicons name="camera-outline" size={17} color={COLORS.white} />
       <Text style={styles.actionText}>{label}</Text>
     </Pressable>
@@ -91,11 +98,11 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
           <View style={styles.headerCopy}><Text style={styles.title}>Upload KTP</Text><Text style={styles.subtitle}>Isi data diri otomatis dari foto KTP</Text></View>
         </View>
         <Pressable
-          accessibilityHint="Membuka kamera untuk mengambil foto KTP"
-          accessibilityLabel={ktpPath ? 'Ambil ulang foto KTP' : 'Ambil foto KTP'}
+          accessibilityHint="Membuka galeri untuk memilih foto KTP"
+          accessibilityLabel={ktpPath ? 'Pilih ulang foto KTP dari galeri' : 'Pilih foto KTP dari galeri'}
           accessibilityRole="button"
           disabled={Boolean(uploading)}
-          onPress={() => void selectImage('ktp', 'camera')}
+          onPress={() => void selectImage('ktp', 'library')}
           style={({pressed}) => [styles.dropZone, pressed && styles.pressed, Boolean(uploading) && styles.disabled]}
           testID="ktp-photo-trigger"
         >
@@ -104,11 +111,11 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
             : ktpUrl
               ? <Image source={{uri: ktpUrl}} resizeMode="contain" style={styles.ktpPreview} />
               : <View style={styles.identityIcon}><Ionicons name="card-outline" size={43} color="#8DBBFF" /></View>}
-          <Text style={styles.dropTitle}>{ktpPath ? 'Foto KTP sudah terverifikasi' : 'Unggah atau ambil foto KTP Anda'}</Text>
+          <Text style={styles.dropTitle}>{ktpPath ? 'Foto KTP sudah terverifikasi' : 'Pilih foto KTP dari galeri'}</Text>
           <Text style={styles.dropMeta}>JPG, PNG, atau WebP · maksimal 5 MB</Text>
         </Pressable>
         {ktpFeedback ? <View style={styles.successMessage}><Ionicons name="checkmark-circle" size={17} color="#34D399" /><Text style={styles.successText}>{ktpFeedback}</Text></View> : null}
-        <View style={styles.singleAction}><CameraAction disabled={Boolean(uploading)} label={ktpPath ? 'Ambil Ulang Foto KTP' : 'Ambil Foto KTP'} onPress={() => void selectImage('ktp', 'camera')} /></View>
+        <View style={styles.singleAction}><CameraAction disabled={Boolean(uploading)} label={ktpPath ? 'Ambil Ulang Foto KTP' : 'Ambil Foto KTP'} onPress={() => void selectImage('ktp', 'camera')} testID="ktp-camera-trigger" /></View>
       </View>
 
       <View testID="profile-photo-card" style={[styles.card, compact && styles.cardCompact]}>
@@ -117,11 +124,11 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
           <View style={styles.headerCopy}><Text style={styles.title}>Foto Profil</Text><Text style={styles.subtitle}>Foto profil akan digunakan pada profil Anda</Text></View>
         </View>
         <Pressable
-          accessibilityHint="Membuka kamera untuk mengambil foto profil"
-          accessibilityLabel={avatarUrl ? 'Ambil ulang foto profil' : 'Ambil foto profil'}
+          accessibilityHint="Membuka galeri untuk memilih foto profil"
+          accessibilityLabel={avatarUrl ? 'Pilih ulang foto profil dari galeri' : 'Pilih foto profil dari galeri'}
           accessibilityRole="button"
           disabled={Boolean(uploading)}
-          onPress={() => void selectImage('avatar', 'camera')}
+          onPress={() => void selectImage('avatar', 'library')}
           style={({pressed}) => [styles.avatar, pressed && styles.pressed, Boolean(uploading) && styles.disabled]}
           testID="avatar-photo-trigger"
         >
@@ -132,7 +139,7 @@ export function IdentityUploadCards({ktpPath, ktpUrl, avatarUrl, onKtpUploaded, 
               : <Ionicons name="person" size={54} color="#AAB8D1" />}
           {!uploading ? <View style={styles.editBadge}><Ionicons name="image-outline" size={15} color={COLORS.white} /></View> : null}
         </Pressable>
-        <View style={styles.singleAction}><CameraAction disabled={Boolean(uploading)} label="Ambil Foto Profil" onPress={() => void selectImage('avatar', 'camera')} /></View>
+        <View style={styles.singleAction}><CameraAction disabled={Boolean(uploading)} label="Ambil Foto Profil" onPress={() => void selectImage('avatar', 'camera')} testID="avatar-camera-trigger" /></View>
       </View>
 
       {overlay ? <ActionOverlayModal overlay={overlay} onClose={() => setOverlay(null)} /> : null}

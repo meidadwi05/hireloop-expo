@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
 import {FormFieldFrame} from '../../../components/forms/FormFieldFrame';
-import {localDateToIso} from './date-field.utils';
+import {DATE_FIELD_PLACEHOLDER, localDateToIso} from './date-field.utils';
 import type {DateFieldProps} from './DateField.types';
 import {FieldLabel} from './FormControls';
 
@@ -23,7 +23,7 @@ export function DateField({label, value, onChange, required, error, disabled, to
       background: 'transparent',
       border: 0,
       boxSizing: 'border-box',
-      color: disabled ? '#5E626B' : '#111827',
+      color: value ? (disabled ? '#5E626B' : '#111827') : 'transparent',
       cursor: disabled ? 'not-allowed' : 'pointer',
       flex: 1,
       fontFamily: 'PlusJakartaSans_400Regular',
@@ -33,6 +33,7 @@ export function DateField({label, value, onChange, required, error, disabled, to
       outline: 'none',
       padding: '0 14px',
       width: '100%',
+      WebkitTextFillColor: value ? (disabled ? '#5E626B' : '#111827') : 'transparent',
     } satisfies React.CSSProperties,
     type: 'date',
     value,
@@ -52,7 +53,10 @@ export function DateField({label, value, onChange, required, error, disabled, to
         errorContainerStyle={styles.errorBorder}
         focusable={false}
       >
-        {input}
+        <View style={styles.inputWrap}>
+          {!value ? <Text pointerEvents="none" style={[styles.placeholder, disabled && styles.disabledText]}>{DATE_FIELD_PLACEHOLDER}</Text> : null}
+          {input}
+        </View>
       </FormFieldFrame>
       {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
     </View>
@@ -62,7 +66,10 @@ export function DateField({label, value, onChange, required, error, disabled, to
 const styles = StyleSheet.create({
   group: {gap: 8, marginBottom: 20},
   control: {minHeight: 54, borderRadius: 11, borderWidth: 2, borderColor: '#E0E5EC', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', overflow: 'hidden'},
+  inputWrap: {flex: 1, alignSelf: 'stretch', justifyContent: 'center'},
+  placeholder: {position: 'absolute', left: 14, zIndex: 1, fontFamily: 'PlusJakartaSans_400Regular', color: '#B6BCC7', fontSize: 14},
   disabled: {backgroundColor: '#D2CED0'},
+  disabledText: {color: '#5E626B'},
   errorBorder: {borderColor: '#FF5B67'},
   error: {fontFamily: 'PlusJakartaSans_400Regular', color: '#FF8B93', fontSize: 11, lineHeight: 16},
 });

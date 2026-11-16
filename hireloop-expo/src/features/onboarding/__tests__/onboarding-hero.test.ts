@@ -1,4 +1,4 @@
-import {getOnboardingHeroLayout, ONBOARDING_HERO_COPY} from '../components/OnboardingHero';
+import {getOnboardingHeroLayout, ONBOARDING_BACK_TOP, ONBOARDING_HERO_COPY} from '../components/OnboardingHero';
 
 describe('OnboardingHero', () => {
   test('menggunakan copy sesuai desain pada kedua langkah', () => {
@@ -20,5 +20,9 @@ describe('OnboardingHero', () => {
 
   test('membatasi ukuran hero pada viewport yang lebih lebar dari konten', () => {
     expect(getOnboardingHeroLayout(1200)).toEqual(getOnboardingHeroLayout(720));
+  });
+
+  test('menurunkan tombol kembali tanpa mengecilkan area sentuhnya', () => {
+    expect(ONBOARDING_BACK_TOP).toBe(20);
   });
 });

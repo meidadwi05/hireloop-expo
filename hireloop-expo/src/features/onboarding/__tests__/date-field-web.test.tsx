@@ -20,6 +20,7 @@ describe('DateField web', () => {
     expect(input.props.type).toBe('date');
     expect(input.props.min).toBe('2020-01-01');
     expect(input.props.max).toBe('2026-10-27');
+    expect(screen.getByText('dd-mm-yyyy')).toBeTruthy();
 
     fireEvent(input, 'change', {currentTarget: {value: '2024-08-17'}});
     expect(onChange).toHaveBeenCalledWith('2024-08-17');

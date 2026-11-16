@@ -4,7 +4,7 @@ import React, {useMemo, useState} from 'react';
 import {Modal, Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {FormFieldPressable} from '../../../components/forms/FormFieldPressable';
-import {isoToLocalDate, localDateToIso} from './date-field.utils';
+import {DATE_FIELD_PLACEHOLDER, formatIsoDateForDisplay, isoToLocalDate, localDateToIso} from './date-field.utils';
 import type {DateFieldProps} from './DateField.types';
 import {FieldLabel} from './FormControls';
 
@@ -12,8 +12,7 @@ export type {DateFieldProps} from './DateField.types';
 export {isoToLocalDate, localDateToIso} from './date-field.utils';
 
 function displayDate(value: string): string {
-  const date = isoToLocalDate(value);
-  return date ? new Intl.DateTimeFormat('id-ID', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(date) : '';
+  return formatIsoDateForDisplay(value);
 }
 
 function initialDate(value: string, minimumDate?: Date, maximumDate?: Date): Date {
@@ -41,7 +40,7 @@ export function DateField({label, value, onChange, required, error, disabled, to
       <FormFieldPressable
         active={open}
         accessibilityRole="button"
-        accessibilityLabel={`${label}. ${value ? displayDate(value) : 'Belum dipilih'}`}
+        accessibilityLabel={`${label}. ${value ? displayDate(value) : `Belum dipilih. Format ${DATE_FIELD_PLACEHOLDER}`}`}
         accessibilityState={{disabled: Boolean(disabled), expanded: open}}
         containerStyle={styles.control}
         disabled={disabled}
@@ -50,7 +49,7 @@ export function DateField({label, value, onChange, required, error, disabled, to
         errorContainerStyle={styles.errorBorder}
         onPress={openPicker}
       >
-        <Text style={[styles.value, !value && styles.placeholder, disabled && styles.disabledText]}>{value ? displayDate(value) : 'Pilih tanggal'}</Text>
+        <Text style={[styles.value, !value && styles.placeholder, disabled && styles.disabledText]}>{value ? displayDate(value) : DATE_FIELD_PLACEHOLDER}</Text>
         <View style={styles.iconButton}><Ionicons name="calendar-outline" size={21} color={disabled ? '#7A8190' : '#172036'} /></View>
       </FormFieldPressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
