@@ -7,7 +7,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -233,7 +232,7 @@ export function PerformanceScreen() {
         <MetricCard color={C.amber} icon="time-outline" primary="Belum Dinilai" secondary="Menunggu" value={metrics?.belum_dinilai ?? 0} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.filters} horizontal showsHorizontalScrollIndicator={false}>
+      <View style={styles.filters}>
         {(['all', 'rated', 'pending'] as PerformanceFilter[]).map(value => (
           <Pressable
             hitSlop={5}
@@ -246,7 +245,7 @@ export function PerformanceScreen() {
             </Text>
           </Pressable>
         ))}
-      </ScrollView>
+      </View>
 
       <View style={styles.sectionHeading}>
         <Text style={styles.sectionTitle}>Daftar Pekerjaan &amp; Penilaian</Text>
@@ -310,10 +309,10 @@ const styles = StyleSheet.create({
   metricValue: {color: C.ink, fontFamily: F.bold, fontSize: 18, lineHeight: 23, marginTop: 7},
   metricPrimary: {color: C.ink, fontFamily: F.semibold, fontSize: 10.5, lineHeight: 14, marginTop: 1},
   metricSecondary: {color: C.soft, fontFamily: F.regular, fontSize: 9.5, lineHeight: 13, marginTop: 1},
-  filters: {gap: 6, paddingRight: 12, paddingTop: 12},
-  filter: {backgroundColor: '#FFF', borderColor: '#D5DEEA', borderRadius: 999, borderWidth: 1, justifyContent: 'center', minHeight: 30, paddingHorizontal: 11},
+  filters: {flexDirection: 'row', gap: 6, marginTop: 12, width: '100%'},
+  filter: {alignItems: 'center', backgroundColor: '#FFF', borderColor: '#D5DEEA', borderRadius: 999, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 34, paddingHorizontal: 6},
   filterActive: {backgroundColor: C.blue, borderColor: C.blue},
-  filterText: {color: '#344054', fontFamily: F.semibold, fontSize: 10.5},
+  filterText: {color: '#344054', flexShrink: 1, fontFamily: F.semibold, fontSize: 10.5, textAlign: 'center'},
   filterTextActive: {color: '#FFF'},
   sectionHeading: {alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginTop: 20},
   sectionTitle: {color: C.ink, flex: 1, fontFamily: F.bold, fontSize: 13, paddingRight: 8},
