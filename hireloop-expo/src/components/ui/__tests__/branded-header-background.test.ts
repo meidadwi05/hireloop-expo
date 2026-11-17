@@ -120,6 +120,7 @@ describe('getBrandedHeaderLayout', () => {
     expect(layout.artworkStyle.left).toBe(0);
     expect(layout.artworkStyle.width).toBe(width);
     expect(layout.artworkStyle.height).toBeCloseTo(width / PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO, 5);
+    expect(layout.artworkStyle.top).toBe(24);
     expect(layout.artworkAspectRatio).toBe(PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO);
     expect((layout.artworkStyle.top as number) + (layout.artworkStyle.height as number)).toBeCloseTo(layout.height, 5);
     expect(layout.resizeMode).toBe('contain');

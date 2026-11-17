@@ -61,7 +61,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
   },
   performance: {
     backgroundColor: '#0044B9',
-    minimumContentHeight: 92,
+    minimumContentHeight: 64,
     maximumArtworkWidth: 720,
     useContainerWidth: true,
     resizeMode: 'contain',
@@ -98,7 +98,11 @@ export function getBrandedHeaderLayout(
   const artworkAspectRatio = preset.artworkAspectRatio ?? BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const artworkHeight = artworkWidth / artworkAspectRatio;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
-  const height = Math.max(minimumContentHeight, artworkHeight);
+  const keepsArtworkBelowSafeArea = variant === 'performance';
+  const height = Math.max(
+    minimumContentHeight,
+    artworkHeight + (keepsArtworkBelowSafeArea ? safeInset : 0),
+  );
 
   return {
     height,
@@ -108,7 +112,7 @@ export function getBrandedHeaderLayout(
     artworkStyle: {
       width: artworkWidth,
       height: artworkHeight,
-      top: height - artworkHeight,
+      top: keepsArtworkBelowSafeArea ? safeInset : height - artworkHeight,
       left: safeWidth - artworkWidth,
     },
   };

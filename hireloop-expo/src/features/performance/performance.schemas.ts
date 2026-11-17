@@ -40,6 +40,7 @@ export const performanceDecisionSchema = z.looseObject({
 export const performanceContractSchema = z.looseObject({
   contract_id: z.coerce.number().int().positive(),
   employee_id: z.coerce.number().int().positive(),
+  is_account_deleted: z.boolean().optional(),
   employee_code: z.string().default('-'),
   employee_name: z.string().default('Karyawan'),
   project_name: nullableText,
@@ -50,6 +51,7 @@ export const performanceContractSchema = z.looseObject({
   cycle_number: z.coerce.number().int().positive().default(1),
   contract_start_date: nullableText,
   contract_end_date: nullableText,
+  non_extension_effective_date: nullableText,
   days_remaining: nullableNumber,
   contract_status: z.string().default('active'),
   kpi_scores_count: z.coerce.number().int().min(0).default(0),
@@ -79,4 +81,5 @@ export const performanceResponseSchema = z.object({
 export type PerformanceResponse = z.infer<typeof performanceResponseSchema>;
 export type PerformanceContract = z.infer<typeof performanceContractSchema>;
 export type PerformanceScore = z.infer<typeof performanceScoreSchema>;
+export type PerformanceDecision = z.infer<typeof performanceDecisionSchema>;
 
