@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
 import React, {useMemo, useState} from 'react';
+import Svg, {Path, Rect} from 'react-native-svg';
 import {
   FlatList,
   Pressable,
@@ -57,6 +58,29 @@ function MetricCard({color, icon, primary, secondary, value}: MetricCardProps) {
       <Text style={styles.metricValue}>{value}</Text>
       <Text numberOfLines={1} style={styles.metricPrimary}>{primary}</Text>
       <Text numberOfLines={1} style={styles.metricSecondary}>{secondary}</Text>
+    </View>
+  );
+}
+
+function CalendarDaysIcon({color, size = 16}: {color: string; size?: number}) {
+  return (
+    <Svg fill="none" height={size} viewBox="0 0 24 24" width={size}>
+      <Path d="M8 2v4M16 2v4" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+      <Rect height={18} rx={2} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} width={18} x={3} y={4} />
+      <Path d="M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+    </Svg>
+  );
+}
+
+function TotalJobsMetricCard({value}: {value: number}) {
+  return (
+    <View style={styles.metricCard}>
+      <View style={[styles.metricIcon, {backgroundColor: `${C.blue}14`}]}>
+        <CalendarDaysIcon color={C.blue} />
+      </View>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text numberOfLines={1} style={styles.metricPrimary}>Total</Text>
+      <Text numberOfLines={1} style={styles.metricSecondary}>Pekerjaan</Text>
     </View>
   );
 }
@@ -185,7 +209,7 @@ export function PerformanceScreen() {
   const controls = (
     <View style={{paddingHorizontal: pagePadding}}>
       <View style={styles.searchBox}>
-        <Ionicons name="search-outline" color="#8794A8" size={19} />
+        <Ionicons name="search-outline" color="#8794A8" size={17} />
         <TextInput
           accessibilityLabel="Cari posisi atau perusahaan"
           onChangeText={setSearch}
@@ -197,13 +221,13 @@ export function PerformanceScreen() {
         />
         {search ? (
           <Pressable accessibilityLabel="Hapus pencarian" hitSlop={8} onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" color="#98A2B3" size={19} />
+            <Ionicons name="close-circle" color="#98A2B3" size={17} />
           </Pressable>
         ) : null}
       </View>
 
       <View style={styles.metrics}>
-        <MetricCard color={C.blue} icon="calendar-outline" primary="Total" secondary="Pekerjaan" value={metrics?.total_pekerjaan ?? 0} />
+        <TotalJobsMetricCard value={metrics?.total_pekerjaan ?? 0} />
         <MetricCard color={C.green} icon="checkmark-circle-outline" primary="Sudah Dinilai" secondary="Evaluasi siap" value={metrics?.sudah_dinilai ?? 0} />
         <MetricCard color={C.amber} icon="time-outline" primary="Belum Dinilai" secondary="Menunggu" value={metrics?.belum_dinilai ?? 0} />
       </View>
@@ -211,6 +235,7 @@ export function PerformanceScreen() {
       <ScrollView contentContainerStyle={styles.filters} horizontal showsHorizontalScrollIndicator={false}>
         {(['all', 'rated', 'pending'] as PerformanceFilter[]).map(value => (
           <Pressable
+            hitSlop={5}
             key={value}
             onPress={() => setFilter(value)}
             style={[styles.filter, filter === value && styles.filterActive]}
@@ -276,18 +301,18 @@ const styles = StyleSheet.create({
   viewport: {alignItems: 'center', backgroundColor: '#EAF0F8', flex: 1},
   page: {backgroundColor: C.background, flex: 1, maxWidth: 560},
   listContent: {gap: 12, paddingBottom: 40},
-  searchBox: {alignItems: 'center', backgroundColor: '#FFF', borderColor: C.border, borderRadius: 18, borderWidth: 1, flexDirection: 'row', gap: 10, minHeight: 52, marginTop: 18, paddingHorizontal: 16},
-  searchInput: {color: C.ink, flex: 1, fontFamily: F.regular, fontSize: 13, paddingVertical: 12},
+  searchBox: {alignItems: 'center', backgroundColor: '#FFF', borderColor: C.border, borderRadius: 14, borderWidth: 1, flexDirection: 'row', gap: 8, minHeight: 44, marginTop: 18, paddingHorizontal: 14},
+  searchInput: {color: C.ink, flex: 1, fontFamily: F.regular, fontSize: 12, paddingVertical: 10},
   metrics: {flexDirection: 'row', gap: 8, marginTop: 16},
   metricCard: {alignItems: 'flex-start', backgroundColor: '#FFF', borderColor: C.border, borderRadius: 16, borderWidth: 1, elevation: 1, flex: 1, minHeight: 126, paddingHorizontal: 12, paddingVertical: 14, shadowColor: '#183B6B', shadowOffset: {height: 3, width: 0}, shadowOpacity: 0.04, shadowRadius: 8},
   metricIcon: {alignItems: 'center', borderRadius: 9, height: 28, justifyContent: 'center', width: 28},
   metricValue: {color: C.ink, fontFamily: F.bold, fontSize: 18, lineHeight: 23, marginTop: 7},
   metricPrimary: {color: C.ink, fontFamily: F.semibold, fontSize: 10.5, lineHeight: 14, marginTop: 1},
   metricSecondary: {color: C.soft, fontFamily: F.regular, fontSize: 9.5, lineHeight: 13, marginTop: 1},
-  filters: {gap: 8, paddingRight: 12, paddingTop: 14},
-  filter: {borderColor: '#D5DEEA', borderRadius: 999, borderWidth: 1, justifyContent: 'center', minHeight: 36, paddingHorizontal: 14},
+  filters: {gap: 6, paddingRight: 12, paddingTop: 12},
+  filter: {backgroundColor: '#FFF', borderColor: '#D5DEEA', borderRadius: 999, borderWidth: 1, justifyContent: 'center', minHeight: 30, paddingHorizontal: 11},
   filterActive: {backgroundColor: C.blue, borderColor: C.blue},
-  filterText: {color: '#344054', fontFamily: F.semibold, fontSize: 11.5},
+  filterText: {color: '#344054', fontFamily: F.semibold, fontSize: 10.5},
   filterTextActive: {color: '#FFF'},
   sectionHeading: {alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginTop: 20},
   sectionTitle: {color: C.ink, flex: 1, fontFamily: F.bold, fontSize: 13, paddingRight: 8},
@@ -304,13 +329,13 @@ const styles = StyleSheet.create({
   periodRow: {alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 15},
   periodCopy: {alignItems: 'center', flex: 1, flexDirection: 'row', gap: 7, minWidth: 0},
   metaText: {color: C.muted, flex: 1, fontFamily: F.regular, fontSize: 11.5},
-  countPill: {backgroundColor: '#EAF2FF', borderRadius: 7, paddingHorizontal: 9, paddingVertical: 5},
-  countText: {color: C.blue, fontFamily: F.semibold, fontSize: 9.5},
+  countPill: {backgroundColor: '#EAF2FF', borderRadius: 7, paddingHorizontal: 8, paddingVertical: 4},
+  countText: {color: C.blue, fontFamily: F.semibold, fontSize: 9},
   cardFooter: {alignItems: 'center', borderTopColor: '#EEF2F6', borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 13, minHeight: 38, paddingTop: 12},
   ratingRow: {alignItems: 'center', flexDirection: 'row', gap: 8},
   scoreWrap: {alignItems: 'baseline', flexDirection: 'row'},
-  score: {color: C.navy, fontFamily: F.bold, fontSize: 17},
-  scoreMax: {color: C.soft, fontFamily: F.medium, fontSize: 10},
+  score: {color: C.navy, fontFamily: F.bold, fontSize: 12},
+  scoreMax: {color: C.soft, fontFamily: F.medium, fontSize: 9},
   stars: {flexDirection: 'row', gap: 1},
   pendingText: {color: C.soft, fontFamily: F.regular, fontSize: 10.5, fontStyle: 'italic'},
   detailLink: {alignItems: 'center', flexDirection: 'row', gap: 3, marginLeft: 8},
