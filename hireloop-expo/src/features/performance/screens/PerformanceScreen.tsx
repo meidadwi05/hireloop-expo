@@ -101,8 +101,8 @@ function PerformanceCard({item}: {item: PerformanceContract}) {
           <Ionicons name="briefcase-outline" color={C.blue} size={21} />
         </View>
         <View style={styles.cardCopy}>
-          <Text numberOfLines={2} style={styles.cardTitle}>{title}</Text>
-          <Text numberOfLines={1} style={styles.cardCompany}>{item.company_name || item.project_name || '-'}</Text>
+          <Text ellipsizeMode="tail" numberOfLines={2} style={styles.cardTitle}>{title}</Text>
+          <Text style={styles.cardCompany}>{item.company_name || item.project_name || '-'}</Text>
         </View>
         <View style={[styles.decisionPill, {backgroundColor: tone.backgroundColor}]}>
           <Text numberOfLines={1} style={[styles.decisionText, {color: tone.color}]}>
