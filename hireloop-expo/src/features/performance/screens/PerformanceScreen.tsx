@@ -27,6 +27,7 @@ const F = {
   medium: 'PlusJakartaSans_500Medium',
   semibold: 'PlusJakartaSans_600SemiBold',
   bold: 'PlusJakartaSans_700Bold',
+  extrabold: 'PlusJakartaSans_800ExtraBold',
 } as const;
 
 const C = {
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
   cardFooter: {alignItems: 'center', borderTopColor: '#EEF2F6', borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 13, minHeight: 38, paddingTop: 12},
   ratingRow: {alignItems: 'center', flexDirection: 'row', gap: 8},
   scoreWrap: {alignItems: 'baseline', flexDirection: 'row'},
-  score: {color: C.navy, fontFamily: F.bold, fontSize: 12},
+  score: {color: C.navy, fontFamily: F.extrabold, fontSize: 16, lineHeight: 20},
   scoreMax: {color: C.soft, fontFamily: F.medium, fontSize: 9},
   stars: {flexDirection: 'row', gap: 1},
   pendingText: {color: C.soft, fontFamily: F.regular, fontSize: 10.5, fontStyle: 'italic'},
