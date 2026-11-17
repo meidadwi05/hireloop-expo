@@ -1,5 +1,6 @@
 import {
   BRANDED_HEADER_ARTWORK_ASPECT_RATIO,
+  PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
   getBrandedHeaderLayout,
   type BrandedHeaderVariant,
 } from '../BrandedHeaderBackground';
@@ -111,5 +112,16 @@ describe('getBrandedHeaderLayout', () => {
 
     expect(layout.height).toBe(98);
     expect(layout.artworkStyle.height).toBeLessThan(layout.height);
+  });
+
+  it.each([320, 390, 430, 720])('keeps the complete performance artwork visible at %ipx', width => {
+    const layout = getBrandedHeaderLayout('performance', width, 24);
+
+    expect(layout.artworkStyle.left).toBe(0);
+    expect(layout.artworkStyle.width).toBe(width);
+    expect(layout.artworkStyle.height).toBeCloseTo(width / PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO, 5);
+    expect(layout.artworkAspectRatio).toBe(PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO);
+    expect((layout.artworkStyle.top as number) + (layout.artworkStyle.height as number)).toBeCloseTo(layout.height, 5);
+    expect(layout.resizeMode).toBe('contain');
   });
 });

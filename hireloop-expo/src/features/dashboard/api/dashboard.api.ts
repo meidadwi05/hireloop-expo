@@ -8,11 +8,6 @@ export const dashboardApi = {
     return dashboardResponseSchema.parse(response.data).data;
   },
 
-  async getPerformance(): Promise<unknown> {
-    const response = await httpClient.get('/job-seeker/performance');
-    return response.data;
-  },
-
   async getRecruitmentActivities(): Promise<unknown> {
     const response = await httpClient.get('/aktivitas-rekrutmen');
     return response.data;

@@ -164,6 +164,15 @@ describe('dashboard sections', () => {
     expect(onNavigate).toHaveBeenCalledWith('/profile');
   });
 
+  it('membuka halaman Performance dari pintasan dashboard', () => {
+    const onNavigate = jest.fn();
+    const screen = render(<ShortcutGrid onNavigate={onNavigate} />);
+
+    fireEvent.press(screen.getByLabelText('Buka Performance'));
+
+    expect(onNavigate).toHaveBeenCalledWith('/(candidate)/performance');
+  });
+
   it('menampilkan card kelengkapan profil statis sesuai rancangan', () => {
     const onOpenProfile = jest.fn();
     const screen = render(<ProfileCompletionCard completion={75} onOpenProfile={onOpenProfile} />);

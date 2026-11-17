@@ -81,13 +81,14 @@ export type DashboardRoute =
   | '/(candidate)/(tabs)/career'
   | '/(candidate)/(tabs)/notifications'
   | '/(candidate)/interviews'
+  | '/(candidate)/performance'
   | '/(candidate)/jobs/saved';
 
 const shortcutItems = [
   {label: 'Profil Saya', icon: 'person-outline' as const, route: '/profile'},
   {label: 'Lowongan Kerja', icon: 'briefcase-outline' as const, route: '/(candidate)/(tabs)/jobs'},
   {label: 'Lamaran Saya', icon: 'document-text-outline' as const, route: '/(candidate)/(tabs)/career'},
-  {label: 'Performance', icon: 'stats-chart-outline' as const},
+  {label: 'Performance', icon: 'stats-chart-outline' as const, route: '/(candidate)/performance'},
 ];
 
 const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
