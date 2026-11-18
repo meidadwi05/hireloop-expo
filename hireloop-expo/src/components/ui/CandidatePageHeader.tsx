@@ -45,9 +45,9 @@ export function CandidatePageHeader({
         accessibilityRole="button"
         hitSlop={8}
         onPress={onBack}
-        style={styles.back}
+        style={({pressed}) => [styles.back, pressed && styles.backPressed]}
       >
-        <Ionicons name="chevron-back" color="#FFFFFF" size={21} />
+        <Ionicons name="chevron-back" color="#FFFFFF" size={22} />
       </Pressable>
       <View style={styles.copy}>
         <Text numberOfLines={1} style={styles.title}>{title}</Text>
@@ -59,8 +59,18 @@ export function CandidatePageHeader({
 
 const styles = StyleSheet.create({
   content: {alignItems: 'center', flexDirection: 'row', height: '100%', paddingHorizontal: 16, paddingBottom: 6},
-  back: {alignItems: 'center', height: 36, justifyContent: 'center', width: 36, marginLeft: -4},
-  copy: {flex: 1, minWidth: 0, paddingRight: 8},
+  back: {
+    alignItems: 'center',
+    borderRadius: 22,
+    flexShrink: 0,
+    height: 44,
+    justifyContent: 'center',
+    marginLeft: -4,
+    overflow: 'visible',
+    width: 44,
+  },
+  backPressed: {backgroundColor: 'rgba(255,255,255,0.12)'},
+  copy: {flex: 1, minWidth: 0, paddingLeft: 2, paddingRight: 12},
   title: {color: '#FFFFFF', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 17, lineHeight: 22},
   subtitle: {color: 'rgba(255,255,255,0.92)', fontFamily: 'PlusJakartaSans_400Regular', fontSize: 11, lineHeight: 15, marginTop: 1},
 });

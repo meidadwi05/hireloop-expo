@@ -21,6 +21,7 @@ type BrandedHeaderPreset = {
   backgroundColor: string;
   minimumContentHeight: number;
   maximumArtworkWidth: number;
+  offsetArtworkBySafeArea?: boolean;
   useContainerWidth?: boolean;
   resizeMode?: ImageResizeMode;
   artworkAspectRatio?: number;
@@ -35,23 +36,34 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     resizeMode: 'contain',
   },
   'application-list': {
-    backgroundColor: '#003E9A',
+    backgroundColor: '#0044B9',
     minimumContentHeight: 74,
-    maximumArtworkWidth: 430,
-    resizeMode: 'contain',
-  },
-  'compact-detail': {
-    backgroundColor: '#003E9A',
-    minimumContentHeight: 64,
-    maximumArtworkWidth: 430,
-    resizeMode: 'contain',
-  },
-  'jobs-list': {
-    backgroundColor: '#00419E',
-    minimumContentHeight: 72,
-    maximumArtworkWidth: 430,
+    maximumArtworkWidth: 720,
+    offsetArtworkBySafeArea: true,
     useContainerWidth: true,
     resizeMode: 'contain',
+    artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
+    artworkSource: performanceHeaderBackground,
+  },
+  'compact-detail': {
+    backgroundColor: '#0044B9',
+    minimumContentHeight: 64,
+    maximumArtworkWidth: 720,
+    offsetArtworkBySafeArea: true,
+    useContainerWidth: true,
+    resizeMode: 'contain',
+    artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
+    artworkSource: performanceHeaderBackground,
+  },
+  'jobs-list': {
+    backgroundColor: '#0044B9',
+    minimumContentHeight: 72,
+    maximumArtworkWidth: 720,
+    offsetArtworkBySafeArea: true,
+    useContainerWidth: true,
+    resizeMode: 'contain',
+    artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
+    artworkSource: performanceHeaderBackground,
   },
   notifications: {
     backgroundColor: '#003E9A',
@@ -63,6 +75,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#0044B9',
     minimumContentHeight: 64,
     maximumArtworkWidth: 720,
+    offsetArtworkBySafeArea: true,
     useContainerWidth: true,
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
@@ -98,7 +111,7 @@ export function getBrandedHeaderLayout(
   const artworkAspectRatio = preset.artworkAspectRatio ?? BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const artworkHeight = artworkWidth / artworkAspectRatio;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
-  const keepsArtworkBelowSafeArea = variant === 'performance';
+  const keepsArtworkBelowSafeArea = preset.offsetArtworkBySafeArea === true;
   const height = Math.max(
     minimumContentHeight,
     artworkHeight + (keepsArtworkBelowSafeArea ? safeInset : 0),
