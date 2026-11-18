@@ -121,4 +121,41 @@ describe('ApplicationRecruitmentProgress', () => {
     expect(previousStage.props.accessibilityState.selected).toBe(false);
     expect(StyleSheet.flatten(screen.getByTestId('application-progress-node-offering-2').props.style).backgroundColor).toBe('#16B97B');
   });
+
+  it('hanya menampilkan satu tahap berikutnya dan membukanya secara dinamis saat proses maju', () => {
+    const futureStage = (index: number, value: string, label: string, type: ApplicationStage['type']): ApplicationStage => ({
+      ...emptyDetails,
+      index,
+      value,
+      label,
+      type,
+      status: 'Pending',
+      isCurrent: false,
+      isCompleted: false,
+      startedAt: null,
+      completedAt: null,
+      note: null,
+    });
+    const dynamicStages: ApplicationStage[] = [
+      ...stages,
+      futureStage(3, 'medical', 'Medical (MCU)', 'medical'),
+      futureStage(4, 'hired', 'Hired', 'terminal'),
+    ];
+    const screen = render(<ApplicationRecruitmentProgress stages={dynamicStages} currentStageIndex={1} />);
+
+    expect(screen.getByText('Offering')).toBeTruthy();
+    expect(screen.queryByText('Medical (MCU)')).toBeNull();
+    expect(screen.queryByText('Hired')).toBeNull();
+
+    const advancedStages = dynamicStages.map((stage, index) => ({
+      ...stage,
+      status: index < 2 ? 'Completed' : index === 2 ? 'In Progress' : stage.status,
+      isCompleted: index < 2,
+      isCurrent: index === 2,
+    }));
+    screen.rerender(<ApplicationRecruitmentProgress stages={advancedStages} currentStageIndex={2} />);
+
+    expect(screen.getByText('Medical (MCU)')).toBeTruthy();
+    expect(screen.queryByText('Hired')).toBeNull();
+  });
 });
