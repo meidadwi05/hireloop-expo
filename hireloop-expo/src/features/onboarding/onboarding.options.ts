@@ -39,6 +39,11 @@ export function isNoFormalEducation(value: string): boolean {
   return ['KURANG DARI SD', 'TIDAK BERSEKOLAH', 'TIDAK SEKOLAH'].includes(value.trim().replaceAll('_', ' ').toUpperCase());
 }
 
+export function supportsEducationMajor(value: string): boolean {
+  const normalized = value.trim().replaceAll('_', ' ').toUpperCase();
+  return !isNoFormalEducation(value) && !['SD', 'SD/SEDERAJAT', 'SMP', 'SMP/SEDERAJAT'].includes(normalized);
+}
+
 export function normalizeWorkSystem(value: unknown): WorkSystem | '' {
   const normalized = String(value ?? '').trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
   if (['onsite', 'on_site'].includes(normalized)) return 'on_site';

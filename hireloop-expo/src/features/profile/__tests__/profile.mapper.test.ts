@@ -60,6 +60,16 @@ describe('profile mapper', () => {
     expect(mapCandidateProfile({data: {job_seeker: {birth_date: '31/02/2001'}}}).birthDate).toBeNull();
   });
 
+  it('mengabaikan jurusan lama untuk pendidikan SD dan SMP', () => {
+    const profile = mapCandidateProfile({data: {job_seeker: {educations: [
+      {id: 1, education_level: 'SD', major_id: 17, major_name: 'Manajemen'},
+      {id: 2, education_level: 'SMP', major_id: 18, major: {name: 'Teknik'}},
+    ]}}});
+
+    expect(profile.educations[0]).toMatchObject({educationLevel: 'SD', majorId: null, majorName: ''});
+    expect(profile.educations[1]).toMatchObject({educationLevel: 'SMP', majorId: null, majorName: ''});
+  });
+
   it('maps mixed document and certification responses', () => {
     const files = mapProfileFiles([
       {

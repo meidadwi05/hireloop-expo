@@ -65,7 +65,6 @@ export function JobsScreen() {
       <StatusBar style="light" />
       <JobsHeader
         containerWidth={containerWidth}
-        horizontalPadding={pagePadding}
       />
       <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
         <JobsSearchField

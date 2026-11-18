@@ -74,4 +74,24 @@ describe('modal pendidikan onboarding', () => {
     expect(screen.getByTestId('education-modal-card')).toBeTruthy();
     expect(screen.getByText('Memuat jurusan...')).toBeTruthy();
   });
+
+  it.each(['SD/Sederajat', 'SMP/Sederajat'])('tidak menawarkan jurusan untuk tingkat %s', levelLabel => {
+    const onSave = jest.fn();
+    const screen = render(
+      <EducationModal
+        visible
+        initialValue={{id: 'education-1', educationLevel: 'S1', schoolName: 'Sekolah', majorId: 17, majorName: 'Manajemen', startDate: '', endDate: '', ongoing: false}}
+        majorOptions={[{value: '17', label: 'Manajemen'}]}
+        onCancel={jest.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('Tingkat Pendidikan'));
+    fireEvent.press(screen.getByText(levelLabel));
+
+    expect(screen.queryByLabelText('Jurusan (Opsional)')).toBeNull();
+    fireEvent.press(screen.getByText('Simpan'));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({majorId: null, majorName: ''}));
+  });
 });

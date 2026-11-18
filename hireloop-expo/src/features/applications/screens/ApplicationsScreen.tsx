@@ -15,9 +15,10 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
+import {CandidatePageHeader} from '../../../components/ui/CandidatePageHeader';
 import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
+import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {jobsApi} from '../../jobs/api/jobs.api';
 import {jobsKeys} from '../../jobs/jobs.keys';
 import type {CandidateJobDetail} from '../../jobs/jobs.types';
@@ -205,25 +206,14 @@ export function ApplicationsScreen() {
   };
 
   const header = (
-    <BrandedHeaderBackground
+    <CandidatePageHeader
+      backLabel="Kembali ke Beranda"
       containerWidth={containerWidth}
-      topInset={insets.top}
+      onBack={() => goBackOrReplace('/(candidate)/(tabs)/home')}
+      subtitle="Pantau perkembangan lamaranmu"
+      title="Lamaran Saya"
       variant="application-list"
-      contentStyle={[styles.heroContent, {paddingTop: insets.top + 8}]}
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Kembali ke Beranda"
-        onPress={() => router.replace('/(candidate)/(tabs)/home')}
-        style={styles.backButton}
-      >
-        <Ionicons name="arrow-back" size={26} color="white" />
-      </Pressable>
-      <View style={styles.heroCopy}>
-        <Text style={styles.heroTitle}>Lamaran Saya</Text>
-        <Text style={styles.heroSubtitle}>Pantau perkembangan lamaranmu</Text>
-      </View>
-    </BrandedHeaderBackground>
+    />
   );
 
   const fixedControls = (
@@ -345,11 +335,6 @@ const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
   list: {flex: 1},
   content: {flexGrow: 1, backgroundColor: APPLICATION_COLORS.background},
-  heroContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
-  backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: 4},
-  heroCopy: {flex: 1, minWidth: 0},
-  heroTitle: {fontFamily: APPLICATION_FONTS.bold, fontSize: 24, lineHeight: 31, color: 'white'},
-  heroSubtitle: {fontFamily: APPLICATION_FONTS.regular, fontSize: 13, lineHeight: 19, color: '#DDEAFF', marginTop: 2},
   controlsSheet: {position: 'relative', zIndex: 2, marginTop: -16, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', backgroundColor: 'white', paddingTop: 21, paddingBottom: 18},
   searchBox: {height: 52, gap: 10, borderRadius: 12, paddingHorizontal: 14},
   searchInput: {flex: 1, minWidth: 0, height: '100%', fontFamily: APPLICATION_FONTS.regular, fontSize: 11.5, color: APPLICATION_COLORS.navy},

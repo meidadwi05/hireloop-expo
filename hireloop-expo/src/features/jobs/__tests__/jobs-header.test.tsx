@@ -22,7 +22,6 @@ describe('JobsHeader', () => {
     const screen = render(
       <JobsHeader
         containerWidth={390}
-        horizontalPadding={20}
       />,
     );
 
@@ -36,7 +35,7 @@ describe('JobsHeader', () => {
     expect(artwork.props.resizeMode).toBe('contain');
     expect(headerStyle.backgroundColor).toBe('#00419E');
     expect(headerStyle.height).toBeCloseTo(390 / (1983 / 515), 1);
-    expect(contentStyle.paddingHorizontal).toBe(20);
+    expect(contentStyle.paddingHorizontal).toBe(16);
     expect(artworkStyle.top).toBe(0);
     expect(artworkStyle.left).toBe(0);
     expect(artworkStyle.width).toBe(390);

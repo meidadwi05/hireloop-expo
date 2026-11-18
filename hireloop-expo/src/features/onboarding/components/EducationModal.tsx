@@ -5,7 +5,7 @@ import {ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Scr
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {educationSchema} from '../onboarding.schemas';
-import {educationLevelOptions, isNoFormalEducation} from '../onboarding.options';
+import {educationLevelOptions, isNoFormalEducation, supportsEducationMajor} from '../onboarding.options';
 import type {EducationDraft, MasterOption} from '../onboarding.types';
 import {DateField, isoToLocalDate} from './DateField';
 import {CheckboxField, FieldLabel, SelectField, TextField} from './FormControls';
@@ -41,9 +41,15 @@ export function EducationModal({visible, initialValue, majorOptions, majorLoadin
       setErrors({});
       return;
     }
+    if (!supportsEducationMajor(next)) {
+      setValue(current => ({...current, educationLevel: next, majorId: null, majorName: ''}));
+      setErrors(current => ({...current, educationLevel: '', majorId: '', majorName: ''}));
+      return;
+    }
     update('educationLevel', next);
   };
   const noFormalEducation = isNoFormalEducation(value.educationLevel);
+  const majorSupported = supportsEducationMajor(value.educationLevel);
   const updateMajor = (next: string) => {
     const option = selectableMajorOptions.find(item => item.value === next);
     setValue(current => ({
@@ -80,12 +86,12 @@ export function EducationModal({visible, initialValue, majorOptions, majorLoadin
             <ScrollView style={styles.body} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
               <SelectField presentation="inline" tone="light" label="Tingkat Pendidikan" required value={value.educationLevel} onChange={updateLevel} options={educationLevelOptions} placeholder="Pilih tingkat pendidikan" error={errors.educationLevel} />
               <TextField disabled={noFormalEducation} tone="light" label="Nama Sekolah / Universitas / Instansi (Opsional)" value={value.schoolName} onChangeText={next => update('schoolName', next)} placeholder={noFormalEducation ? 'Tidak diperlukan' : 'Nama institusi'} error={errors.schoolName} />
-              {!noFormalEducation && majorLoading ? (
+              {majorSupported && majorLoading ? (
                 <View style={styles.masterGroup}>
                   <FieldLabel label="Jurusan (Opsional)" tone="light" />
                   <View style={styles.masterState}><ActivityIndicator color="#1268FF" /><Text style={styles.masterStateText}>Memuat jurusan...</Text></View>
                 </View>
-              ) : !noFormalEducation && majorError ? (
+              ) : majorSupported && majorError ? (
                 <View style={styles.masterGroup}>
                   <FieldLabel label="Jurusan (Opsional)" tone="light" />
                   <View style={styles.masterError}>
@@ -93,7 +99,7 @@ export function EducationModal({visible, initialValue, majorOptions, majorLoadin
                     <Pressable accessibilityRole="button" onPress={onRetryMajors} style={styles.retryButton}><Text style={styles.retryText}>Coba lagi</Text></Pressable>
                   </View>
                 </View>
-              ) : !noFormalEducation ? (
+              ) : majorSupported ? (
                 <SelectField presentation="inline" tone="light" label="Jurusan (Opsional)" searchable value={value.majorId ? String(value.majorId) : customMajorValue} onChange={updateMajor} options={selectableMajorOptions} placeholder={majorOptions.length ? 'Pilih jurusan' : 'Jurusan belum tersedia'} error={errors.majorName} />
               ) : null}
               <DateField presentation="inline" tone="light" label="Mulai Pendidikan (Opsional)" disabled={noFormalEducation} value={value.startDate} onChange={next => update('startDate', next)} maximumDate={new Date()} error={errors.startDate} />

@@ -1,12 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {StatusBar} from 'expo-status-bar';
 import React, {useState} from 'react';
 import {router} from 'expo-router';
 
-import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
+import {CandidatePageHeader} from '../../../components/ui/CandidatePageHeader';
 import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
@@ -27,7 +27,6 @@ type JobDetailScreenProps = {
 
 export function JobDetailScreen({source, id}: JobDetailScreenProps) {
   const actionFeedback = useActionFeedback();
-  const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
   const queryClient = useQueryClient();
@@ -99,18 +98,14 @@ export function JobDetailScreen({source, id}: JobDetailScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <StatusBar style="light" />
-      <BrandedHeaderBackground
+      <CandidatePageHeader
+        backLabel="Kembali ke daftar lowongan"
         containerWidth={containerWidth}
-        topInset={insets.top}
+        onBack={() => goBackOrReplace('/(candidate)/(tabs)/jobs')}
+        subtitle="Lihat informasi dan persyaratan lowongan"
+        title="Detail Lowongan"
         variant="compact-detail"
-        contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
-      >
-        <Pressable accessibilityLabel="Kembali ke daftar lowongan" accessibilityRole="button" onPress={() => goBackOrReplace('/(candidate)/(tabs)/jobs')} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={26} color="white" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Detail Lowongan</Text>
-        <View style={styles.headerSpacer} />
-      </BrandedHeaderBackground>
+      />
 
       <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
@@ -208,10 +203,6 @@ const styles = StyleSheet.create({
   safeArea: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   scrollArea: {flex: 1},
   scrollContent: {paddingBottom: 24},
-  headerContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
-  backButton: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},
-  headerTitle: {flex: 1, fontFamily: JOBS_FONTS.bold, fontSize: 21, color: 'white', textAlign: 'center'},
-  headerSpacer: {width: 42},
   content: {paddingHorizontal: 20, paddingTop: 18, gap: 15},
   stateCard: {...jobsCardShadow, minHeight: 220, borderRadius: 18, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', padding: 25},
   stateTitle: {fontFamily: JOBS_FONTS.bold, fontSize: 15, color: JOBS_COLORS.ink, textAlign: 'center', marginTop: 10},

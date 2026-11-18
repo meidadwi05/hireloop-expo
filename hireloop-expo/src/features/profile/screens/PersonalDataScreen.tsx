@@ -9,7 +9,7 @@ import {masterDataApi} from '../../master-data/api/master-data.api';
 import {AddressFields} from '../../onboarding/components/AddressFields';
 import {DateField, isoToLocalDate} from '../../onboarding/components/DateField';
 import {CheckboxField, SelectField, TextField} from '../../onboarding/components/FormControls';
-import {educationLevelOptions, isNoFormalEducation} from '../../onboarding/onboarding.options';
+import {educationLevelOptions, isNoFormalEducation, supportsEducationMajor} from '../../onboarding/onboarding.options';
 import {emptyAddress, type AddressDetail, type MasterOption} from '../../onboarding/onboarding.types';
 import {profileApi} from '../api/profile.api';
 import {CardTitle, DataRow, PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
@@ -197,11 +197,14 @@ function EducationModal({item, visible, onClose}: {item: ProfileEducation | null
   const deleteMutation = useProfileMutation((id: number) => profileApi.deleteEducation(id));
   const set = <K extends keyof EducationDraft>(key: K, value: EducationDraft[K]) => setDraft(current => ({...current, [key]: value}));
   const noFormal = isNoFormalEducation(draft.level);
+  const majorSupported = supportsEducationMajor(draft.level);
   const isDirty = hasFormChanges(initialDraft, draft);
   const hasValidDates = draft.ongoing || !draft.startDate || !draft.endDate || draft.endDate >= draft.startDate;
   const isValid = Boolean(draft.level && hasValidDates);
   const saveDisabled = !isDirty || !isValid || saveMutation.isPending;
-  const setLevel = (level: string) => setDraft(current => isNoFormalEducation(level) ? {...current, level, school: '', majorId: '', startDate: '', endDate: '', ongoing: false} : {...current, level});
+  const setLevel = (level: string) => setDraft(current => isNoFormalEducation(level)
+    ? {...current, level, school: '', majorId: '', startDate: '', endDate: '', ongoing: false}
+    : {...current, level, majorId: supportsEducationMajor(level) ? current.majorId : ''});
 
   const save = async () => {
     if (saveDisabled) return;
@@ -212,7 +215,7 @@ function EducationModal({item, visible, onClose}: {item: ProfileEducation | null
       successTitle: item ? 'Pendidikan Diperbarui' : 'Pendidikan Ditambahkan',
       successMessage: item ? 'Riwayat pendidikan berhasil diperbarui.' : 'Riwayat pendidikan berhasil ditambahkan.',
       errorTitle: 'Gagal Menyimpan Pendidikan',
-      operation: () => saveMutation.mutateAsync({education_level: draft.level, school_name: draft.school.trim() || null, major_id: draft.majorId ? Number(draft.majorId) : null, start_date: draft.startDate || null, end_date: draft.ongoing ? null : draft.endDate || null, additional_info: draft.info.trim() || null}),
+      operation: () => saveMutation.mutateAsync({education_level: draft.level, school_name: draft.school.trim() || null, major_id: majorSupported && draft.majorId ? Number(draft.majorId) : null, start_date: draft.startDate || null, end_date: draft.ongoing ? null : draft.endDate || null, additional_info: draft.info.trim() || null}),
       onSuccessExit: onClose,
     });
   };
@@ -226,7 +229,7 @@ function EducationModal({item, visible, onClose}: {item: ProfileEducation | null
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.form}>
             <SelectField presentation="inline" tone="light" label="Tingkat Pendidikan" required value={draft.level} onChange={setLevel} options={educationLevelOptions} placeholder="Pilih tingkat pendidikan" />
             <TextField disabled={noFormal} tone="light" label="Nama Institusi" value={draft.school} onChangeText={value => set('school', value)} placeholder={noFormal ? 'Tidak diperlukan' : 'Universitas atau sekolah'} />
-            {!noFormal ? <SelectField presentation="inline" searchable tone="light" label="Jurusan" value={draft.majorId} onChange={value => set('majorId', value)} options={majorOptions} placeholder={majors.isLoading ? 'Memuat jurusan...' : 'Pilih jurusan (opsional)'} /> : null}
+            {majorSupported ? <SelectField presentation="inline" searchable tone="light" label="Jurusan" value={draft.majorId} onChange={value => set('majorId', value)} options={majorOptions} placeholder={majors.isLoading ? 'Memuat jurusan...' : 'Pilih jurusan (opsional)'} /> : null}
             <DateField tone="light" disabled={noFormal} label="Tanggal Mulai" value={draft.startDate} onChange={value => set('startDate', value)} maximumDate={new Date()} />
             <DateField tone="light" disabled={noFormal || draft.ongoing} label="Tanggal Selesai" value={draft.endDate} onChange={value => set('endDate', value)} minimumDate={isoToLocalDate(draft.startDate) ?? undefined} maximumDate={new Date()} />
             {!noFormal ? <CheckboxField tone="light" label="Sedang berlangsung" checked={draft.ongoing} onChange={value => setDraft(current => ({...current, ongoing: value, endDate: value ? '' : current.endDate}))} /> : null}

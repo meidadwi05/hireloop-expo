@@ -7,7 +7,7 @@ import type {
   SkillOption,
 } from './onboarding.types';
 import {createEmptyOnboardingDraft, emptyAddress} from './onboarding.types';
-import {normalizeAvailability, normalizeEmploymentStatus, normalizeWorkSystem} from './onboarding.options';
+import {normalizeAvailability, normalizeEmploymentStatus, normalizeWorkSystem, supportsEducationMajor} from './onboarding.options';
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
@@ -218,19 +218,20 @@ export function toRegularPersonalPayload(draft: OnboardingDraft): Record<string,
 
 export function toRegularEducationPayload(draft: OnboardingDraft): Record<string, unknown> {
   const primary = draft.educations[0];
+  const primarySupportsMajor = supportsEducationMajor(primary?.educationLevel ?? '');
   return {
     education_level: primary?.educationLevel ?? '',
     school_name: primary?.schoolName.trim() ?? '',
-    major_id: primary?.majorId ?? null,
-    major_name: primary?.majorName.trim() ?? '',
+    major_id: primarySupportsMajor ? primary?.majorId ?? null : null,
+    major_name: primarySupportsMajor ? primary?.majorName.trim() ?? '' : '',
     start_date: primary?.startDate || null,
     end_date: primary?.ongoing ? null : primary?.endDate || null,
     ongoing: primary?.ongoing ?? false,
     educations: draft.educations.map(item => ({
       education_level: item.educationLevel,
       school_name: item.schoolName.trim(),
-      major_id: item.majorId,
-      major_name: item.majorName.trim(),
+      major_id: supportsEducationMajor(item.educationLevel) ? item.majorId : null,
+      major_name: supportsEducationMajor(item.educationLevel) ? item.majorName.trim() : '',
       start_date: item.startDate || null,
       end_date: item.ongoing ? null : item.endDate || null,
       ongoing: item.ongoing,
@@ -241,6 +242,7 @@ export function toRegularEducationPayload(draft: OnboardingDraft): Record<string
 
 export function toProductionPersonalPayload(draft: OnboardingDraft): Record<string, unknown> {
   const primary = draft.educations[0];
+  const primarySupportsMajor = supportsEducationMajor(primary?.educationLevel ?? '');
   const domicile = draft.domicileSameAsIdentity ? draft.identityAddress : draft.domicileAddress;
   const productionGender = draft.gender === 'male' ? 'Laki-laki' : draft.gender === 'female' ? 'Perempuan' : '';
   const productionMaritalStatus = draft.maritalStatus === 'single'
@@ -267,7 +269,7 @@ export function toProductionPersonalPayload(draft: OnboardingDraft): Record<stri
     avatar_path: draft.avatarPath || null,
     pendidikan_terakhir: primary?.educationLevel ?? '',
     nama_sekolah: primary?.schoolName.trim() ?? '',
-    jurusan: primary?.majorName.trim() ?? '',
+    jurusan: primarySupportsMajor ? primary?.majorName.trim() ?? '' : '',
     tanggal_mulai_pendidikan: primary?.startDate || null,
     tanggal_selesai_pendidikan: primary?.ongoing ? null : primary?.endDate || null,
     sedang_berlangsung: primary?.ongoing ?? false,
@@ -326,8 +328,8 @@ export function toOnboardingPayload(draft: OnboardingDraft): OnboardingPayload {
     educations: draft.educations.map(item => ({
       education_level: item.educationLevel,
       school_name: item.schoolName.trim(),
-      major_id: item.majorId,
-      major_name: item.majorName.trim(),
+      major_id: supportsEducationMajor(item.educationLevel) ? item.majorId : null,
+      major_name: supportsEducationMajor(item.educationLevel) ? item.majorName.trim() : '',
       start_date: item.startDate,
       end_date: item.ongoing ? null : item.endDate,
       ongoing: item.ongoing,

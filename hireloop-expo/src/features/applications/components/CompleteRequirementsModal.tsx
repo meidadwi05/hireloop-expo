@@ -4,6 +4,8 @@ import React, {useMemo, useState} from 'react';
 import {KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
+import {ActionOverlayModal} from '../../../shared/components/ActionOverlayModal';
+import {validateApplicationFile} from '../../jobs/application-file.validation';
 import type {CandidateJobDetail} from '../../jobs/jobs.types';
 import type {CompleteRequirementsInput, RequirementUpload} from '../applications.types';
 import {APPLICATION_COLORS, APPLICATION_FONTS} from './applications.ui';
@@ -16,17 +18,23 @@ export function CompleteRequirementsModal({visible, applicationId, job, loading,
   const [policyChecks, setPolicyChecks] = useState<Record<number, boolean>>({});
   const [agreed, setAgreed] = useState(false);
   const [validation, setValidation] = useState('');
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const requiredComplete = useMemo(() => job.documentRequirements.every((item, index) => !item.required || Boolean(uploads[index]?.uri)), [job.documentRequirements, uploads]);
   const policiesComplete = useMemo(() => job.policies.every((item, index) => !item.required || policyChecks[index]), [job.policies, policyChecks]);
 
   const choose = async (index: number, requirement: CandidateJobDetail['documentRequirements'][number]) => {
-    const result = await DocumentPicker.getDocumentAsync({type: ['application/pdf', 'image/jpeg', 'image/png'], copyToCacheDirectory: true});
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if ((asset.size ?? 0) > 2 * 1024 * 1024) return setValidation('Ukuran setiap file maksimal 2 MB.');
-    setValidation('');
-    setUploads(current => ({...current, [index]: {label: requirement.label, group: requirement.group, required: requirement.required, uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream', file: asset.file}}));
+    try {
+      const result = await DocumentPicker.getDocumentAsync({type: ['application/pdf', 'image/jpeg', 'image/png'], copyToCacheDirectory: true});
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const fileValidation = validateApplicationFile({name: asset.name, mimeType: asset.mimeType ?? asset.file?.type, size: asset.size ?? asset.file?.size});
+      if (fileValidation) return setFileError(fileValidation);
+      setValidation('');
+      setUploads(current => ({...current, [index]: {label: requirement.label, group: requirement.group, required: requirement.required, uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? asset.file?.type ?? 'application/octet-stream', file: asset.file}}));
+    } catch {
+      setFileError('File belum dapat dipilih. Silakan coba kembali.');
+    }
   };
   const submit = () => {
     if (!requiredComplete) return setValidation('Lengkapi seluruh dokumen yang berstatus wajib.');
@@ -36,7 +44,7 @@ export function CompleteRequirementsModal({visible, applicationId, job, loading,
     onSubmit({applicationId, documents, familyDeclaration: job.familyDeclarationRequired ? {has_family_relation: familyRelation} : undefined, statements: job.policies.length ? Object.fromEntries(job.policies.map((item, index) => [item.name, Boolean(policyChecks[index])])) : undefined, agreed: true});
   };
 
-  return <Modal visible={visible} animationType="slide" onRequestClose={() => !loading && onClose()}><SafeAreaView style={styles.safe}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.safe}>
+  return <><Modal visible={visible} animationType="slide" onRequestClose={() => !loading && onClose()}><SafeAreaView style={styles.safe}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.safe}>
     <View style={styles.header}><View style={styles.headerCopy}><Text style={styles.title}>Lengkapi Persyaratan</Text><Text numberOfLines={2} style={styles.subtitle}>{job.title} · {job.company}</Text></View><Pressable accessibilityLabel="Tutup persyaratan" disabled={loading} onPress={onClose} style={styles.close}><Ionicons name="close" size={25} color={APPLICATION_COLORS.navy} /></Pressable></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <View style={styles.info}><Ionicons name="shield-checkmark-outline" size={23} color={APPLICATION_COLORS.blue} /><Text style={styles.infoText}>Lamaran akan aktif setelah persyaratan wajib dikirim dan diverifikasi oleh sistem.</Text></View>
@@ -48,7 +56,7 @@ export function CompleteRequirementsModal({visible, applicationId, job, loading,
       {validation || error ? <View style={styles.error}><Ionicons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{validation || error}</Text></View> : null}
       <Pressable accessibilityRole="button" disabled={loading} onPress={submit} style={[styles.submit, loading && styles.disabled]}><Text style={styles.submitText}>{loading ? 'Mengirim persyaratan...' : 'Kirim Persyaratan'}</Text><Ionicons name="arrow-forward" size={20} color="white" /></Pressable>
     </ScrollView>
-  </KeyboardAvoidingView></SafeAreaView></Modal>;
+  </KeyboardAvoidingView></SafeAreaView></Modal>{fileError ? <ActionOverlayModal overlay={{kind: 'error', title: 'File Tidak Valid', message: fileError}} onClose={() => setFileError(null)} /> : null}</>;
 }
 
 function CheckRow({checked, onPress, label}: {checked: boolean; onPress: () => void; label: string}) { return <Pressable accessibilityRole="checkbox" accessibilityState={{checked}} onPress={onPress} style={styles.checkRow}><View style={[styles.checkbox, checked && styles.checkboxOn]}>{checked ? <Ionicons name="checkmark" size={15} color="white" /> : null}</View><Text style={styles.checkText}>{label}</Text></Pressable>; }

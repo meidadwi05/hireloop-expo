@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import {ActionOverlayModal} from '../../../shared/components/ActionOverlayModal';
+import {validateApplicationFile} from '../application-file.validation';
 import type {CandidateApplicationUpload, CandidateJobDetail} from '../jobs.types';
 import {JOBS_COLORS, JOBS_FONTS} from './jobs.ui';
 
@@ -35,8 +37,6 @@ type Props = {
   onSubmit: (value: JobApplicationRequirementsValue) => void;
 };
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-
 export function JobApplicationRequirementsSheet({visible, job, submitting, error, onClose, onSubmit}: Props) {
   const {height} = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -46,6 +46,7 @@ export function JobApplicationRequirementsSheet({visible, job, submitting, error
   const [referral, setReferral] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [validation, setValidation] = useState('');
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const requiredDocumentsComplete = useMemo(
     () => job.documentRequirements.every((item, index) => !item.required || Boolean(uploads[index]?.uri)),
@@ -61,31 +62,40 @@ export function JobApplicationRequirementsSheet({visible, job, submitting, error
   );
 
   const chooseFile = async (index: number, requirement: CandidateJobDetail['documentRequirements'][number]) => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png'],
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if ((asset.size ?? 0) > MAX_FILE_SIZE) {
-      setValidation('Ukuran setiap file maksimal 2 MB.');
-      return;
-    }
-
-    setValidation('');
-    setUploads(current => ({
-      ...current,
-      [index]: {
-        label: requirement.label,
-        group: requirement.group,
-        required: requirement.required,
-        uri: asset.uri,
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/jpeg', 'image/png'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const fileValidation = validateApplicationFile({
         name: asset.name,
-        mimeType: asset.mimeType ?? 'application/octet-stream',
-        file: asset.file,
-      },
-    }));
+        mimeType: asset.mimeType ?? asset.file?.type,
+        size: asset.size ?? asset.file?.size,
+      });
+      if (fileValidation) {
+        setFileError(fileValidation);
+        return;
+      }
+
+      setValidation('');
+      setUploads(current => ({
+        ...current,
+        [index]: {
+          label: requirement.label,
+          group: requirement.group,
+          required: requirement.required,
+          uri: asset.uri,
+          name: asset.name,
+          mimeType: asset.mimeType ?? asset.file?.type ?? 'application/octet-stream',
+          file: asset.file,
+        },
+      }));
+    } catch {
+      setFileError('File belum dapat dipilih. Silakan coba kembali.');
+    }
   };
 
   const submit = () => {
@@ -105,8 +115,9 @@ export function JobApplicationRequirementsSheet({visible, job, submitting, error
   };
 
   return (
-    <Modal animationType="slide" onRequestClose={() => !submitting && onClose()} transparent visible={visible}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalRoot}>
+    <>
+      <Modal animationType="slide" onRequestClose={() => !submitting && onClose()} transparent visible={visible}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalRoot}>
         <Pressable accessibilityLabel="Tutup formulir lamaran" onPress={() => !submitting && onClose()} style={styles.backdrop} />
         <View style={[styles.sheet, {maxHeight: Math.min(height * 0.9, 760), paddingBottom: Math.max(insets.bottom, 12)}]}>
           <View style={styles.handle} />
@@ -223,8 +234,10 @@ export function JobApplicationRequirementsSheet({visible, job, submitting, error
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+        </KeyboardAvoidingView>
+      </Modal>
+      {fileError ? <ActionOverlayModal overlay={{kind: 'error', title: 'File Tidak Valid', message: fileError}} onClose={() => setFileError(null)} /> : null}
+    </>
   );
 }
 

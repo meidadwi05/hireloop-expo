@@ -1,5 +1,6 @@
 import {fireEvent, render} from '@testing-library/react-native';
 import React from 'react';
+import {StyleSheet} from 'react-native';
 
 import type {ApplicationStage} from '../applications.types';
 import {ApplicationRecruitmentProgress} from '../components/ApplicationRecruitmentProgress';
@@ -90,5 +91,32 @@ describe('ApplicationRecruitmentProgress', () => {
     fireEvent.press(screen.getByLabelText('Lihat tahap Offering'));
     expect(screen.getByText('Detail aktivitas tahap ini belum tersedia.')).toBeTruthy();
     expect(screen.getByLabelText('Lihat tahap Offering').props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('menampilkan tahap sebelum Hired sebagai selesai, sama seperti tahap selesai lainnya', () => {
+    const hiredStages: ApplicationStage[] = [
+      {...stages[0], isCompleted: true, isCurrent: false},
+      {...stages[1], status: 'Completed', isCompleted: true, isCurrent: false},
+      {...stages[2], status: 'Pending', isCompleted: false, isCurrent: false},
+      {
+        ...emptyDetails,
+        index: 3,
+        value: 'hired',
+        label: 'Hired',
+        type: 'terminal',
+        status: 'Completed',
+        isCurrent: true,
+        isCompleted: true,
+        startedAt: '2026-11-18T09:00:00+07:00',
+        completedAt: '2026-11-18T09:00:00+07:00',
+        note: null,
+      },
+    ];
+    const screen = render(<ApplicationRecruitmentProgress stages={hiredStages} currentStageIndex={3} />);
+
+    const previousStage = screen.getByLabelText('Lihat tahap Offering');
+    expect(previousStage.props.accessibilityState.disabled).toBe(false);
+    expect(previousStage.props.accessibilityState.selected).toBe(false);
+    expect(StyleSheet.flatten(screen.getByTestId('application-progress-node-offering-2').props.style).backgroundColor).toBe('#16B97B');
   });
 });

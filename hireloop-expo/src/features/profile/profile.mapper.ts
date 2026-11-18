@@ -13,7 +13,7 @@ import type {
   WorkSetting,
   WorkType,
 } from './profile.types';
-import {normalizeAvailability, normalizeEmploymentStatus, normalizeWorkSystem} from '../onboarding/onboarding.options';
+import {normalizeAvailability, normalizeEmploymentStatus, normalizeWorkSystem, supportsEducationMajor} from '../onboarding/onboarding.options';
 
 export function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
@@ -81,12 +81,14 @@ function address(value: unknown): ProfileAddress | null {
 function education(value: unknown): ProfileEducation {
   const raw = asRecord(value);
   const major = asRecord(raw.major);
+  const educationLevel = text(raw.education_level);
+  const majorSupported = supportsEducationMajor(educationLevel);
   return {
     id: number(raw.id),
-    educationLevel: text(raw.education_level),
+    educationLevel,
     schoolName: text(raw.school_name),
-    majorId: raw.major_id === null || raw.major_id === undefined ? null : number(raw.major_id),
-    majorName: text(raw.major_name, major.name),
+    majorId: majorSupported && raw.major_id !== null && raw.major_id !== undefined ? number(raw.major_id) : null,
+    majorName: majorSupported ? text(raw.major_name, major.name) : '',
     startDate: optionalDate(raw.start_date),
     endDate: optionalDate(raw.end_date),
     additionalInfo: text(raw.additional_info),

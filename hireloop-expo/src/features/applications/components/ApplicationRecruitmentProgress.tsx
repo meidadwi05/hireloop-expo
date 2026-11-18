@@ -285,7 +285,8 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
     return resolvedCurrentIndex;
   }, [resolvedCurrentIndex, selectedStageKey, stages]);
 
-  const terminalSourceIndex = isTerminal(stages[resolvedCurrentIndex] ?? stages[0]) ? resolvedCurrentIndex - 1 : -1;
+  const currentTerminalKind = stageKind(stages[resolvedCurrentIndex] ?? stages[0]);
+  const terminalSourceIndex = ['canceled', 'rejected'].includes(currentTerminalKind) ? resolvedCurrentIndex - 1 : -1;
   const selectedStage = stages[selectedIndex] ?? stages[resolvedCurrentIndex] ?? stages[0];
 
   if (!selectedStage) return null;
@@ -295,7 +296,8 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
       <View style={styles.progressContent} testID="application-progress-vertical">
         {stages.map((stage, index) => {
           const active = stage.isCurrent || index === resolvedCurrentIndex;
-          const completed = stage.isCompleted && !active;
+          const hiredSourceCompleted = currentTerminalKind === 'hired' && index === resolvedCurrentIndex - 1;
+          const completed = (stage.isCompleted || hiredSourceCompleted) && !active;
           const terminalSource = index === terminalSourceIndex;
           const enabled = completed || active || terminalSource;
           const selected = selectedIndex === index;
@@ -313,6 +315,7 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
                   accessibilityState={{disabled: !enabled, selected}}
                   disabled={!enabled}
                   onPress={() => setSelectedStageKey(`${stage.value}-${stage.index}`)}
+                  testID={`application-progress-node-${stage.value}-${stage.index}`}
                   style={({pressed}) => [
                     styles.progressNode,
                     completed && styles.progressNodeCompleted,
@@ -344,7 +347,7 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
                   {stage.label}
                 </Text>
                 <Text style={styles.progressStatus}>
-                  {stage.status || (completed ? 'Completed' : active ? 'In Progress' : 'Belum dimulai')}
+                  {hiredSourceCompleted ? 'Completed' : stage.status || (completed ? 'Completed' : active ? 'In Progress' : 'Belum dimulai')}
                 </Text>
               </Pressable>
             </View>
