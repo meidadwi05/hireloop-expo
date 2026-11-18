@@ -75,10 +75,9 @@ export function ApplicationDetailSkeleton({
           contentStyle={[styles.headerContent, {paddingTop: topInset + 8}]}
         >
           <Pressable accessibilityLabel="Kembali ke Lamaran Saya" accessibilityRole="button" onPress={onBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={26} color="white" />
+            <Ionicons name="chevron-back" size={22} color="white" />
           </Pressable>
           <Text style={styles.headerTitle}>Detail Lamaran</Text>
-          <View style={styles.backButton} />
         </BrandedHeaderBackground>
 
         <ShimmerGroup>
@@ -136,9 +135,9 @@ const styles = StyleSheet.create({
   cardFooter: {marginTop: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   timeline: {gap: 17, paddingTop: 8},
   timelineRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 12},
-  headerContent: {paddingHorizontal: 14, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
-  backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
-  headerTitle: {flex: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 22, color: 'white', textAlign: 'center'},
+  headerContent: {paddingHorizontal: 16, paddingBottom: 6, flexDirection: 'row', alignItems: 'center'},
+  backButton: {width: 44, height: 44, marginLeft: -4, flexShrink: 0, overflow: 'visible', alignItems: 'center', justifyContent: 'center'},
+  headerTitle: {flex: 1, minWidth: 0, paddingLeft: 2, paddingRight: 12, fontFamily: APPLICATION_FONTS.bold, fontSize: 17, lineHeight: 22, color: 'white', textAlign: 'left'},
   detailContent: {paddingTop: 17, gap: 15},
   detailCard: {...applicationShadow, borderRadius: 16, borderWidth: 1, borderColor: APPLICATION_COLORS.border, backgroundColor: 'white', padding: 16, gap: 14},
   metadataRow: {flexDirection: 'row', alignItems: 'center', gap: 10},

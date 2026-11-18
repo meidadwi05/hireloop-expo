@@ -5,7 +5,8 @@ import React, {useMemo, useRef, useState} from 'react';
 import {Alert, FlatList, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
+import {CandidatePageHeader} from '../../../components/ui/CandidatePageHeader';
+import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {
@@ -112,20 +113,14 @@ export function SavedJobsScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <BrandedHeaderBackground
+      <CandidatePageHeader
+        backLabel="Kembali ke Lowongan"
         containerWidth={containerWidth}
-        topInset={insets.top}
+        onBack={() => goBackOrReplace('/(candidate)/(tabs)/jobs')}
+        subtitle="Lihat kembali lowongan pilihanmu"
+        title="Lowongan Disimpan"
         variant="saved-list"
-        contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
-      >
-        <Pressable accessibilityLabel="Kembali ke Lowongan" accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={26} color="white" />
-        </Pressable>
-        <View style={styles.headerCopy}>
-          <Text style={styles.title}>Lowongan Disimpan</Text>
-          <Text style={styles.subtitle}>Lihat kembali lowongan pilihanmu</Text>
-        </View>
-      </BrandedHeaderBackground>
+      />
 
       <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
         <View style={styles.filterRow}>
@@ -252,11 +247,6 @@ const styles = StyleSheet.create({
   screen: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: JOBS_COLORS.background},
   list: {flex: 1},
   content: {flexGrow: 1},
-  headerContent: {paddingHorizontal: 18, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 9},
-  backButton: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},
-  headerCopy: {flex: 1, minWidth: 0},
-  title: {fontFamily: JOBS_FONTS.bold, fontSize: 22, lineHeight: 29, color: 'white'},
-  subtitle: {fontFamily: JOBS_FONTS.regular, fontSize: 11.5, lineHeight: 17, color: 'rgba(255,255,255,0.86)', marginTop: 1},
   controlsSheet: {position: 'relative', zIndex: 2, backgroundColor: JOBS_COLORS.background, paddingTop: 14, paddingBottom: 14, gap: 12},
   filterRow: {width: '100%', minHeight: 52, flexDirection: 'row', alignItems: 'stretch', gap: 9},
   searchAnchor: {flex: 1, minWidth: 0},

@@ -309,27 +309,34 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
                 {index < stages.length - 1 ? (
                   <View style={[styles.progressLine, connectorReached && styles.progressLineReached]} />
                 ) : null}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Lihat tahap ${stage.label}`}
-                  accessibilityState={{disabled: !enabled, selected}}
-                  disabled={!enabled}
-                  onPress={() => setSelectedStageKey(`${stage.value}-${stage.index}`)}
-                  testID={`application-progress-node-${stage.value}-${stage.index}`}
-                  style={({pressed}) => [
-                    styles.progressNode,
-                    completed && styles.progressNodeCompleted,
-                    active && styles.progressNodeActive,
-                    active && terminalFailure && styles.progressNodeDanger,
-                    terminalSource && styles.progressNodeActive,
-                    selected && enabled && styles.progressNodeSelected,
-                    pressed && enabled && styles.progressNodePressed,
-                  ]}
-                >
-                  {completed ? <Ionicons name="checkmark" size={15} color="white" /> : null}
-                  {active && terminalFailure ? <Ionicons name="close" size={15} color="white" /> : null}
-                  {(active && !terminalFailure) || terminalSource ? <View style={styles.progressCurrentDot} /> : null}
-                </Pressable>
+                {enabled ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Lihat tahap ${stage.label}`}
+                    accessibilityState={{selected}}
+                    onPress={() => setSelectedStageKey(`${stage.value}-${stage.index}`)}
+                    testID={`application-progress-node-${stage.value}-${stage.index}`}
+                    style={({pressed}) => [
+                      styles.progressNode,
+                      completed && styles.progressNodeCompleted,
+                      active && styles.progressNodeActive,
+                      active && terminalFailure && styles.progressNodeDanger,
+                      terminalSource && styles.progressNodeActive,
+                      selected && styles.progressNodeSelected,
+                      pressed && styles.progressNodePressed,
+                    ]}
+                  >
+                    {completed ? <Ionicons name="checkmark" size={15} color="white" /> : null}
+                    {active && terminalFailure ? <Ionicons name="close" size={15} color="white" /> : null}
+                    {(active && !terminalFailure) || terminalSource ? <View style={styles.progressCurrentDot} /> : null}
+                  </Pressable>
+                ) : (
+                  <View
+                    accessible={false}
+                    style={styles.progressNodePlaceholder}
+                    testID={`application-progress-node-placeholder-${stage.value}-${stage.index}`}
+                  />
+                )}
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -380,6 +387,7 @@ const styles = StyleSheet.create({
   progressNodeDanger: {borderColor: APPLICATION_COLORS.red, backgroundColor: APPLICATION_COLORS.red},
   progressNodeSelected: {shadowColor: APPLICATION_COLORS.blue, shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.32, shadowRadius: 6, elevation: 5, borderWidth: 3},
   progressNodePressed: {transform: [{scale: 0.92}]},
+  progressNodePlaceholder: {width: 28, height: 28},
   progressCurrentDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: 'white'},
   progressCopy: {flex: 1, minWidth: 0, justifyContent: 'flex-start', paddingLeft: 4, paddingRight: 6, paddingBottom: 12},
   progressCopyPressed: {opacity: 0.72},

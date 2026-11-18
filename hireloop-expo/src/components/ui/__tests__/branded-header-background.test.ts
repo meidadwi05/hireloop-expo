@@ -9,7 +9,6 @@ describe('getBrandedHeaderLayout', () => {
   it.each([
     ['account', 390, 24],
     ['notifications', 390, 24],
-    ['saved-list', 390, 24],
   ] satisfies [BrandedHeaderVariant, number, number][])('%s keeps the new artwork inside a %ipx header', (variant, width, inset) => {
     const layout = getBrandedHeaderLayout(variant, width, inset);
     const artwork = layout.artworkStyle;
@@ -36,7 +35,7 @@ describe('getBrandedHeaderLayout', () => {
     expect((withInset.artworkStyle.top as number) + (withInset.artworkStyle.height as number)).toBeCloseTo(withInset.height, 5);
   });
 
-  it.each(['account', 'saved-list'] satisfies BrandedHeaderVariant[])(
+  it.each(['account'] satisfies BrandedHeaderVariant[])(
     '%s uses the new compact artwork ratio',
     variant => {
       const layout = getBrandedHeaderLayout(variant, 390, 24);
@@ -55,6 +54,7 @@ describe('getBrandedHeaderLayout', () => {
     'compact-detail',
     'jobs-list',
     'performance',
+    'saved-list',
   ] satisfies BrandedHeaderVariant[])('%s uses the Performance artwork safely at phone and PWA widths', variant => {
     for (const width of [320, 390, 430, 720]) {
       const layout = getBrandedHeaderLayout(variant, width, 24);

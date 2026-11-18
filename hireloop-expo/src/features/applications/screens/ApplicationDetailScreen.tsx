@@ -216,10 +216,9 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
           contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
         >
           <Pressable accessibilityRole="button" accessibilityLabel="Kembali ke Lamaran Saya" onPress={() => goBackOrReplace('/(candidate)/(tabs)/career')} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={26} color="white" />
+            <Ionicons name="chevron-back" size={22} color="white" />
           </Pressable>
           <Text style={styles.headerTitle}>Detail Lamaran</Text>
-          <View style={styles.headerSpacer} />
         </BrandedHeaderBackground>
 
         <View style={[styles.content, {paddingHorizontal: pagePadding}]}>
@@ -374,10 +373,9 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
 const styles = StyleSheet.create({
   safeArea: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
   scrollContent: {backgroundColor: APPLICATION_COLORS.background},
-  headerContent: {paddingHorizontal: 14, paddingBottom: 12, flexDirection: 'row', alignItems: 'center'},
-  backButton: {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
-  headerTitle: {flex: 1, fontFamily: APPLICATION_FONTS.bold, fontSize: 22, color: 'white', textAlign: 'center'},
-  headerSpacer: {width: 44},
+  headerContent: {paddingHorizontal: 16, paddingBottom: 6, flexDirection: 'row', alignItems: 'center'},
+  backButton: {width: 44, height: 44, marginLeft: -4, flexShrink: 0, overflow: 'visible', alignItems: 'center', justifyContent: 'center'},
+  headerTitle: {flex: 1, minWidth: 0, paddingLeft: 2, paddingRight: 12, fontFamily: APPLICATION_FONTS.bold, fontSize: 17, lineHeight: 22, color: 'white', textAlign: 'left'},
   content: {
     marginTop: -18,
     paddingTop: 22,

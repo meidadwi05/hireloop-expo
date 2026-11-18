@@ -88,9 +88,11 @@ describe('ApplicationRecruitmentProgress', () => {
     fireEvent.press(screen.getByLabelText('Lihat tahap Applied'));
     expect(screen.getByText('Detail aktivitas tahap ini belum tersedia.')).toBeTruthy();
 
-    fireEvent.press(screen.getByLabelText('Lihat tahap Offering'));
+    fireEvent.press(screen.getByLabelText('Buka detail tahap Offering'));
     expect(screen.getByText('Detail aktivitas tahap ini belum tersedia.')).toBeTruthy();
-    expect(screen.getByLabelText('Lihat tahap Offering').props.accessibilityState.disabled).toBe(true);
+    expect(screen.queryByLabelText('Lihat tahap Offering')).toBeNull();
+    expect(screen.getByTestId('application-progress-node-placeholder-offering-2')).toBeTruthy();
+    expect(screen.getByLabelText('Buka detail tahap Offering').props.accessibilityState.disabled).toBe(true);
   });
 
   it('menampilkan tahap sebelum Hired sebagai selesai, sama seperti tahap selesai lainnya', () => {
