@@ -90,8 +90,8 @@ describe('ApplicationRecruitmentProgress', () => {
 
     fireEvent.press(screen.getByLabelText('Buka detail tahap Offering'));
     expect(screen.getByText('Detail aktivitas tahap ini belum tersedia.')).toBeTruthy();
-    expect(screen.queryByLabelText('Lihat tahap Offering')).toBeNull();
-    expect(screen.getByTestId('application-progress-node-placeholder-offering-2')).toBeTruthy();
+    expect(screen.getByTestId('application-progress-node-offering-2')).toBeTruthy();
+    expect(screen.getByLabelText('Lihat tahap Offering').props.accessibilityState.disabled).toBe(true);
     expect(screen.getByLabelText('Buka detail tahap Offering').props.accessibilityState.disabled).toBe(true);
   });
 
