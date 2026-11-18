@@ -7,7 +7,6 @@ import {
 
 describe('getBrandedHeaderLayout', () => {
   it.each([
-    ['account', 390, 24],
     ['notifications', 390, 24],
   ] satisfies [BrandedHeaderVariant, number, number][])('%s keeps the new artwork inside a %ipx header', (variant, width, inset) => {
     const layout = getBrandedHeaderLayout(variant, width, inset);
@@ -35,21 +34,8 @@ describe('getBrandedHeaderLayout', () => {
     expect((withInset.artworkStyle.top as number) + (withInset.artworkStyle.height as number)).toBeCloseTo(withInset.height, 5);
   });
 
-  it.each(['account'] satisfies BrandedHeaderVariant[])(
-    '%s uses the new compact artwork ratio',
-    variant => {
-      const layout = getBrandedHeaderLayout(variant, 390, 24);
-
-      expect(layout.height).toBeCloseTo(390 / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
-      expect(layout.artworkStyle.left).toBe(0);
-      expect(layout.artworkStyle.top).toBe(0);
-      expect(layout.artworkStyle.width).toBe(390);
-      expect(layout.artworkStyle.height).toBeCloseTo(390 / BRANDED_HEADER_ARTWORK_ASPECT_RATIO, 5);
-      expect(layout.resizeMode).toBe('contain');
-    },
-  );
-
   it.each([
+    'account',
     'application-list',
     'compact-detail',
     'jobs-list',

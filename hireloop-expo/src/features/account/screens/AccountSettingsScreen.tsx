@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import {BrandedHeaderBackground} from '../../../components/ui/BrandedHeaderBackground';
+import {CandidatePageHeader} from '../../../components/ui/CandidatePageHeader';
+import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {useAuth} from '../../auth/auth-provider';
 import {profileColors, profileFonts} from '../../profile/components/profile-ui';
 
@@ -85,19 +86,17 @@ export function AccountSettingsScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <BrandedHeaderBackground
+      <CandidatePageHeader
         artworkTestID="account-header-artwork"
+        backLabel="Kembali ke Beranda"
         containerWidth={containerWidth}
+        contentTestID="account-header-content"
+        onBack={() => goBackOrReplace('/(candidate)/(tabs)/home')}
+        subtitle="Kelola akun dan keamananmu"
         testID="account-header"
-        topInset={insets.top}
+        title="Akun"
         variant="account"
-        contentStyle={[styles.headerContent, {paddingTop: insets.top + 8}]}
-      >
-        <View>
-          <Text style={styles.headerTitle}>Akun</Text>
-          <Text style={styles.headerSubtitle}>Kelola akun dan keamananmu</Text>
-        </View>
-      </BrandedHeaderBackground>
+      />
 
       <ScrollView
         contentContainerStyle={[styles.content, {paddingBottom: Math.max(insets.bottom, 18) + 18}]}
@@ -282,9 +281,6 @@ const cardShadow = {
 
 const styles = StyleSheet.create({
   screen: {flex: 1, width: '100%', maxWidth: 440, alignSelf: 'center', backgroundColor: profileColors.background},
-  headerContent: {paddingHorizontal: 22, paddingBottom: 12},
-  headerTitle: {fontFamily: profileFonts.bold, fontSize: 25, lineHeight: 31, color: 'white'},
-  headerSubtitle: {fontFamily: profileFonts.regular, fontSize: 12, lineHeight: 18, color: '#DDEAFF', marginTop: 1},
   content: {paddingHorizontal: 18, paddingTop: 14, gap: 18},
   profileCard: {...cardShadow, minHeight: 102, borderRadius: 16, borderWidth: 1, borderColor: '#E8EDF4', backgroundColor: 'white', paddingHorizontal: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', gap: 14},
   avatar: {width: 66, height: 66, borderRadius: 33, backgroundColor: '#E8EEF6'},

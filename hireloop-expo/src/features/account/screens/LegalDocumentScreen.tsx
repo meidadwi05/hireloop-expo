@@ -1,15 +1,14 @@
 import {useQuery} from '@tanstack/react-query';
-import {router} from 'expo-router';
 import React, {useMemo} from 'react';
-import {Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
 import {ProfileHeader, ProfilePage, ScreenState, profileFonts} from '../../profile/components/profile-ui';
 import {legalApi, type LegalDocumentKind} from '../api/legal.api';
 
 const metadata = {
-  privacy: {title: 'Kebijakan Privasi', route: '/(candidate)/account/privacy-policy'},
-  terms: {title: 'Syarat & Ketentuan', route: '/(candidate)/account/terms-and-conditions'},
+  privacy: {title: 'Kebijakan Privasi'},
+  terms: {title: 'Syarat & Ketentuan'},
 };
 
 function isContactSection(title: string): boolean {
@@ -36,10 +35,6 @@ export function LegalDocumentScreen({kind}: {kind: LegalDocumentKind}) {
   const header = useMemo(() => entries.find(entry => entry.structure.toLowerCase() === 'header') ?? entries[0], [entries]);
   const sections = useMemo(() => entries.filter(entry => entry.id !== header?.id), [entries, header?.id]);
   const error = query.isError ? toAppApiError(query.error).message : null;
-  const selectDocument = (nextKind: LegalDocumentKind) => {
-    if (nextKind === kind) return;
-    router.replace(metadata[nextKind].route as never);
-  };
 
   return (
     <View style={styles.screen}>
@@ -52,32 +47,6 @@ export function LegalDocumentScreen({kind}: {kind: LegalDocumentKind}) {
         />
       ) : (
         <ProfilePage contentContainerStyle={[styles.pageContent, wide && styles.pageContentWide]}>
-          <View style={styles.navigation}>
-            <Text style={styles.navigationLabel}>INFORMASI HIRELOOP</Text>
-            <View accessibilityRole="tablist" style={styles.navigationItems}>
-              {(['terms', 'privacy'] as const).map(itemKind => {
-                const active = itemKind === kind;
-                return (
-                  <Pressable
-                    accessibilityRole="tab"
-                    accessibilityState={{selected: active}}
-                    key={itemKind}
-                    onPress={() => selectDocument(itemKind)}
-                    style={({pressed}) => [
-                      styles.navigationItem,
-                      active && styles.navigationItemActive,
-                      pressed && !active && styles.navigationItemPressed,
-                    ]}
-                  >
-                    <Text style={[styles.navigationText, active && styles.navigationTextActive]}>
-                      {metadata[itemKind].title}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
           <View style={[styles.document, wide && styles.documentWide]}>
             <Text selectable style={styles.title}>{header.title || document.title}</Text>
             {header.content[0] ? <Text selectable style={styles.version}>{header.content[0]}</Text> : null}
@@ -116,9 +85,7 @@ export function LegalDocumentScreen({kind}: {kind: LegalDocumentKind}) {
             })}
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>© 2026 HireLoop · PT Proven Force Indonesia</Text>
-          </View>
+          <Text style={styles.watermark}>HireLoop</Text>
         </ProfilePage>
       )}
     </View>
@@ -129,14 +96,6 @@ const styles = StyleSheet.create({
   screen: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: '#F8FAFC'},
   pageContent: {gap: 16, padding: 16},
   pageContentWide: {paddingHorizontal: 24, paddingTop: 24},
-  navigation: {gap: 10},
-  navigationLabel: {fontFamily: profileFonts.bold, fontSize: 10, letterSpacing: 0.8, color: '#94A3B8', paddingLeft: 4},
-  navigationItems: {flexDirection: 'row', gap: 8},
-  navigationItem: {flex: 1, minHeight: 42, borderRadius: 9, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10},
-  navigationItemActive: {borderColor: '#BAE6FD', borderLeftColor: '#0284C7', borderLeftWidth: 3, backgroundColor: '#F0F9FF'},
-  navigationItemPressed: {backgroundColor: '#F1F5F9'},
-  navigationText: {fontFamily: profileFonts.medium, fontSize: 11.5, color: '#475569', textAlign: 'center'},
-  navigationTextActive: {fontFamily: profileFonts.semibold, color: '#0284C7'},
   document: {backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 24, shadowColor: '#000000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1},
   documentWide: {padding: 32},
   title: {fontFamily: profileFonts.bold, fontSize: 24, lineHeight: 31, letterSpacing: -0.35, color: '#00205A'},
@@ -153,6 +112,5 @@ const styles = StyleSheet.create({
   contactRow: {gap: 3},
   contactLabel: {fontFamily: profileFonts.bold, fontSize: 9.5, lineHeight: 14, letterSpacing: 0.45, color: '#64748B', textTransform: 'uppercase'},
   contactValue: {fontFamily: profileFonts.medium, fontSize: 11.5, lineHeight: 18, color: '#0F172A'},
-  footer: {alignItems: 'center', borderRadius: 12, backgroundColor: '#0B1528', paddingHorizontal: 18, paddingVertical: 16},
-  footerText: {fontFamily: profileFonts.regular, fontSize: 10.5, lineHeight: 16, color: '#94A3B8', textAlign: 'center'},
+  watermark: {fontFamily: profileFonts.medium, fontSize: 10, lineHeight: 16, color: '#8B95A7', textAlign: 'center', marginTop: -2},
 });

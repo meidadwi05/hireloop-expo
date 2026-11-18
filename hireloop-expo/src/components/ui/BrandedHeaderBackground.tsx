@@ -30,10 +30,14 @@ type BrandedHeaderPreset = {
 
 const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
   account: {
-    backgroundColor: '#003E9A',
+    backgroundColor: '#0044B9',
     minimumContentHeight: 72,
-    maximumArtworkWidth: 430,
+    maximumArtworkWidth: 720,
+    offsetArtworkBySafeArea: true,
+    useContainerWidth: true,
     resizeMode: 'contain',
+    artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
+    artworkSource: performanceHeaderBackground,
   },
   'application-list': {
     backgroundColor: '#0044B9',
