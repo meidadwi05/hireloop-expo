@@ -26,18 +26,24 @@ function InformationCard({icon, title, testID, cardWidth, children}: Information
   );
 }
 
-function BulletList({items}: {items: string[]}) {
+function BulletList({items, testID}: {items: string[]; testID?: string}) {
   if (items.length === 0) return <Text style={styles.empty}>-</Text>;
   return (
     <View style={styles.list}>
       {items.map((item, index) => (
-        <View key={`${item}-${index}`} style={styles.bulletRow}>
+        <View key={`${item}-${index}`} testID={testID ? `${testID}-${index}` : undefined} style={styles.bulletRow}>
           <Text accessibilityElementsHidden style={styles.bullet}>•</Text>
           <Text style={styles.body}>{item}</Text>
         </View>
       ))}
     </View>
   );
+}
+
+function DescriptionContent({items}: {items: string[]}) {
+  if (items.length === 0) return <Text style={styles.empty}>-</Text>;
+  if (items.length === 1) return <Text testID="job-description-paragraph" style={styles.body}>{items[0]}</Text>;
+  return <BulletList items={items} testID="job-description-bullet" />;
 }
 
 function SkillChips({items}: {items: string[]}) {
@@ -71,7 +77,7 @@ export function JobInformationSections({job}: {job: CandidateJobDetail}) {
       style={[styles.grid, wide && styles.gridWide]}
     >
       <InformationCard icon="clipboard-outline" title="Deskripsi Pekerjaan" testID="job-information-description" cardWidth={cardWidth}>
-        <BulletList items={job.descriptionItems} />
+        <DescriptionContent items={job.descriptionItems} />
       </InformationCard>
       <InformationCard icon="person-outline" title="Kualifikasi" testID="job-information-qualifications" cardWidth={cardWidth}>
         <BulletList items={qualifications} />

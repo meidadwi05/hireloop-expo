@@ -130,9 +130,7 @@ const recruitmentStageSchema = z.looseObject({
   offerings: z.array(recruitmentOfferingSchema).default([]),
 });
 
-export const recruitmentProcessResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
+const recruitmentProcessDataSchema = z.object({
     application_id: z.coerce.number().int().positive(),
     current_stage: z.object({
       index: z.coerce.number().int().min(0),
@@ -148,7 +146,16 @@ export const recruitmentProcessResponseSchema = z.object({
       decided_at: nullableText,
     }).nullable().optional(),
     stages: z.array(recruitmentStageSchema).default([]),
-  }),
+});
+
+export const recruitmentProcessResponseSchema = z.object({
+  success: z.boolean(),
+  data: recruitmentProcessDataSchema,
+});
+
+export const recruitmentProcessesResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.array(recruitmentProcessDataSchema).default([]),
 });
 
 export type RawApplication = z.infer<typeof rawApplicationSchema>;

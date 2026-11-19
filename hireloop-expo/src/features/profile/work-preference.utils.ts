@@ -20,3 +20,7 @@ export function parseRupiahInput(value: string | number | null | undefined): num
   const parsed = Number(digits);
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
+
+export function isWorkPreferenceSelectionValid(roleCount: number, workTypeCount: number, workSettingCount: number): boolean {
+  return roleCount > 0 && workTypeCount > 0 && workSettingCount > 0;
+}

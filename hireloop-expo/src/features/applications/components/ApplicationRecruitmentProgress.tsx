@@ -288,23 +288,13 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
   const currentTerminalKind = stageKind(stages[resolvedCurrentIndex] ?? stages[0]);
   const terminalSourceIndex = ['canceled', 'rejected'].includes(currentTerminalKind) ? resolvedCurrentIndex - 1 : -1;
   const selectedStage = stages[selectedIndex] ?? stages[resolvedCurrentIndex] ?? stages[0];
-  const furthestReachedIndex = useMemo(() => stages.reduce((furthest, stage, index) => (
-    stage.isCompleted || stage.isCurrent ? Math.max(furthest, index) : furthest
-  ), resolvedCurrentIndex), [resolvedCurrentIndex, stages]);
-  const furthestReachedKind = stageKind(stages[furthestReachedIndex]);
-  const reachedTerminalStage = ['canceled', 'rejected', 'hired'].includes(furthestReachedKind);
-  const lastVisibleIndex = Math.min(
-    stages.length - 1,
-    furthestReachedIndex + (reachedTerminalStage ? 0 : 1),
-  );
-  const visibleStages = stages.slice(0, lastVisibleIndex + 1);
 
   if (!selectedStage) return null;
 
   return (
     <View>
       <View style={styles.progressContent} testID="application-progress-vertical">
-        {visibleStages.map((stage, index) => {
+        {stages.map((stage, index) => {
           const active = stage.isCurrent || index === resolvedCurrentIndex;
           const hiredSourceCompleted = currentTerminalKind === 'hired' && index === resolvedCurrentIndex - 1;
           const completed = (stage.isCompleted || hiredSourceCompleted) && !active;
@@ -316,7 +306,7 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
           return (
             <View key={`${stage.value}-${stage.index}`} style={styles.progressStage}>
               <View style={styles.progressRail}>
-                {index < visibleStages.length - 1 ? (
+                {index < stages.length - 1 ? (
                   <View style={[styles.progressLine, connectorReached && styles.progressLineReached]} />
                 ) : null}
                 <Pressable

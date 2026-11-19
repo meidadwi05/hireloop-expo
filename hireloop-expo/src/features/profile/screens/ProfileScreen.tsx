@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import {router} from 'expo-router';
 import React, {useMemo, useState} from 'react';
 import {
   Alert,
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -47,6 +48,7 @@ export function ProfileScreen() {
   const feedback = useActionFeedback();
   const profile = useProfile();
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [avatarSourceOpen, setAvatarSourceOpen] = useState(false);
   const [about, setAbout] = useState('');
   const updateDescription = useProfileMutation(profileApi.updateDescription);
   const uploadAvatar = useProfileMutation(profileApi.uploadAvatar);
@@ -54,27 +56,62 @@ export function ProfileScreen() {
   const completion = useMemo(() => data ? calculateProfileCompletion(data) : 0, [data]);
   const aboutChanged = hasFormChanges(data?.selfDescription ?? '', about);
 
-  const chooseAvatar = async () => {
-    const result = await DocumentPicker.getDocumentAsync({type: ['image/jpeg', 'image/png'], copyToCacheDirectory: true});
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if ((asset.size ?? 0) > 2 * 1024 * 1024) {
-      Alert.alert('File terlalu besar', 'Foto profil maksimal 2 MB.');
-      return;
+  const chooseAvatar = async (source: 'camera' | 'gallery') => {
+    setAvatarSourceOpen(false);
+    try {
+      const permission = Platform.OS === 'web'
+        ? null
+        : source === 'camera'
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission && !permission.granted) {
+        Alert.alert(
+          'Izin diperlukan',
+          source === 'camera'
+            ? 'Izinkan akses kamera untuk mengambil foto profil.'
+            : 'Izinkan akses galeri untuk memilih foto profil.',
+        );
+        return;
+      }
+
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      };
+      const result = source === 'camera'
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+      if (result.canceled || !result.assets[0]) return;
+
+      const asset = result.assets[0];
+      const mimeType = asset.mimeType ?? (asset.fileName?.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+      if (!['image/jpeg', 'image/png'].includes(mimeType)) {
+        Alert.alert('Format tidak didukung', 'Gunakan foto JPG, JPEG, atau PNG.');
+        return;
+      }
+      if ((asset.fileSize ?? 0) > 2 * 1024 * 1024) {
+        Alert.alert('File terlalu besar', 'Foto profil maksimal 2 MB.');
+        return;
+      }
+      const extension = mimeType === 'image/png' ? 'png' : 'jpg';
+      await feedback.runAction({
+        loadingMessage: 'Mengunggah foto profil...',
+        successTitle: 'Foto Profil Diperbarui',
+        successMessage: 'Foto profil Anda berhasil diperbarui.',
+        errorTitle: 'Gagal Memperbarui Foto',
+        operation: () => uploadAvatar.mutateAsync({
+          uri: asset.uri,
+          name: asset.fileName?.trim() || `avatar-${Date.now()}.${extension}`,
+          mimeType,
+          size: asset.fileSize,
+          file: asset.file,
+        }),
+      });
+    } catch (error) {
+      Alert.alert('Foto tidak dapat dipilih', toAppApiError(error).message);
     }
-    await feedback.runAction({
-      loadingMessage: 'Mengunggah foto profil...',
-      successTitle: 'Foto Profil Diperbarui',
-      successMessage: 'Foto profil Anda berhasil diperbarui.',
-      errorTitle: 'Gagal Memperbarui Foto',
-      operation: () => uploadAvatar.mutateAsync({
-        uri: asset.uri,
-        name: asset.name,
-        mimeType: asset.mimeType ?? 'image/jpeg',
-        size: asset.size,
-        file: asset.file,
-      }),
-    });
   };
 
   const openCv = async () => {
@@ -84,7 +121,7 @@ export function ProfileScreen() {
       successTitle: 'CV ATS Siap',
       successMessage: 'CV ATS berhasil dibuat dari data profil terbaru.',
       errorTitle: 'CV ATS Gagal Dibuat',
-      operation: () => exportAtsCv(data),
+      operation: async () => exportAtsCv(await profileApi.getAtsProfile()),
     });
   };
 
@@ -124,7 +161,7 @@ export function ProfileScreen() {
               ) : (
                 <View style={[styles.avatar, styles.avatarFallback]}><Text style={styles.avatarInitials}>{initials(data.fullName)}</Text></View>
               )}
-              <Pressable accessibilityLabel="Ubah foto profil" onPress={() => void chooseAvatar()} style={styles.cameraButton}>
+              <Pressable accessibilityLabel="Ubah foto profil" onPress={() => setAvatarSourceOpen(true)} style={styles.cameraButton}>
                 <Ionicons name="camera-outline" size={19} color="white" />
               </Pressable>
             </View>
@@ -191,6 +228,24 @@ export function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal animationType="fade" transparent visible={avatarSourceOpen} onRequestClose={() => setAvatarSourceOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.avatarSourceCard}>
+            <Text style={styles.modalTitle}>Ubah Foto Profil</Text>
+            <Text style={styles.avatarSourceHelper}>Pilih sumber foto yang ingin digunakan.</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Ambil foto dari kamera" onPress={() => void chooseAvatar('camera')} style={styles.avatarSourceButton}>
+              <Ionicons name="camera-outline" size={22} color={profileColors.blue} />
+              <Text style={styles.avatarSourceText}>Ambil dari Kamera</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Pilih foto dari galeri" onPress={() => void chooseAvatar('gallery')} style={styles.avatarSourceButton}>
+              <Ionicons name="images-outline" size={22} color={profileColors.blue} />
+              <Text style={styles.avatarSourceText}>Pilih dari Galeri</Text>
+            </Pressable>
+            <Pressable onPress={() => setAvatarSourceOpen(false)} style={styles.avatarSourceCancel}><Text style={styles.cancelText}>Batal</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -229,6 +284,11 @@ const styles = StyleSheet.create({
   hiddenAddress: {position: 'absolute', width: 1, height: 1, opacity: 0},
   modalBackdrop: {flex: 1, backgroundColor: 'rgba(0,20,55,0.55)', justifyContent: 'center', padding: 20},
   modalCard: {backgroundColor: 'white', borderRadius: 18, padding: 18},
+  avatarSourceCard: {backgroundColor: 'white', borderRadius: 18, padding: 18, gap: 10},
+  avatarSourceHelper: {fontFamily: profileFonts.regular, fontSize: 12, lineHeight: 18, color: profileColors.muted, marginBottom: 4},
+  avatarSourceButton: {minHeight: 52, borderRadius: 11, borderWidth: 1, borderColor: '#D8E1EC', flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14},
+  avatarSourceText: {fontFamily: profileFonts.semibold, fontSize: 13, color: profileColors.ink},
+  avatarSourceCancel: {minHeight: 44, alignItems: 'center', justifyContent: 'center'},
   modalTitle: {fontFamily: profileFonts.bold, fontSize: 18, color: profileColors.ink},
   aboutInputFrame: {height: 150, alignItems: 'stretch', borderRadius: 12, padding: 12, marginTop: 14},
   aboutInput: {height: 122, padding: 0, fontFamily: profileFonts.regular, fontSize: 13, color: profileColors.ink},

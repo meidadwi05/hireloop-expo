@@ -225,6 +225,10 @@ export function mapCandidateProfile(payload: unknown): CandidateProfile {
     resumes: array(seeker.resumes ?? data.resumes).map(resume).filter((item): item is ProfileResume => item !== null),
     skills: skillItems.map(item => item.name),
     languages: languageItems.map(item => item.name),
+    profileFiles: [
+      ...array(seeker.documents).map(item => mapProfileFile({...asRecord(item), type: 'document'})),
+      ...array(seeker.certifications).map(item => mapProfileFile({...asRecord(item), type: 'certification'})),
+    ].filter(item => item.id > 0),
   };
 }
 

@@ -1,4 +1,5 @@
 import {httpClient} from '../../../core/api/http-client';
+import {Platform} from 'react-native';
 import {mapCandidateProfile, mapProfileFiles, mapUploadedFile} from '../profile.mapper';
 import type {
   CertificationInput,
@@ -10,11 +11,21 @@ import type {
   WorkPreferenceInput,
 } from '../profile.types';
 
-function appendFile(body: FormData, input: UploadInput, field = 'file') {
+async function appendFile(body: FormData, input: UploadInput, field = 'file') {
   if (input.file) {
     body.append(field, input.file, input.name);
     return;
   }
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(input.uri);
+    if (!response.ok) throw new Error('File gagal diproses oleh browser. Silakan pilih ulang file.');
+    const blob = await response.blob();
+    if (blob.size === 0) throw new Error('File kosong. Silakan pilih ulang file.');
+    body.append(field, blob.type || !input.mimeType ? blob : blob.slice(0, blob.size, input.mimeType), input.name);
+    return;
+  }
+
   body.append(field, {uri: input.uri, name: input.name, type: input.mimeType} as unknown as Blob);
 }
 
@@ -51,6 +62,19 @@ export const profileApi = {
     return mapCandidateProfile(response.data);
   },
 
+  async getAtsProfile() {
+    const [profileResponse, experiencesResponse, filesResponse] = await Promise.all([
+      httpClient.get('/job-seeker/profile'),
+      httpClient.get('/job-seeker/experiences'),
+      httpClient.get('/job-seeker/documents-and-certifications'),
+    ]);
+    return {
+      ...mapCandidateProfile(profileResponse.data),
+      experiences: mapExperiences(experiencesResponse.data),
+      profileFiles: mapProfileFiles(filesResponse.data),
+    };
+  },
+
   async updatePersonalInfo(payload: Record<string, unknown>): Promise<unknown> {
     const response = await httpClient.put('/job-seeker/personal-info', payload);
     return response.data;
@@ -70,16 +94,14 @@ export const profileApi = {
 
   async uploadAvatar(input: UploadInput): Promise<void> {
     const body = new FormData();
-    appendFile(body, input);
-    await httpClient.post('/job-seeker/avatar', body, {
-      headers: {'Content-Type': 'multipart/form-data'},
-    });
+    await appendFile(body, input, 'avatar');
+    await httpClient.post('/job-seeker/avatar', body);
   },
 
   async uploadCover(input: UploadInput): Promise<void> {
     const body = new FormData();
-    appendFile(body, input, 'cover');
-    await httpClient.post('/job-seeker/cover', body, {headers: {'Content-Type': 'multipart/form-data'}});
+    await appendFile(body, input, 'cover');
+    await httpClient.post('/job-seeker/cover', body);
   },
 
   async createEducation(payload: EducationInput): Promise<void> {
@@ -170,10 +192,8 @@ export const profileApi = {
 
   async uploadProfileFile(input: UploadInput) {
     const body = new FormData();
-    appendFile(body, input);
-    const response = await httpClient.post('/job-seeker/profile-files/media/upload', body, {
-      headers: {'Content-Type': 'multipart/form-data'},
-    });
+    await appendFile(body, input);
+    const response = await httpClient.post('/job-seeker/profile-files/media/upload', body);
     return mapUploadedFile(response.data);
   },
 

@@ -156,6 +156,7 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
             <SelectField tone="light" presentation="inline" required label="Status Pekerjaan" value={draft.workType} onChange={value => setDraft(current => ({...current, workType: value as WorkType}))} options={employmentStatusOptions} placeholder="Pilih status pekerjaan" />
             <SkillMultiSelect
               allowCustom={false}
+              tone="light"
               options={skillsQuery.data ?? []}
               selected={draft.skills}
               onToggle={skill => setDraft(current => ({

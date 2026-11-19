@@ -13,7 +13,7 @@ import {asRecord} from '../profile.mapper';
 import {hasFormChanges} from '../profile-form-state';
 import type {CandidateProfile, WorkPeriodStatus, WorkSetting, WorkType} from '../profile.types';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
-import {formatRupiahInput, parseRupiahInput, sanitizeRupiahInput} from '../work-preference.utils';
+import {formatRupiahInput, isWorkPreferenceSelectionValid, parseRupiahInput, sanitizeRupiahInput} from '../work-preference.utils';
 import {
   PrimaryButton,
   ProfileHeader,
@@ -105,6 +105,7 @@ export function WorkPreferenceScreen() {
   const [workSettings, setWorkSettings] = useState<WorkSetting[]>(() => data ? (data.preferredWorkSettings.length ? data.preferredWorkSettings : [data.jobTypeExpected]) : ['on_site']);
   const [shift, setShift] = useState(() => data?.willingToWorkShifts ?? false);
   const [relocate, setRelocate] = useState(() => data?.willingToRelocate ?? false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const [baseline, setBaseline] = useState<PreferenceSnapshot | null>(() => data ? preferenceSnapshotFromProfile(data) : null);
   const hydratedUserId = useRef<number | null>(data?.userId ?? null);
 
@@ -134,8 +135,13 @@ export function WorkPreferenceScreen() {
     relocate,
   }), [availability, locations, relocate, salary, selectedRoles, shift, workSettings, workTypes]);
   const isDirty = baseline !== null && hasFormChanges(baseline, currentSnapshot);
-  const isValid = workTypes.length > 0 && workSettings.length > 0;
-  const saveDisabled = !baseline || !isDirty || !isValid || mutation.isPending;
+  const isValid = isWorkPreferenceSelectionValid(selectedRoles.length, workTypes.length, workSettings.length);
+  const saveDisabled = !baseline || !isDirty || mutation.isPending;
+  const roleValidationError = validationAttempted && selectedRoles.length === 0
+    ? 'Pilih minimal satu posisi yang diminati.'
+    : rolesQuery.isError
+      ? 'Daftar posisi belum dapat dimuat. Coba lagi.'
+      : null;
 
   const reset = () => {
     if (!profile.data || !baseline) return;
@@ -150,6 +156,7 @@ export function WorkPreferenceScreen() {
     setRelocate(baseline.relocate);
     setRoleSearch('');
     setLocationInput('');
+    setValidationAttempted(false);
   };
 
   const selectedRoleIds = useMemo(() => new Set(selectedRoles.map(role => role.id)), [selectedRoles]);
@@ -180,7 +187,8 @@ export function WorkPreferenceScreen() {
 
   const save = async () => {
     if (saveDisabled) return;
-    if (workTypes.length === 0 || workSettings.length === 0) return;
+    setValidationAttempted(true);
+    if (!isValid) return;
     await feedback.runAction({
       loadingMessage: 'Menyimpan preferensi kerja...', successTitle: 'Preferensi Tersimpan',
       successMessage: 'Preferensi kerja Anda berhasil diperbarui.', errorTitle: 'Gagal Menyimpan Preferensi',
@@ -209,9 +217,10 @@ export function WorkPreferenceScreen() {
       <ProfileHeader title="Preferensi Kerja" />
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.sectionBlock}>
-          <View style={styles.sectionTitleRow}><Ionicons name="briefcase-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Posisi yang diminati</Text></View>
+          <View style={styles.sectionTitleRow}><Ionicons name="briefcase-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Posisi yang diminati<Text style={styles.required}> *</Text></Text></View>
           <View style={styles.chipWrap}>{selectedRoles.map(role => <View key={role.id} style={styles.selectedChip}><Text style={styles.selectedChipText}>{role.name}</Text><Pressable onPress={() => setSelectedRoles(items => items.filter(item => item.id !== role.id))}><Ionicons name="close" size={16} color={profileColors.blue} /></Pressable></View>)}</View>
-          <FormTextInput accessibilityLabel="Cari posisi yang diminati" containerStyle={styles.inputFrame} inputStyle={styles.input} placeholder="Cari posisi" placeholderTextColor="#98A2B3" value={roleSearch} onChangeText={setRoleSearch} />
+          <FormTextInput accessibilityLabel="Cari posisi yang diminati" containerStyle={styles.inputFrame} error={Boolean(roleValidationError)} inputStyle={styles.input} placeholder={rolesQuery.isLoading ? 'Memuat posisi...' : 'Cari posisi'} placeholderTextColor="#98A2B3" value={roleSearch} onChangeText={setRoleSearch} />
+          {roleValidationError ? <Text accessibilityLiveRegion="polite" style={styles.validationError}>{roleValidationError}</Text> : null}
           {availableRoles.length > 0 ? <View style={styles.suggestionBox}>{availableRoles.map(role => <Pressable key={role.id} onPress={() => { if (selectedRoles.length >= 10) return Alert.alert('Batas posisi', 'Maksimal 10 posisi.'); setSelectedRoles(items => items.some(item => item.id === role.id) ? items : [...items, role]); setRoleSearch(''); }} style={styles.suggestion}><Text style={styles.suggestionText}>{role.name}</Text><Ionicons name="add" size={18} color={profileColors.blue} /></Pressable>)}</View> : null}
         </View>
 
@@ -257,6 +266,8 @@ const styles = StyleSheet.create({
   sectionBlock: {gap: 10},
   sectionTitleRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
   sectionTitle: {fontFamily: profileFonts.bold, fontSize: 13, lineHeight: 18, color: profileColors.ink},
+  required: {color: profileColors.red},
+  validationError: {fontFamily: profileFonts.regular, fontSize: 10.5, lineHeight: 16, color: profileColors.red},
   chipWrap: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
   selectedChip: {minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 10, backgroundColor: '#EAF2FF', paddingHorizontal: 11},
   selectedChipText: {fontFamily: profileFonts.semibold, fontSize: 10.5, color: profileColors.blue},

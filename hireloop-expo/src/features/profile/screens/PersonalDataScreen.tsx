@@ -14,6 +14,7 @@ import {emptyAddress, type AddressDetail, type MasterOption} from '../../onboard
 import {profileApi} from '../api/profile.api';
 import {CardTitle, DataRow, PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
 import {hasFormChanges} from '../profile-form-state';
+import {canUseEducationLevel, hasNoFormalEducation} from '../education-rules';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
 import {formatAddress, normalizeProfileDate} from '../profile.mapper';
 import type {CandidateProfile, EducationInput, ProfileAddress, ProfileEducation} from '../profile.types';
@@ -187,7 +188,7 @@ function educationDraftFromItem(item: ProfileEducation | null): EducationDraft {
   };
 }
 
-function EducationModal({item, visible, onClose}: {item: ProfileEducation | null; visible: boolean; onClose: () => void}) {
+function EducationModal({item, items, visible, onClose}: {item: ProfileEducation | null; items: ProfileEducation[]; visible: boolean; onClose: () => void}) {
   const feedback = useActionFeedback();
   const [initialDraft] = useState<EducationDraft>(() => educationDraftFromItem(item));
   const [draft, setDraft] = useState<EducationDraft>(() => initialDraft);
@@ -210,6 +211,14 @@ function EducationModal({item, visible, onClose}: {item: ProfileEducation | null
     if (saveDisabled) return;
     if (!draft.level) return Alert.alert('Pendidikan wajib diisi', 'Pilih tingkat pendidikan terakhir.');
     if (!draft.ongoing && draft.startDate && draft.endDate && draft.endDate < draft.startDate) return Alert.alert('Tanggal tidak valid', 'Tanggal selesai harus setelah tanggal mulai.');
+    if (!canUseEducationLevel(items, draft.level, item?.id ?? null)) {
+      return Alert.alert(
+        'Riwayat pendidikan tidak dapat digabungkan',
+        isNoFormalEducation(draft.level)
+          ? 'Kurang dari SD hanya dapat digunakan jika belum ada riwayat pendidikan lain.'
+          : 'Ubah atau hapus data Kurang dari SD sebelum menambahkan pendidikan lain.',
+      );
+    }
     await feedback.runAction({
       loadingMessage: item ? 'Memperbarui pendidikan...' : 'Menambahkan pendidikan...',
       successTitle: item ? 'Pendidikan Diperbarui' : 'Pendidikan Ditambahkan',
@@ -251,7 +260,14 @@ export function PersonalDataScreen() {
   const [selectedEducation, setSelectedEducation] = useState<ProfileEducation | null>(null);
   const data = query.data;
   const education = useMemo(() => data?.educations ?? [], [data]);
-  const openEducation = (item: ProfileEducation | null) => { setSelectedEducation(item); setEducationOpen(true); };
+  const openEducation = (item: ProfileEducation | null) => {
+    if (!item && hasNoFormalEducation(education)) {
+      Alert.alert('Tidak dapat menambah pendidikan', 'Ubah atau hapus data Kurang dari SD sebelum menambahkan pendidikan lain.');
+      return;
+    }
+    setSelectedEducation(item);
+    setEducationOpen(true);
+  };
 
   return <View style={styles.screen}>
     <ProfileHeader title="Data Diri" rightIcon="pencil-outline" rightLabel="Ubah" onRightPress={() => data && setEditOpen(true)} />
@@ -262,7 +278,7 @@ export function PersonalDataScreen() {
       <ProfileCard><CardTitle icon="school-outline" title="Pendidikan" action="+ Tambah" onAction={() => openEducation(null)} />{education.length === 0 ? <View style={styles.emptyEducation}><Ionicons name="school-outline" size={30} color="#98A2B3" /><Text style={styles.emptyEducationText}>Pendidikan belum ditambahkan.</Text></View> : education.map((item, index) => <Pressable key={item.id} onPress={() => openEducation(item)} style={[styles.educationRow, index === education.length - 1 && styles.educationRowLast]}><View style={styles.educationCopy}><Text style={styles.educationTitle}>{[item.educationLevel, item.majorName].filter(Boolean).join(' – ')}</Text><Text style={styles.educationSchool}>{item.schoolName || 'Institusi belum diisi'}</Text><Text style={styles.educationDate}>{displayDate(item.startDate)} – {item.startDate && !item.endDate ? 'Sekarang' : displayDate(item.endDate)}</Text></View><View style={styles.editIcon}><Ionicons name="pencil" size={18} color={profileColors.blue} /></View></Pressable>)}</ProfileCard>
     </ProfilePage>}
     {data && editOpen ? <PersonalEditModal profile={data} visible onClose={() => setEditOpen(false)} /> : null}
-    {educationOpen ? <EducationModal item={selectedEducation} visible onClose={() => setEducationOpen(false)} /> : null}
+    {educationOpen ? <EducationModal item={selectedEducation} items={education} visible onClose={() => setEducationOpen(false)} /> : null}
   </View>;
 }
 

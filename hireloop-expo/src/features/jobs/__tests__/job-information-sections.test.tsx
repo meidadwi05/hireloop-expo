@@ -91,9 +91,22 @@ describe('JobInformationSections', () => {
     })} />);
 
     expect(screen.getByText(longDescription)).toBeTruthy();
+    expect(screen.getByTestId('job-description-paragraph')).toBeTruthy();
     expect(screen.getByText(longQualification)).toBeTruthy();
     expect(screen.getByText(longSkill)).toBeTruthy();
     expect(screen.getByText(longBenefit)).toBeTruthy();
+  });
+
+  it('uses bullets only when the description contains multiple list items', () => {
+    const screen = render(<JobInformationSections job={detail({
+      descriptionItems: ['Menyiapkan mesin', 'Menjaga kualitas produksi'],
+      requirements: [],
+      additionalQualifications: [],
+      benefits: [],
+    })} />);
+
+    expect(screen.queryByTestId('job-description-paragraph')).toBeNull();
+    expect(screen.getAllByTestId(/^job-description-bullet-/)).toHaveLength(2);
   });
 
   it('uses the measured container width for the responsive two-column layout', () => {

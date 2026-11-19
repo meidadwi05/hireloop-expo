@@ -159,6 +159,7 @@ export function ApplicationsScreen() {
   const sortAnchorRef = useRef<View>(null);
   const pagePadding = width <= 350 ? 14 : 18;
   const containerWidth = Math.min(width, 720);
+  const controlsOverlap = width <= 390 ? 12 : 18;
   const applications = applicationsQuery.data ?? EMPTY_APPLICATIONS;
 
   const jobQueries = useQueries({
@@ -217,7 +218,7 @@ export function ApplicationsScreen() {
   );
 
   const fixedControls = (
-    <View style={[styles.controlsSheet, {paddingHorizontal: pagePadding}]}>
+    <View style={[styles.controlsSheet, {marginTop: -controlsOverlap, paddingHorizontal: pagePadding}]}>
       <FormTextInput
         accessibilityLabel="Cari lowongan atau perusahaan"
         containerStyle={styles.searchBox}
@@ -335,7 +336,7 @@ const styles = StyleSheet.create({
   viewport: {flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: APPLICATION_COLORS.background},
   list: {flex: 1},
   content: {flexGrow: 1, backgroundColor: APPLICATION_COLORS.background},
-  controlsSheet: {position: 'relative', zIndex: 2, marginTop: -24, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', backgroundColor: 'white', paddingTop: 21, paddingBottom: 18},
+  controlsSheet: {position: 'relative', zIndex: 2, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', backgroundColor: 'white', paddingTop: 21, paddingBottom: 18},
   searchBox: {height: 52, gap: 10, borderRadius: 12, paddingHorizontal: 14},
   searchInput: {flex: 1, minWidth: 0, height: '100%', fontFamily: APPLICATION_FONTS.regular, fontSize: 11.5, color: APPLICATION_COLORS.navy},
   clearButton: {width: 30, height: 40, alignItems: 'center', justifyContent: 'center'},

@@ -19,6 +19,7 @@ export function useApplications() {
     queryKey: applicationsKeys.list(),
     queryFn: applicationsApi.list,
     initialData,
+    initialDataUpdatedAt: 0,
     staleTime: 30_000,
   });
 }

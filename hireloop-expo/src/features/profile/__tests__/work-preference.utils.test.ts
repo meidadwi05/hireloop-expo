@@ -1,4 +1,4 @@
-import {formatRupiahInput, parseRupiahInput, sanitizeRupiahInput} from '../work-preference.utils';
+import {formatRupiahInput, isWorkPreferenceSelectionValid, parseRupiahInput, sanitizeRupiahInput} from '../work-preference.utils';
 
 describe('work preference rupiah helpers', () => {
   it.each([
@@ -18,5 +18,10 @@ describe('work preference rupiah helpers', () => {
   it('returns numeric API values and null for an empty value', () => {
     expect(parseRupiahInput('Rp 9.000.000')).toBe(9000000);
     expect(parseRupiahInput('')).toBeNull();
+  });
+
+  it('requires at least one desired role before preferences can be saved', () => {
+    expect(isWorkPreferenceSelectionValid(0, 1, 1)).toBe(false);
+    expect(isWorkPreferenceSelectionValid(1, 1, 1)).toBe(true);
   });
 });

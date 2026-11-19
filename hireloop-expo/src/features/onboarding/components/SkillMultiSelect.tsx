@@ -8,13 +8,14 @@ import {FormTextInput} from '../../../components/forms/FormTextInput';
 import type {SelectedSkill, SkillOption} from '../onboarding.types';
 import {FieldLabel} from './FormControls';
 
-export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, error, allowCustom = true}: {
+export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, error, allowCustom = true, tone = 'dark'}: {
   options: SkillOption[];
   selected: SelectedSkill[];
   onToggle: (skill: SkillOption) => void;
   onToggleCustom: (name: string) => void;
   error?: string;
   allowCustom?: boolean;
+  tone?: 'dark' | 'light';
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -28,7 +29,7 @@ export function SkillMultiSelect({options, selected, onToggle, onToggleCustom, e
   )).slice(0, 100), [options, normalizedQuery, selected]);
   return (
     <View style={styles.group}>
-      <FieldLabel label="Keahlian" required />
+      <FieldLabel label="Keahlian" required tone={tone} />
       <FormFieldPressable
         active={open}
         accessibilityRole="button"

@@ -96,6 +96,7 @@ export type CandidateProfile = {
   resumes: ProfileResume[];
   skills: string[];
   languages: string[];
+  profileFiles: ProfileFileItem[];
 };
 
 export type WorkType =

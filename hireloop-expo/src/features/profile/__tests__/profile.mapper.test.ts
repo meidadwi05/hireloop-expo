@@ -40,6 +40,8 @@ describe('profile mapper', () => {
             is_current: true,
             skills: [{id: 9, name: 'React'}],
           }],
+          documents: [{id: 12, name: 'CV', file_path: 'profile/cv.pdf', original_name: 'cv.pdf'}],
+          certifications: [{id: 13, name: 'K3', issuer: 'BNSP', media: []}],
         },
       },
     });
@@ -51,6 +53,10 @@ describe('profile mapper', () => {
     expect(profile.jobPreferences).toEqual([{id: 9, name: 'Data Analyst'}]);
     expect(profile.educations[0].educationLevel).toBe('S1');
     expect(profile.experiences[0].skills).toEqual([{id: 9, name: 'React'}]);
+    expect(profile.profileFiles).toEqual(expect.arrayContaining([
+      expect.objectContaining({id: 12, type: 'document', name: 'CV'}),
+      expect.objectContaining({id: 13, type: 'certification', name: 'K3'}),
+    ]));
     expect(formatAddress(profile.ktpAddress)).toContain('Bekasi');
   });
 

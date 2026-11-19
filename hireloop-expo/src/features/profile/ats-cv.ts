@@ -142,7 +142,10 @@ function profileLocation(profile: CandidateProfile): string {
 
 export function buildAtsCvDocument(profile: CandidateProfile): AtsCvDocument {
   const skillParagraphs: string[] = [];
-  const skills = unique(profile.skills);
+  const skills = unique([
+    ...profile.skills,
+    ...profile.experiences.flatMap(experience => experience.skills.map(skill => skill.name)),
+  ]);
   const languages = unique(profile.languages);
   if (skills.length) skillParagraphs.push(`Keahlian: ${skills.join(', ')}`);
   if (languages.length) skillParagraphs.push(`Bahasa: ${languages.join(', ')}`);
@@ -187,6 +190,19 @@ export function buildAtsCvDocument(profile: CandidateProfile): AtsCvDocument {
     }));
   if (educations.length) {
     sections.push({title: 'Pendidikan', paragraphs: [], items: educations});
+  }
+
+  const profileFiles = profile.profileFiles.map(item => ({
+    title: `${item.type === 'certification' ? 'Sertifikat' : 'Dokumen'} | ${item.name || item.originalName}`,
+    period: item.type === 'certification' ? formatMonthYear(item.issuedDate) : '',
+    bullets: unique([
+      item.issuer ? `Penerbit: ${item.issuer}` : '',
+      item.credentialId ? `ID Kredensial: ${item.credentialId}` : '',
+      item.originalName && item.originalName !== item.name ? `File: ${item.originalName}` : '',
+    ]),
+  }));
+  if (profileFiles.length) {
+    sections.push({title: 'Dokumen & Sertifikat', paragraphs: [], items: profileFiles});
   }
 
   return {

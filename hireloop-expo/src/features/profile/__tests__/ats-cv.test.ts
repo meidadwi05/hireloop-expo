@@ -19,7 +19,7 @@ describe('ATS CV', () => {
           start_date: '2025-01-01',
           is_current: true,
           description: '- Mengembangkan aplikasi kandidat.\n- Menjaga kualitas antarmuka.',
-          skills: [{id: 7, name: 'React'}],
+          skills: [{id: 7, name: 'React'}, {id: 8, name: 'TypeScript'}],
         }],
         educations: [{
           id: 2,
@@ -30,6 +30,8 @@ describe('ATS CV', () => {
           end_date: '2024-07-01',
         }],
         skills: [{id: 7, skill_id: 7, name: 'React'}],
+        documents: [{id: 3, name: 'CV Utama', file_path: 'cv.pdf', original_name: 'cv.pdf'}],
+        certifications: [{id: 4, name: 'Sertifikat K3', issuer: 'BNSP', issued_date: '2026-01-01'}],
       },
     }});
 
@@ -42,12 +44,16 @@ describe('ATS CV', () => {
     expect(lines.join(' ')).toContain('Andi Pratama');
     expect(lines.join(' ')).toContain('Frontend Developer');
     expect(lines.join(' ')).toContain('React');
+    expect(lines.join(' ')).toContain('TypeScript');
     expect(lines.join(' ')).toContain('Universitas HireLoop');
+    expect(lines.join(' ')).toContain('CV Utama');
+    expect(lines.join(' ')).toContain('Sertifikat K3');
     expect(document.sections.map(section => section.title)).toEqual([
       'Ringkasan Profesional',
       'Keahlian',
       'Pengalaman Kerja',
       'Pendidikan',
+      'Dokumen & Sertifikat',
     ]);
     expect(text).toBe('%PDF-1.4');
     expect(pdfSource).toContain('/BaseFont /Helvetica-Bold');

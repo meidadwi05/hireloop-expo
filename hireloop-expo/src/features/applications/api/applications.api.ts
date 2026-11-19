@@ -1,6 +1,6 @@
 import {httpClient} from '../../../core/api/http-client';
-import {mapApplications, mapRecruitmentProcess} from '../applications.mapper';
-import {applicationsMeResponseSchema, recruitmentProcessResponseSchema} from '../applications.schemas';
+import {mapApplications, mapRecruitmentProcess, mergeRecruitmentProcess} from '../applications.mapper';
+import {applicationsMeResponseSchema, recruitmentProcessResponseSchema, recruitmentProcessesResponseSchema} from '../applications.schemas';
 import type {
   CancelApplicationInput,
   CandidateApplication,
@@ -12,7 +12,24 @@ export const applicationsApi = {
   async list(): Promise<CandidateApplication[]> {
     const response = await httpClient.get('/auth/me');
     const parsed = applicationsMeResponseSchema.parse(response.data);
-    return mapApplications(parsed.data.job_applications);
+    const applications = mapApplications(parsed.data.job_applications);
+    const applicantDataIds = applications
+      .filter(application => application.storageKind === 'applicant-data')
+      .map(application => application.applicationId);
+
+    if (applicantDataIds.length === 0) return applications;
+
+    const processResponse = await httpClient.get('/applicant-data/recruitment-processes', {
+      params: {ids: applicantDataIds},
+    });
+    const processes = recruitmentProcessesResponseSchema.parse(processResponse.data).data
+      .map(mapRecruitmentProcess);
+    const processByApplicationId = new Map(processes.map(process => [process.applicationId, process]));
+
+    return applications.map(application => {
+      const process = processByApplicationId.get(application.applicationId);
+      return process ? mergeRecruitmentProcess(application, process) : application;
+    });
   },
 
   async create(payload: Record<string, unknown>): Promise<unknown> {

@@ -107,7 +107,7 @@ function decisionTone(value: string) {
   return {backgroundColor: '#F2F4F7', color: '#475467'};
 }
 
-function PerformanceCard({item}: {item: PerformanceContract}) {
+export function PerformanceCard({item}: {item: PerformanceContract}) {
   const rated = item.kpi_status === 'Sudah dinilai';
   const evaluationCount = item.kpi_scores.length;
   const tone = decisionTone(item.tindak_lanjut_kontrak);
@@ -124,12 +124,12 @@ function PerformanceCard({item}: {item: PerformanceContract}) {
         <View style={styles.jobIcon}>
           <Ionicons name="briefcase-outline" color={C.blue} size={21} />
         </View>
-        <View style={styles.cardCopy}>
-          <Text ellipsizeMode="tail" numberOfLines={2} style={styles.cardTitle}>{title}</Text>
-          <Text style={styles.cardCompany}>{item.company_name || item.project_name || '-'}</Text>
+        <View testID="performance-card-copy" style={styles.cardCopy}>
+          <Text ellipsizeMode="tail" numberOfLines={1} style={styles.cardTitle}>{title}</Text>
+          <Text ellipsizeMode="tail" numberOfLines={1} style={styles.cardCompany}>{item.company_name || item.project_name || '-'}</Text>
         </View>
-        <View style={[styles.decisionPill, {backgroundColor: tone.backgroundColor}]}>
-          <Text numberOfLines={1} style={[styles.decisionText, {color: tone.color}]}>
+        <View testID="performance-card-decision" style={[styles.decisionPill, {backgroundColor: tone.backgroundColor}]}>
+          <Text ellipsizeMode="tail" numberOfLines={1} style={[styles.decisionText, {color: tone.color}]}>
             {decisionLabel(item.tindak_lanjut_kontrak)}
           </Text>
         </View>
@@ -319,13 +319,13 @@ const styles = StyleSheet.create({
   sectionCount: {color: C.soft, fontFamily: F.regular, fontSize: 11.5},
   card: {backgroundColor: '#FFF', borderColor: C.border, borderRadius: 18, borderWidth: 1, elevation: 2, padding: 16, shadowColor: '#183B6B', shadowOffset: {height: 5, width: 0}, shadowOpacity: 0.07, shadowRadius: 12},
   pressed: {opacity: 0.84},
-  cardTop: {alignItems: 'flex-start', flexDirection: 'row', gap: 11},
-  jobIcon: {alignItems: 'center', backgroundColor: '#EDF4FF', borderRadius: 12, height: 42, justifyContent: 'center', width: 42},
-  cardCopy: {flex: 1, minWidth: 0},
-  cardTitle: {color: C.ink, fontFamily: F.bold, fontSize: 14, lineHeight: 19},
-  cardCompany: {color: C.muted, fontFamily: F.regular, fontSize: 11.5, marginTop: 2},
-  decisionPill: {borderRadius: 999, maxWidth: 130, paddingHorizontal: 10, paddingVertical: 6},
-  decisionText: {fontFamily: F.semibold, fontSize: 9.5},
+  cardTop: {alignItems: 'flex-start', flexDirection: 'row', gap: 11, minWidth: 0},
+  jobIcon: {alignItems: 'center', backgroundColor: '#EDF4FF', borderRadius: 12, flexShrink: 0, height: 42, justifyContent: 'center', width: 42},
+  cardCopy: {flex: 1, minWidth: 0, overflow: 'hidden'},
+  cardTitle: {color: C.ink, flexShrink: 1, fontFamily: F.bold, fontSize: 14, lineHeight: 19, width: '100%'},
+  cardCompany: {color: C.muted, flexShrink: 1, fontFamily: F.regular, fontSize: 11.5, marginTop: 2, width: '100%'},
+  decisionPill: {borderRadius: 999, flexShrink: 0, maxWidth: '46%', paddingHorizontal: 10, paddingVertical: 6},
+  decisionText: {flexShrink: 1, fontFamily: F.semibold, fontSize: 9.5},
   periodRow: {alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 15},
   periodCopy: {alignItems: 'center', flex: 1, flexDirection: 'row', gap: 7, minWidth: 0},
   metaText: {color: C.muted, flex: 1, fontFamily: F.regular, fontSize: 11.5},
