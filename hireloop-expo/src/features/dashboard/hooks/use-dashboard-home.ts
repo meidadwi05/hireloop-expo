@@ -1,8 +1,8 @@
 import {useQuery} from '@tanstack/react-query';
+import {useMemo} from 'react';
 
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
-import {mapApplications} from '../../applications/applications.mapper';
-import {rawApplicationSchema} from '../../applications/applications.schemas';
+import {mapUserApplications} from '../../applications/applications.mapper';
 import {jobsApi} from '../../jobs/api/jobs.api';
 import {jobsKeys} from '../../jobs/jobs.keys';
 import {notificationsApi} from '../../notifications/api/notifications.api';
@@ -28,12 +28,8 @@ export function useDashboardHome() {
   };
 
   const failedCount = [dashboard.isError, candidate.isError, jobs.isError, unread.isError, profile.isError].filter(Boolean).length;
-  const applications = mapApplications(
-    (candidate.candidate?.job_applications ?? [])
-      .map(item => rawApplicationSchema.safeParse(item))
-      .filter(result => result.success)
-      .map(result => result.data),
-  );
+  const userApplications = candidate.candidate?.job_applications;
+  const applications = useMemo(() => mapUserApplications(userApplications ?? []), [userApplications]);
 
   return {
     applications,

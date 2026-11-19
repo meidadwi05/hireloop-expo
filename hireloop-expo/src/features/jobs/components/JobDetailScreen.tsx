@@ -11,7 +11,7 @@ import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {applicationsKeys} from '../../applications/applications.keys';
-import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
+import {candidateApplyAccessKey, useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {jobsApi} from '../api/jobs.api';
 import {jobsKeys} from '../jobs.keys';
 import type {CandidateJobSource} from '../jobs.types';
@@ -75,6 +75,7 @@ export function JobDetailScreen({source, id}: JobDetailScreenProps) {
           await Promise.all([
             queryClient.invalidateQueries({queryKey: jobsKeys.all}),
             queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
+            queryClient.invalidateQueries({queryKey: candidateApplyAccessKey}),
           ]);
           return response;
         },

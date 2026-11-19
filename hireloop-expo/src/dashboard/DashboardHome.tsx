@@ -25,6 +25,7 @@ import type {DashboardInterview} from '../features/dashboard/dashboard.types';
 import {useDashboardHome} from '../features/dashboard/hooks/use-dashboard-home';
 import {openInterviewApplication} from '../features/dashboard/interview-application-route';
 import {openInterviewDestination} from '../features/dashboard/interview-linking';
+import {getAppliedJobKeys, getJobCardApplyState} from '../features/jobs/job-card-apply';
 import {useSavedJobs} from '../features/jobs/saved-jobs-provider';
 import type {JobCardModel} from '../features/jobs/jobs.types';
 import {CandidateEvaluationNotice} from './components/CandidateEvaluationNotice';
@@ -539,11 +540,12 @@ export function RecentApplicationsCard({applications, containerWidth = 390, onOp
   );
 }
 
-export function JobCard({compact = false, job, width, saved, applyBlocked = false, onApply, onOpen, onShare, onToggleSaved}: {
+export function JobCard({compact = false, job, width, saved, applied = false, applyBlocked = false, onApply, onOpen, onShare, onToggleSaved}: {
   compact?: boolean;
   job: JobCardModel;
   width: number;
   saved: boolean;
+  applied?: boolean;
   applyBlocked?: boolean;
   onApply: () => void;
   onOpen: () => void;
@@ -554,16 +556,11 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
   const visibleSkills = job.skills.slice(0, 4);
   const hiddenSkillCount = Math.max(0, job.skills.length - visibleSkills.length);
   const workMode = job.workType || 'On Site';
-  const applyUnavailable = applyBlocked || !job.active;
+  const applyButton = getJobCardApplyState(applied, applyBlocked);
+  const applyUnavailable = applied || applyBlocked || !job.active;
 
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Lowongan ${job.title} di ${job.company}`}
-      onPress={onOpen}
-      style={[styles.jobCard, compact && styles.jobCardCompact, {width}]}
-      testID="dashboard-job-card"
-    >
+  const cardContent = (
+    <>
       <View style={styles.jobHeader}>
         <View style={styles.jobCategoryIcon}>
           <Ionicons name="business-outline" size={25} color={C.brightBlue} />
@@ -656,37 +653,39 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
         <Text style={styles.timestampDot}>{'\u2022'}</Text>
         <Text style={styles.timestamp}>{job.updatedLabel}</Text>
       </View>
+    </>
+  );
+
+  return (
+    <View style={[styles.jobCard, compact && styles.jobCardCompact, {width}]} testID="dashboard-job-card">
+      <Pressable accessibilityRole="button" accessibilityLabel={`Lowongan ${job.title} di ${job.company}`} onPress={onOpen}>
+        {cardContent}
+      </Pressable>
 
       <View style={[styles.jobButtons, compact && styles.jobButtonsCompact]}>
         <Pressable
-          accessibilityLabel={applyBlocked ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
+          accessibilityLabel={applyButton.accessibilityLabel}
           accessibilityRole="button"
           accessibilityState={{disabled: applyUnavailable}}
-          onPress={event => {
-            event?.stopPropagation();
-            if (applyUnavailable) return;
-            onApply();
-          }}
-          style={[styles.applyButton, compact && styles.jobActionButtonCompact, applyBlocked && styles.blockedApplyButton, !job.active && styles.disabledApplyButton]}
+          disabled={applyUnavailable}
+          onPress={onApply}
+          style={[styles.applyButton, compact && styles.jobActionButtonCompact, !job.active && !applied && styles.disabledApplyButton]}
           testID="dashboard-job-apply-button"
         >
           <LinearGradient
-            colors={applyBlocked ? ['#E33B5B', '#C81E43'] : ['#0865FF', '#003F9F']}
+            colors={applyButton.colors}
             end={{x: 1, y: 0}}
             start={{x: 0, y: 0}}
             style={styles.applyButtonGradient}
             testID="dashboard-job-apply-gradient"
           >
-            {applyBlocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
-            <Text style={styles.applyButtonText}>{applyBlocked ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
+            {applyButton.blocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
+            <Text style={styles.applyButtonText}>{applyButton.label}</Text>
           </LinearGradient>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={event => {
-            event.stopPropagation();
-            onOpen();
-          }}
+          onPress={onOpen}
           hitSlop={8}
           style={[styles.detailButton, compact && styles.jobActionButtonCompact]}
           testID="dashboard-job-detail-button"
@@ -694,7 +693,7 @@ export function JobCard({compact = false, job, width, saved, applyBlocked = fals
           <Text style={styles.detailButtonText}>Lihat Detail  {'\u203A'}</Text>
         </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -738,6 +737,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
       );
     }
 
+    const appliedJobKeys = getAppliedJobKeys(applications);
     return (
       <ScrollView
         horizontal
@@ -753,6 +753,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
             job={job}
             width={cardWidth}
             saved={isSaved(job.key)}
+            applied={appliedJobKeys.has(job.key)}
             applyBlocked={applyBlocked}
             onApply={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id)}} as never)}
             onOpen={() => router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: job.source, id: String(job.id)}} as never)}
@@ -762,7 +763,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
         ))}
       </ScrollView>
     );
-  }, [applyBlocked, cardWidth, isSaved, jobs, jobsLoading, responsive.compact, toggleSaved]);
+  }, [applications, applyBlocked, cardWidth, isSaved, jobs, jobsLoading, responsive.compact, toggleSaved]);
 
   return (
     <View
@@ -1024,7 +1025,6 @@ const styles = StyleSheet.create({
   jobActionButtonCompact: {flex: 0, width: '100%', minHeight: 42},
   applyButton: {flex: 1.65, height: 40, overflow: 'hidden', borderRadius: 10},
   applyButtonGradient: {flex: 1, width: '100%', flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12},
-  blockedApplyButton: {},
   disabledApplyButton: {opacity: 0.5},
   applyButtonText: {fontFamily: F.bold, fontSize: 10.5, color: 'white'},
   detailButton: {flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4},

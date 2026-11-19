@@ -1,4 +1,4 @@
-import type {RawApplication, RawRecruitmentProcess} from './applications.schemas';
+import {rawApplicationSchema, type RawApplication, type RawRecruitmentProcess} from './applications.schemas';
 import type {ApplicationStage, ApplicationUiState, CandidateApplication, RecruitmentProcess} from './applications.types';
 
 const DEFAULT_STAGES = [
@@ -184,6 +184,14 @@ export function mapApplication(raw: RawApplication): CandidateApplication | null
 
 export function mapApplications(raw: RawApplication[]): CandidateApplication[] {
   return raw.map(mapApplication).filter((item): item is CandidateApplication => item !== null);
+}
+
+export function mapUserApplications(items: readonly unknown[]): CandidateApplication[] {
+  const records = items.flatMap(item => {
+    const parsed = rawApplicationSchema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+  return mapApplications(records);
 }
 
 export function mapRecruitmentProcess(raw: RawRecruitmentProcess): RecruitmentProcess {

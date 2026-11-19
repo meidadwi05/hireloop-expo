@@ -8,6 +8,7 @@ import React from 'react';
 import {httpClient} from '../../../core/api/http-client';
 import {MAX_AVATAR_BYTES} from '../api/profile.api';
 import {DocumentsScreen} from '../screens/DocumentsScreen';
+import {PersonalDataScreen} from '../screens/PersonalDataScreen';
 import {ProfileScreen} from '../screens/ProfileScreen';
 
 jest.mock('@expo/vector-icons', () => ({Ionicons: () => null}));
@@ -50,6 +51,17 @@ function renderScreen(element: React.ReactElement) {
   }});
   return render(<QueryClientProvider client={client}>{element}</QueryClientProvider>);
 }
+
+it('shows education periods as abbreviated months and years', async () => {
+  get.mockResolvedValueOnce({data: {data: {job_seeker: {id: 2, educations: [
+    {id: 1, education_level: 'S1', start_date: '01/09/2021', end_date: '31/12/2025'},
+    {id: 2, education_level: 'S2', start_date: '2026-01-01', end_date: null},
+  ]}}}});
+  const screen = renderScreen(<PersonalDataScreen />);
+
+  expect(await screen.findByText('Sep 2021 - Des 2025')).toBeTruthy();
+  expect(screen.getByText('Jan 2026 - Sekarang')).toBeTruthy();
+});
 
 describe('profile file actions', () => {
   let hasDocument: boolean;

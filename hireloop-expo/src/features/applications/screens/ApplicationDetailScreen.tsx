@@ -24,6 +24,7 @@ import {jobsKeys} from '../../jobs/jobs.keys';
 import {useSavedJobs} from '../../jobs/saved-jobs-provider';
 import type {CandidateJobDetail, CandidateJobSource} from '../../jobs/jobs.types';
 import {useAuth} from '../../auth/auth-provider';
+import {candidateApplyAccessKey} from '../../auth/hooks/use-candidate-apply-access';
 import {applicationsApi} from '../api/applications.api';
 import {applicationsKeys} from '../applications.keys';
 import {canCancelApplication, mergeRecruitmentProcess} from '../applications.mapper';
@@ -148,7 +149,12 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
     void (async () => {
       try {
         await cancelMutation.mutateAsync({applicationId: application!.applicationId, storageKind: application!.storageKind});
-        await Promise.all([queryClient.invalidateQueries({queryKey: applicationsKeys.all}), queryClient.invalidateQueries({queryKey: dashboardKeys.home()}), refreshUser()]);
+        await Promise.all([
+          queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
+          queryClient.invalidateQueries({queryKey: dashboardKeys.home()}),
+          queryClient.invalidateQueries({queryKey: candidateApplyAccessKey}),
+          refreshUser(),
+        ]);
         router.replace('/(candidate)/(tabs)/career');
       } catch (error) {
         Alert.alert('Gagal Membatalkan Lamaran', toAppApiError(error).message);

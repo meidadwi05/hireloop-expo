@@ -1,6 +1,6 @@
 import {router} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 
 import {toAppApiError} from '../../../core/api/api-error';
+import {mapUserApplications} from '../../applications/applications.mapper';
 import {useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {useCandidateJobs} from '../hooks/use-candidate-jobs';
+import {getAppliedJobKeys} from '../job-card-apply';
 import {getJobsIconLayout} from '../jobs-header.layout';
 import {useSavedJobs} from '../saved-jobs-provider';
 import type {CandidateJobCard, CandidateJobQuery} from '../jobs.types';
@@ -34,6 +36,8 @@ export function JobsScreen() {
   const [priority, setPriority] = useState<Priority>('all');
   const {isSaved, toggleSaved} = useSavedJobs();
   const applyAccess = useCandidateApplyAccess();
+  const userApplications = applyAccess.candidate?.job_applications;
+  const appliedJobKeys = useMemo(() => getAppliedJobKeys(mapUserApplications(userApplications ?? [])), [userApplications]);
   const jobs = useCandidateJobs(priority);
   const containerWidth = measuredWidth ?? Math.min(width, 720);
   const pagePadding = containerWidth <= 350 ? 14 : 20;
@@ -86,6 +90,7 @@ export function JobsScreen() {
               iconLayout={iconLayout}
               job={item}
               saved={isSaved(item.key)}
+              applied={appliedJobKeys.has(item.key)}
               applyBlocked={applyAccess.isTier2Banned}
               onApply={() => openJob(item)}
               onOpen={() => openJob(item)}

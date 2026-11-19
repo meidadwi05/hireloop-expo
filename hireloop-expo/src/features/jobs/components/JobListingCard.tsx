@@ -4,6 +4,7 @@ import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import type {CandidateJobCard} from '../jobs.types';
+import {getJobCardApplyState} from '../job-card-apply';
 import type {JobsIconLayout} from '../jobs-header.layout';
 import {JOBS_COLORS, JOBS_FONTS, jobsCardShadow} from './jobs.ui';
 
@@ -11,6 +12,7 @@ type JobListingCardProps = {
   iconLayout: JobsIconLayout;
   job: CandidateJobCard;
   saved: boolean;
+  applied?: boolean;
   applyBlocked?: boolean;
   onOpen: () => void;
   onApply: () => void;
@@ -31,6 +33,7 @@ export function JobListingCard({
   iconLayout,
   job,
   saved,
+  applied = false,
   applyBlocked = false,
   onOpen,
   onApply,
@@ -40,16 +43,11 @@ export function JobListingCard({
   const [shared, setShared] = useState(false);
   const visibleSkills = job.skills.slice(0, 4);
   const extraSkills = Math.max(0, job.skills.length - visibleSkills.length);
-  const applyUnavailable = !job.active || applyBlocked;
+  const applyButton = getJobCardApplyState(applied, applyBlocked);
+  const applyUnavailable = applied || applyBlocked || !job.active;
 
-  return (
-    <Pressable
-      accessibilityLabel={`Lowongan ${job.title} di ${job.company}`}
-      accessibilityRole="button"
-      onPress={onOpen}
-      style={({pressed}) => [styles.card, pressed && styles.cardPressed]}
-      testID="job-listing-card"
-    >
+  const cardContent = (
+    <>
       <View style={styles.header}>
         <View style={[styles.companyIcon, {height: iconLayout.companyContainerSize, width: iconLayout.companyContainerSize}]}>
           <Ionicons name="business-outline" size={iconLayout.companyIconSize} color={JOBS_COLORS.blue} />
@@ -161,38 +159,46 @@ export function JobListingCard({
         <View style={styles.timestampDot} />
         <Text style={styles.timestamp}>{job.updatedLabel}</Text>
       </View>
+    </>
+  );
+
+  return (
+    <View style={styles.card} testID="job-listing-card">
+      <Pressable
+        accessibilityLabel={`Lowongan ${job.title} di ${job.company}`}
+        accessibilityRole="button"
+        onPress={onOpen}
+        style={({pressed}) => pressed && styles.cardPressed}
+      >
+        {cardContent}
+      </Pressable>
 
       <View style={styles.buttons}>
         <Pressable
-          accessibilityLabel={applyBlocked ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
+          accessibilityLabel={applyButton.accessibilityLabel}
           accessibilityRole="button"
           accessibilityState={{disabled: applyUnavailable}}
-          onPress={event => {
-            event?.stopPropagation();
-            if (applyUnavailable) return;
-            onApply();
-          }}
-          style={({pressed}) => [styles.applyButton, pressed && styles.buttonPressed, !job.active && styles.disabled]}
+          disabled={applyUnavailable}
+          onPress={onApply}
+          style={({pressed}) => [styles.applyButton, pressed && styles.buttonPressed, !job.active && !applied && styles.disabled]}
           testID="job-listing-apply-button"
         >
           <LinearGradient
-            colors={applyBlocked ? ['#E33B5B', '#C81E43'] : ['#0865FF', '#003F9F']}
+            colors={applyButton.colors}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 0}}
             style={styles.applyGradient}
+            testID="job-listing-apply-gradient"
           >
             <View style={styles.applyContent}>
-              {applyBlocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
-              <Text style={styles.applyText}>{applyBlocked ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
+              {applyButton.blocked && <Ionicons name="shield-checkmark-outline" size={16} color="white" />}
+              <Text style={styles.applyText}>{applyButton.label}</Text>
             </View>
           </LinearGradient>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={event => {
-            event?.stopPropagation();
-            onOpen();
-          }}
+          onPress={onOpen}
           style={({pressed}) => [styles.detailButton, pressed && styles.buttonPressed]}
           testID="job-listing-detail-button"
         >
@@ -200,7 +206,7 @@ export function JobListingCard({
           <Ionicons name="chevron-forward" size={iconLayout.cardChevronIconSize} color={JOBS_COLORS.blue} />
         </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 }
 

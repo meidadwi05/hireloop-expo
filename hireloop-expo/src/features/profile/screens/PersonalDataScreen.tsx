@@ -44,6 +44,15 @@ function displayDate(value: string | null) {
   return new Intl.DateTimeFormat('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}).format(date);
 }
 
+const educationMonthYear = new Intl.DateTimeFormat('id-ID', {month: 'short', year: 'numeric'});
+
+function educationDateRange({startDate, endDate}: ProfileEducation) {
+  const start = isoToLocalDate(startDate ?? '');
+  const end = isoToLocalDate(endDate ?? '');
+  if (!start) return end ? educationMonthYear.format(end) : '';
+  return `${educationMonthYear.format(start)} - ${end ? educationMonthYear.format(end) : 'Sekarang'}`;
+}
+
 function addressPayload(value: ProfileAddress | AddressDetail) {
   return {
     address_line: value.addressLine,
@@ -290,7 +299,27 @@ export function PersonalDataScreen() {
       <ProfileCard><CardTitle icon="person-outline" title="Identitas & Kontak" /><DataRow label="NIK" value={maskNik(data.nik, nikVisible)} right={data.nik ? <Pressable accessibilityLabel={nikVisible ? 'Sembunyikan NIK' : 'Tampilkan NIK'} onPress={() => setNikVisible(value => !value)}><Ionicons name={nikVisible ? 'eye-off-outline' : 'eye-outline'} size={21} color={profileColors.blue} /></Pressable> : undefined} /><DataRow label="Nama Lengkap" value={data.fullName} /><DataRow label="Email" value={data.email} icon="mail-outline" /><DataRow label="WhatsApp" value={data.phone} icon="call-outline" last /></ProfileCard>
       <ProfileCard><CardTitle icon="calendar-outline" title="Data Pribadi" /><DataRow label="Tempat Lahir" value={data.birthPlace} /><DataRow label="Tanggal Lahir" value={displayDate(data.birthDate)} /><DataRow label="Usia" value={ageFromDate(data.birthDate)} /><DataRow label="Jenis Kelamin" value={data.gender === 'female' ? 'Perempuan' : data.gender === 'male' ? 'Laki-laki' : 'Belum dilengkapi'} /><DataRow label="Status Pernikahan" value={{single: 'Belum menikah', married: 'Menikah', other: 'Lainnya', '': 'Belum dilengkapi'}[data.maritalStatus]} last /></ProfileCard>
       <ProfileCard><CardTitle icon="location-outline" title="Alamat" /><DataRow label="Alamat KTP" value={formatAddress(data.ktpAddress)} /><DataRow label="Alamat Domisili" value={formatAddress(data.domicileAddress)} right={data.sameAsKtp ? <View style={styles.sameBadge}><Text style={styles.sameBadgeText}>Sama dengan KTP</Text></View> : undefined} last /></ProfileCard>
-      <ProfileCard><CardTitle icon="school-outline" title="Pendidikan" action="+ Tambah" onAction={() => openEducation(null)} />{education.length === 0 ? <View style={styles.emptyEducation}><Ionicons name="school-outline" size={30} color="#98A2B3" /><Text style={styles.emptyEducationText}>Pendidikan belum ditambahkan.</Text></View> : education.map((item, index) => <Pressable key={item.id} onPress={() => openEducation(item)} style={[styles.educationRow, index === education.length - 1 && styles.educationRowLast]}><View style={styles.educationCopy}><Text style={styles.educationTitle}>{[item.educationLevel, item.majorName].filter(Boolean).join(' – ')}</Text><Text style={styles.educationSchool}>{item.schoolName || 'Institusi belum diisi'}</Text><Text style={styles.educationDate}>{displayDate(item.startDate)} – {item.startDate && !item.endDate ? 'Sekarang' : displayDate(item.endDate)}</Text></View><View style={styles.editIcon}><Ionicons name="pencil" size={18} color={profileColors.blue} /></View></Pressable>)}</ProfileCard>
+      <ProfileCard>
+        <CardTitle icon="school-outline" title="Pendidikan" action="+ Tambah" onAction={() => openEducation(null)} />
+        {education.length === 0 ? (
+          <View style={styles.emptyEducation}>
+            <Ionicons name="school-outline" size={30} color="#98A2B3" />
+            <Text style={styles.emptyEducationText}>Pendidikan belum ditambahkan.</Text>
+          </View>
+        ) : education.map((item, index) => {
+          const period = educationDateRange(item);
+          return (
+            <Pressable key={item.id} onPress={() => openEducation(item)} style={[styles.educationRow, index === education.length - 1 && styles.educationRowLast]}>
+              <View style={styles.educationCopy}>
+                <Text style={styles.educationTitle}>{[item.educationLevel, item.majorName].filter(Boolean).join(' – ')}</Text>
+                <Text style={styles.educationSchool}>{item.schoolName || 'Institusi belum diisi'}</Text>
+                {period ? <Text style={styles.educationDate}>{period}</Text> : null}
+              </View>
+              <View style={styles.editIcon}><Ionicons name="pencil" size={18} color={profileColors.blue} /></View>
+            </Pressable>
+          );
+        })}
+      </ProfileCard>
     </ProfilePage>}
     {data && editOpen ? <PersonalEditModal profile={data} visible onClose={() => setEditOpen(false)} /> : null}
     {educationOpen ? <EducationModal item={selectedEducation} items={education} visible onClose={() => setEducationOpen(false)} /> : null}
