@@ -15,7 +15,7 @@ import {
 
 import {FormTextInput} from '../../../components/forms/FormTextInput';
 import {toAppApiError} from '../../../core/api/api-error';
-import {profileApi} from '../api/profile.api';
+import {AVATAR_SIZE_ERROR, MAX_AVATAR_BYTES, profileApi} from '../api/profile.api';
 import {calculateProfileCompletion, formatAddress} from '../profile.mapper';
 import {hasFormChanges} from '../profile-form-state';
 import {useProfile, useProfileMutation} from '../hooks/use-profile';
@@ -30,6 +30,7 @@ import {
   profileFonts,
 } from '../components/profile-ui';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
+import {ActionOverlayModal} from '../../../shared/components/ActionOverlayModal';
 
 const menuItems = [
   {label: 'Data Diri', subtitle: 'Identitas, kontak & pendidikan', icon: 'id-card-outline' as const, route: '/(candidate)/profile/personal-data'},
@@ -49,7 +50,10 @@ export function ProfileScreen() {
   const profile = useProfile();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [avatarSourceOpen, setAvatarSourceOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
   const [about, setAbout] = useState('');
+  const [cvDownloading, setCvDownloading] = useState(false);
+  const [cvError, setCvError] = useState('');
   const updateDescription = useProfileMutation(profileApi.updateDescription);
   const uploadAvatar = useProfileMutation(profileApi.uploadAvatar);
   const data = profile.data;
@@ -86,13 +90,14 @@ export function ProfileScreen() {
       if (result.canceled || !result.assets[0]) return;
 
       const asset = result.assets[0];
+      const size = asset.file?.size ?? asset.fileSize;
+      if ((size ?? 0) > MAX_AVATAR_BYTES) {
+        setAvatarError(AVATAR_SIZE_ERROR);
+        return;
+      }
       const mimeType = asset.mimeType ?? (asset.fileName?.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
       if (!['image/jpeg', 'image/png'].includes(mimeType)) {
         Alert.alert('Format tidak didukung', 'Gunakan foto JPG, JPEG, atau PNG.');
-        return;
-      }
-      if ((asset.fileSize ?? 0) > 2 * 1024 * 1024) {
-        Alert.alert('File terlalu besar', 'Foto profil maksimal 2 MB.');
         return;
       }
       const extension = mimeType === 'image/png' ? 'png' : 'jpg';
@@ -105,7 +110,7 @@ export function ProfileScreen() {
           uri: asset.uri,
           name: asset.fileName?.trim() || `avatar-${Date.now()}.${extension}`,
           mimeType,
-          size: asset.fileSize,
+          size,
           file: asset.file,
         }),
       });
@@ -115,14 +120,16 @@ export function ProfileScreen() {
   };
 
   const openCv = async () => {
-    if (!data) return;
-    await feedback.runAction({
-      loadingMessage: 'Menyusun CV ATS...',
-      successTitle: 'CV ATS Siap',
-      successMessage: 'CV ATS berhasil dibuat dari data profil terbaru.',
-      errorTitle: 'CV ATS Gagal Dibuat',
-      operation: async () => exportAtsCv(await profileApi.getAtsProfile()),
-    });
+    if (!data || cvDownloading) return;
+    setCvDownloading(true);
+    setCvError('');
+    try {
+      await exportAtsCv(await profileApi.getAtsProfile());
+    } catch (error) {
+      setCvError(toAppApiError(error).message);
+    } finally {
+      setCvDownloading(false);
+    }
   };
 
   const openAbout = () => {
@@ -177,7 +184,15 @@ export function ProfileScreen() {
             <View style={styles.completionHeader}><Text style={styles.cardTitle}>Kelengkapan Profil</Text><Text style={styles.completionValue}>{completion}%</Text></View>
             <View style={styles.progressTrack}><View style={[styles.progressFill, {width: `${completion}%`}]} /></View>
             <Text style={styles.helper}>Lengkapi profil Anda untuk kesempatan kerja yang lebih besar.</Text>
-            <PrimaryButton label="Lihat / Unduh CV" icon="download-outline" onPress={() => void openCv()} />
+            <PrimaryButton
+              label={cvDownloading ? 'Menyiapkan CV ATS...' : 'Lihat / Unduh CV'}
+              icon="download-outline"
+              disabled={cvDownloading}
+              onPress={() => void openCv()}
+            />
+            {cvError ? (
+              <Text accessibilityRole="alert" style={styles.cvError}>CV ATS gagal diunduh. {cvError}</Text>
+            ) : null}
           </ProfileCard>
 
           <ProfileCard>
@@ -229,7 +244,7 @@ export function ProfileScreen() {
         </View>
       </Modal>
 
-      <Modal animationType="fade" transparent visible={avatarSourceOpen} onRequestClose={() => setAvatarSourceOpen(false)}>
+      {avatarSourceOpen ? <Modal animationType="fade" transparent visible onRequestClose={() => setAvatarSourceOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.avatarSourceCard}>
             <Text style={styles.modalTitle}>Ubah Foto Profil</Text>
@@ -245,7 +260,10 @@ export function ProfileScreen() {
             <Pressable onPress={() => setAvatarSourceOpen(false)} style={styles.avatarSourceCancel}><Text style={styles.cancelText}>Batal</Text></Pressable>
           </View>
         </View>
-      </Modal>
+      </Modal> : null}
+      {avatarError ? (
+        <ActionOverlayModal overlay={{kind: 'error', title: 'Gagal Memperbarui Foto', message: avatarError}} onClose={() => setAvatarError('')} />
+      ) : null}
     </View>
   );
 }
@@ -271,6 +289,7 @@ const styles = StyleSheet.create({
   progressTrack: {height: 9, borderRadius: 5, backgroundColor: '#E7ECF3', marginTop: 12, overflow: 'hidden'},
   progressFill: {height: '100%', borderRadius: 5, backgroundColor: profileColors.blue},
   helper: {fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 17, color: profileColors.muted, marginVertical: 10},
+  cvError: {fontFamily: profileFonts.regular, fontSize: 11, lineHeight: 17, color: '#B42318', marginTop: 8},
   aboutHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   aboutText: {fontFamily: profileFonts.regular, fontSize: 12, lineHeight: 19, color: '#344054', marginTop: 12},
   emptyText: {color: '#98A2B3', fontStyle: 'italic'},

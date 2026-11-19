@@ -66,6 +66,16 @@ describe('profile mapper', () => {
     expect(mapCandidateProfile({data: {job_seeker: {birth_date: '31/02/2001'}}}).birthDate).toBeNull();
   });
 
+  it('normalizes saved education dates for the edit fields and keeps ongoing education open-ended', () => {
+    const profile = mapCandidateProfile({data: {job_seeker: {educations: [
+      {id: 1, education_level: 'SMA/SMK', start_date: '15/07/2021', end_date: '20/06/2024'},
+      {id: 2, education_level: 'S1', start_date: '2024-09-02T00:00:00.000Z', end_date: null},
+    ]}}});
+
+    expect(profile.educations[0]).toMatchObject({startDate: '2021-07-15', endDate: '2024-06-20'});
+    expect(profile.educations[1]).toMatchObject({startDate: '2024-09-02', endDate: null});
+  });
+
   it('mengabaikan jurusan lama untuk pendidikan SD dan SMP', () => {
     const profile = mapCandidateProfile({data: {job_seeker: {educations: [
       {id: 1, education_level: 'SD', major_id: 17, major_name: 'Manajemen'},

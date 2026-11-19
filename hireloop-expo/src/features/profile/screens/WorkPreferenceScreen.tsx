@@ -66,7 +66,7 @@ function mapRoles(payload: unknown): Role[] {
   return values.map(item => {
     const raw = asRecord(item);
     return {id: Number(raw.id ?? raw.role_taxonomy_id), name: String(raw.role ?? raw.name ?? raw.title ?? '').trim()};
-  }).filter(item => Number.isFinite(item.id) && item.id > 0 && item.name);
+  }).filter(item => Number.isSafeInteger(item.id) && item.id > 0 && item.name);
 }
 
 function ToggleChip({active, label, onPress}: {active: boolean; label: string; onPress: () => void}) {
@@ -92,7 +92,8 @@ function BinaryChoice({label, value, onChange}: {label: string; value: boolean; 
 export function WorkPreferenceScreen() {
   const feedback = useActionFeedback();
   const profile = useProfile();
-  const rolesQuery = useQuery({queryKey: ['master', 'job-roles'], queryFn: async () => mapRoles(await masterDataApi.list('job-roles'))});
+  // The save endpoint validates these IDs against role_taxonomies, the catalog behind /roles.
+  const rolesQuery = useQuery({queryKey: ['master', 'roles'], queryFn: async () => mapRoles(await masterDataApi.list('roles'))});
   const mutation = useProfileMutation(profileApi.updateWorkPreferences);
   const data = profile.data;
   const [selectedRoles, setSelectedRoles] = useState<Role[]>(() => data?.jobPreferences.map(item => ({id: item.id, name: item.name || `Posisi ${item.id}`})) ?? []);
@@ -136,12 +137,17 @@ export function WorkPreferenceScreen() {
   }), [availability, locations, relocate, salary, selectedRoles, shift, workSettings, workTypes]);
   const isDirty = baseline !== null && hasFormChanges(baseline, currentSnapshot);
   const isValid = isWorkPreferenceSelectionValid(selectedRoles.length, workTypes.length, workSettings.length);
+  const catalogRoles = rolesQuery.data;
+  const unavailableRoles = catalogRoles
+    ? selectedRoles.filter(selected => !catalogRoles.some(role => role.id === selected.id))
+    : [];
   const saveDisabled = !baseline || !isDirty || mutation.isPending;
-  const roleValidationError = validationAttempted && selectedRoles.length === 0
-    ? 'Pilih minimal satu posisi yang diminati.'
-    : rolesQuery.isError
-      ? 'Daftar posisi belum dapat dimuat. Coba lagi.'
-      : null;
+  let roleValidationError = rolesQuery.isError ? 'Daftar posisi belum dapat dimuat. Coba lagi.' : null;
+  if (validationAttempted && selectedRoles.length === 0) {
+    roleValidationError = 'Pilih minimal satu posisi yang diminati.';
+  } else if (unavailableRoles.length > 0) {
+    roleValidationError = `Hapus posisi yang sudah tidak tersedia: ${unavailableRoles.map(role => role.name).join(', ')}.`;
+  }
 
   const reset = () => {
     if (!profile.data || !baseline) return;
@@ -188,7 +194,7 @@ export function WorkPreferenceScreen() {
   const save = async () => {
     if (saveDisabled) return;
     setValidationAttempted(true);
-    if (!isValid) return;
+    if (!isValid || unavailableRoles.length > 0) return;
     await feedback.runAction({
       loadingMessage: 'Menyimpan preferensi kerja...', successTitle: 'Preferensi Tersimpan',
       successMessage: 'Preferensi kerja Anda berhasil diperbarui.', errorTitle: 'Gagal Menyimpan Preferensi',
@@ -218,7 +224,16 @@ export function WorkPreferenceScreen() {
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.sectionBlock}>
           <View style={styles.sectionTitleRow}><Ionicons name="briefcase-outline" size={20} color={profileColors.navy} /><Text style={styles.sectionTitle}>Posisi yang diminati<Text style={styles.required}> *</Text></Text></View>
-          <View style={styles.chipWrap}>{selectedRoles.map(role => <View key={role.id} style={styles.selectedChip}><Text style={styles.selectedChipText}>{role.name}</Text><Pressable onPress={() => setSelectedRoles(items => items.filter(item => item.id !== role.id))}><Ionicons name="close" size={16} color={profileColors.blue} /></Pressable></View>)}</View>
+          <View style={styles.chipWrap}>
+            {selectedRoles.map(role => (
+              <View key={role.id} style={styles.selectedChip}>
+                <Text style={styles.selectedChipText}>{role.name}</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={`Hapus ${role.name}`} onPress={() => setSelectedRoles(items => items.filter(item => item.id !== role.id))}>
+                  <Ionicons name="close" size={16} color={profileColors.blue} />
+                </Pressable>
+              </View>
+            ))}
+          </View>
           <FormTextInput accessibilityLabel="Cari posisi yang diminati" containerStyle={styles.inputFrame} error={Boolean(roleValidationError)} inputStyle={styles.input} placeholder={rolesQuery.isLoading ? 'Memuat posisi...' : 'Cari posisi'} placeholderTextColor="#98A2B3" value={roleSearch} onChangeText={setRoleSearch} />
           {roleValidationError ? <Text accessibilityLiveRegion="polite" style={styles.validationError}>{roleValidationError}</Text> : null}
           {availableRoles.length > 0 ? <View style={styles.suggestionBox}>{availableRoles.map(role => <Pressable key={role.id} onPress={() => { if (selectedRoles.length >= 10) return Alert.alert('Batas posisi', 'Maksimal 10 posisi.'); setSelectedRoles(items => items.some(item => item.id === role.id) ? items : [...items, role]); setRoleSearch(''); }} style={styles.suggestion}><Text style={styles.suggestionText}>{role.name}</Text><Ionicons name="add" size={18} color={profileColors.blue} /></Pressable>)}</View> : null}

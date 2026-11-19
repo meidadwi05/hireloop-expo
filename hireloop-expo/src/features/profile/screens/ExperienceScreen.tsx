@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useQuery} from '@tanstack/react-query';
 import React, {useMemo, useState} from 'react';
-import {Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {toAppApiError} from '../../../core/api/api-error';
@@ -14,6 +14,7 @@ import {employmentStatusOptions, workSystemOptions} from '../../onboarding/onboa
 import type {SelectedSkill} from '../../onboarding/onboarding.types';
 import {masterDataApi} from '../../master-data/api/master-data.api';
 import {profileApi} from '../api/profile.api';
+import {ProfileDeleteConfirmation} from '../components/ProfileDeleteConfirmation';
 import {useExperiences, useProfileMutation} from '../hooks/use-profile';
 import {hasFormChanges} from '../profile-form-state';
 import type {ExperienceInput, ProfileExperience, WorkSetting, WorkType} from '../profile.types';
@@ -178,9 +179,9 @@ function ExperienceForm({item, visible, onClose}: {item: ProfileExperience | nul
 }
 
 export function ExperienceScreen() {
-  const feedback = useActionFeedback();
   const query = useExperiences();
   const [selected, setSelected] = useState<ProfileExperience | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProfileExperience | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const removeMutation = useProfileMutation(profileApi.deleteExperience, {refreshExperiences: true});
   const experiences = useMemo(() => query.data ?? [], [query.data]);
@@ -192,14 +193,6 @@ export function ExperienceScreen() {
   }, 0) / 12, [experiences]);
 
   const openForm = (item: ProfileExperience | null) => { setSelected(item); setFormOpen(true); };
-  const remove = (item: ProfileExperience) => Alert.alert('Hapus pengalaman?', `${item.position} di ${item.companyName} akan dihapus.`, [
-    {text: 'Batal', style: 'cancel'},
-    {text: 'Hapus', style: 'destructive', onPress: () => void feedback.runAction({
-      loadingMessage: 'Menghapus pengalaman...', successTitle: 'Pengalaman Dihapus',
-      successMessage: 'Riwayat pengalaman berhasil dihapus.', errorTitle: 'Gagal Menghapus Pengalaman',
-      operation: () => removeMutation.mutateAsync(item.id),
-    })},
-  ]);
 
   return (
     <View style={styles.screen}>
@@ -216,7 +209,7 @@ export function ExperienceScreen() {
             <ProfileCard key={item.id} style={styles.experienceCard}>
               <View style={styles.timeline}><View style={[styles.node, item.isCurrent && styles.nodeCurrent]} />{index < experiences.length - 1 ? <View style={styles.line} /> : null}</View>
               <View style={styles.cardCopy}>
-                <View style={styles.cardTop}><View style={styles.cardHeading}><Text style={styles.position}>{item.position || 'Posisi belum diisi'}</Text><Text style={styles.company}>{item.companyName}</Text></View><View style={styles.actions}><Pressable accessibilityLabel={`Ubah ${item.position}`} onPress={() => openForm(item)} style={styles.action}><Ionicons name="pencil-outline" size={19} color={profileColors.blue} /></Pressable><Pressable accessibilityLabel={`Hapus ${item.position}`} onPress={() => remove(item)} style={[styles.action, styles.deleteAction]}><Ionicons name="trash-outline" size={19} color={profileColors.red} /></Pressable></View></View>
+                <View style={styles.cardTop}><View style={styles.cardHeading}><Text style={styles.position}>{item.position || 'Posisi belum diisi'}</Text><Text style={styles.company}>{item.companyName}</Text></View><View style={styles.actions}><Pressable accessibilityLabel={`Ubah ${item.position}`} onPress={() => openForm(item)} style={styles.action}><Ionicons name="pencil-outline" size={19} color={profileColors.blue} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Hapus ${item.position}`} onPress={() => setDeleteTarget(item)} style={[styles.action, styles.deleteAction]}><Ionicons name="trash-outline" size={19} color={profileColors.red} /></Pressable></View></View>
                 <Text style={styles.dates}>{monthYear(item.startDate)} – {item.isCurrent ? 'Sekarang' : monthYear(item.endDate)}</Text>
                 <View style={styles.badges}><Text style={styles.badge}>{workSystemOptions.find(option => option.value === item.workSetting)?.label}</Text><Text style={styles.badge}>{employmentStatusOptions.find(option => option.value === item.workType)?.label}</Text></View>
                 {item.skills.length ? <View style={styles.badges}>{item.skills.map(skill => <Text key={skill.id} style={[styles.badge, styles.skillBadge]}>{skill.name}</Text>)}</View> : null}
@@ -227,6 +220,15 @@ export function ExperienceScreen() {
         </ProfilePage>
       )}
       {formOpen ? <ExperienceForm item={selected} visible onClose={() => setFormOpen(false)} /> : null}
+      {deleteTarget ? (
+        <ProfileDeleteConfirmation
+          title="Hapus pengalaman?"
+          message={`${[deleteTarget.position, deleteTarget.companyName].filter(Boolean).join(' · ') || 'Pengalaman ini'} akan dihapus.`}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => removeMutation.mutateAsync(deleteTarget.id)}
+          onDeleted={() => setDeleteTarget(null)}
+        />
+      ) : null}
     </View>
   );
 }

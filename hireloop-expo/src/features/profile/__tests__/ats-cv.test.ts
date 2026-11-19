@@ -31,7 +31,18 @@ describe('ATS CV', () => {
         }],
         skills: [{id: 7, skill_id: 7, name: 'React'}],
         documents: [{id: 3, name: 'CV Utama', file_path: 'cv.pdf', original_name: 'cv.pdf'}],
-        certifications: [{id: 4, name: 'Sertifikat K3', issuer: 'BNSP', issued_date: '2026-01-01'}],
+        certifications: [
+          {id: 5, name: 'C Learner', issuer: 'Sololearn', issued_date: '01/12/2021', no_expiry: true, expired_date: '2022-12-01'},
+          {
+            id: 4,
+            name: 'Sertifikat K3',
+            issuer: 'BNSP',
+            issued_date: '2026-01-01',
+            expired_date: '2028-01-01',
+            credential_id: 'K3-927',
+            media: [{path: 'cert/k3.pdf', original_name: 'scan-k3.pdf'}],
+          },
+        ],
       },
     }});
 
@@ -53,12 +64,25 @@ describe('ATS CV', () => {
       'Keahlian',
       'Pengalaman Kerja',
       'Pendidikan',
-      'Dokumen & Sertifikat',
+      'Sertifikasi dan Pelatihan',
+      'Dokumen',
     ]);
     expect(text).toBe('%PDF-1.4');
     expect(pdfSource).toContain('/BaseFont /Helvetica-Bold');
     expect(pdfSource).toContain('(RINGKASAN PROFESIONAL)');
     expect(pdfSource).toMatch(/0\.90 w .* m .* l S/);
     expect(pdfSource).toContain('(Januari 2025 - Sekarang)');
+    expect(pdfSource).toContain('(Agustus 2020 - Juli 2024)');
+    expect(pdfSource).toContain('(Sertifikat K3 | BNSP)');
+    expect(pdfSource).toContain('(Januari 2026 - Januari 2028)');
+    expect(pdfSource).toContain('(Desember 2021 - Sekarang)');
+    expect(pdfSource).not.toMatch(/K3-927|scan-k3\.pdf|cv\.pdf/);
+    expect(document.sections.find(section => section.title === 'Sertifikasi dan Pelatihan')?.items).toEqual([
+      {title: 'Sertifikat K3 | BNSP', period: 'Januari 2026 - Januari 2028', bullets: []},
+      {title: 'C Learner | Sololearn', period: 'Desember 2021 - Sekarang', bullets: []},
+    ]);
+    expect(document.sections.find(section => section.title === 'Dokumen')?.items).toEqual([
+      {title: 'CV Utama', period: '', bullets: []},
+    ]);
   });
 });

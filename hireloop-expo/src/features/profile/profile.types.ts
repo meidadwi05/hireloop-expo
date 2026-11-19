@@ -148,6 +148,7 @@ export type ProfileFileItem = {
   issuer: string;
   issuedDate: string | null;
   expiredDate: string | null;
+  noExpiry: boolean;
   credentialId: string;
   originalName: string;
   mimeType: string;

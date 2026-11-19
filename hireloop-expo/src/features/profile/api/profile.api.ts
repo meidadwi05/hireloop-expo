@@ -1,4 +1,5 @@
 import {httpClient} from '../../../core/api/http-client';
+import {toAppApiError} from '../../../core/api/api-error';
 import {Platform} from 'react-native';
 import {mapCandidateProfile, mapProfileFiles, mapUploadedFile} from '../profile.mapper';
 import type {
@@ -11,7 +12,15 @@ import type {
   WorkPreferenceInput,
 } from '../profile.types';
 
+export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+export const AVATAR_SIZE_ERROR = 'Ukuran foto profil melebihi batas maksimal 2 MB. Pilih foto yang lebih kecil.';
+
+function assertUploadSize(field: string, size: number | undefined) {
+  if (field === 'avatar' && (size ?? 0) > MAX_AVATAR_BYTES) throw new Error(AVATAR_SIZE_ERROR);
+}
+
 async function appendFile(body: FormData, input: UploadInput, field = 'file') {
+  assertUploadSize(field, input.file?.size ?? input.size);
   if (input.file) {
     body.append(field, input.file, input.name);
     return;
@@ -22,6 +31,7 @@ async function appendFile(body: FormData, input: UploadInput, field = 'file') {
     if (!response.ok) throw new Error('File gagal diproses oleh browser. Silakan pilih ulang file.');
     const blob = await response.blob();
     if (blob.size === 0) throw new Error('File kosong. Silakan pilih ulang file.');
+    assertUploadSize(field, blob.size);
     body.append(field, blob.type || !input.mimeType ? blob : blob.slice(0, blob.size, input.mimeType), input.name);
     return;
   }
@@ -95,7 +105,15 @@ export const profileApi = {
   async uploadAvatar(input: UploadInput): Promise<void> {
     const body = new FormData();
     await appendFile(body, input, 'avatar');
-    await httpClient.post('/job-seeker/avatar', body);
+    try {
+      await httpClient.post('/job-seeker/avatar', body);
+    } catch (error) {
+      const {status, validationErrors} = toAppApiError(error);
+      if (status === 413 || (status === 422 && validationErrors.avatar?.some(message => /\b2048\b|\b2\s*mb\b/i.test(message)))) {
+        throw new Error(AVATAR_SIZE_ERROR);
+      }
+      throw error;
+    }
   },
 
   async uploadCover(input: UploadInput): Promise<void> {
@@ -211,6 +229,11 @@ export const profileApi = {
 
   async deleteDocument(id: number): Promise<void> {
     await httpClient.delete(`/job-seeker/documents/${id}`);
+  },
+
+  async getDocumentFile(id: number): Promise<ArrayBuffer> {
+    const response = await httpClient.get<ArrayBuffer>(`/job-seeker/documents/${id}/download`, {responseType: 'arraybuffer'});
+    return response.data;
   },
 
   async createCertification(payload: CertificationInput): Promise<void> {

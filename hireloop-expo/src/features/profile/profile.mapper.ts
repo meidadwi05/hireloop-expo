@@ -89,8 +89,8 @@ function education(value: unknown): ProfileEducation {
     schoolName: text(raw.school_name),
     majorId: majorSupported && raw.major_id !== null && raw.major_id !== undefined ? number(raw.major_id) : null,
     majorName: majorSupported ? text(raw.major_name, major.name) : '',
-    startDate: optionalDate(raw.start_date),
-    endDate: optionalDate(raw.end_date),
+    startDate: normalizeProfileDate(raw.start_date),
+    endDate: normalizeProfileDate(raw.end_date),
     additionalInfo: text(raw.additional_info),
   };
 }
@@ -259,6 +259,7 @@ export function mapProfileFile(value: unknown): ProfileFileItem {
     issuer: text(raw.issuer),
     issuedDate: optionalDate(raw.issued_date),
     expiredDate: optionalDate(raw.expired_date),
+    noExpiry: boolean(raw.no_expiry),
     credentialId: text(raw.credential_id),
     originalName: text(raw.original_name, first?.originalName),
     mimeType: text(raw.mime_type, first?.mimeType),

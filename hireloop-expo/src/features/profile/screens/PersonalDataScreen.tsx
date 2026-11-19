@@ -12,6 +12,7 @@ import {CheckboxField, SelectField, TextField} from '../../onboarding/components
 import {educationLevelOptions, isNoFormalEducation, supportsEducationMajor} from '../../onboarding/onboarding.options';
 import {emptyAddress, type AddressDetail, type MasterOption} from '../../onboarding/onboarding.types';
 import {profileApi} from '../api/profile.api';
+import {ProfileDeleteConfirmation} from '../components/ProfileDeleteConfirmation';
 import {CardTitle, DataRow, PrimaryButton, ProfileCard, ProfileHeader, ProfilePage, ScreenState, profileColors, profileFonts} from '../components/profile-ui';
 import {hasFormChanges} from '../profile-form-state';
 import {canUseEducationLevel, hasNoFormalEducation} from '../education-rules';
@@ -190,6 +191,7 @@ function educationDraftFromItem(item: ProfileEducation | null): EducationDraft {
 
 function EducationModal({item, items, visible, onClose}: {item: ProfileEducation | null; items: ProfileEducation[]; visible: boolean; onClose: () => void}) {
   const feedback = useActionFeedback();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [initialDraft] = useState<EducationDraft>(() => educationDraftFromItem(item));
   const [draft, setDraft] = useState<EducationDraft>(() => initialDraft);
   const majors = useQuery({queryKey: ['master-data', 'majors'], queryFn: () => masterDataApi.list('majors'), staleTime: 30 * 60 * 1000});
@@ -228,10 +230,22 @@ function EducationModal({item, items, visible, onClose}: {item: ProfileEducation
       onSuccessExit: onClose,
     });
   };
-  const remove = () => item && Alert.alert('Hapus pendidikan?', `${item.educationLevel} di ${item.schoolName || 'institusi ini'} akan dihapus.`, [{text: 'Batal', style: 'cancel'}, {text: 'Hapus', style: 'destructive', onPress: () => void feedback.runAction({loadingMessage: 'Menghapus pendidikan...', successTitle: 'Pendidikan Dihapus', successMessage: 'Riwayat pendidikan berhasil dihapus.', errorTitle: 'Gagal Menghapus Pendidikan', operation: () => deleteMutation.mutateAsync(item.id), onSuccessExit: onClose})}]);
+  const cancelDelete = () => {
+    if (!deleteMutation.isPending) setConfirmDelete(false);
+  };
 
   return (
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={confirmDelete ? cancelDelete : onClose}>
+      {item && confirmDelete ? (
+        <ProfileDeleteConfirmation
+          embedded
+          title="Hapus pendidikan?"
+          message={`${[item.educationLevel, item.schoolName].filter(Boolean).join(' · ')} akan dihapus.`}
+          onCancel={cancelDelete}
+          onConfirm={() => deleteMutation.mutateAsync(item.id)}
+          onDeleted={onClose}
+        />
+      ) : (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>{item ? 'Ubah Pendidikan' : 'Tambah Pendidikan'}</Text><Pressable onPress={onClose}><Ionicons name="close" size={25} /></Pressable></View>
@@ -244,10 +258,11 @@ function EducationModal({item, items, visible, onClose}: {item: ProfileEducation
             {!noFormal ? <CheckboxField tone="light" label="Sedang berlangsung" checked={draft.ongoing} onChange={value => setDraft(current => ({...current, ongoing: value, endDate: value ? '' : current.endDate}))} /> : null}
             <TextField tone="light" label="Informasi Tambahan" multiline value={draft.info} onChangeText={value => set('info', value)} />
             <PrimaryButton disabled={saveDisabled} label={saveMutation.isPending ? 'Menyimpan...' : 'Simpan Pendidikan'} onPress={() => void save()} />
-            {item ? <Pressable disabled={deleteMutation.isPending} onPress={remove} style={styles.deleteButton}><Ionicons name="trash-outline" size={18} color="#D92D20" /><Text style={styles.deleteText}>Hapus Pendidikan</Text></Pressable> : null}
+            {item ? <Pressable accessibilityRole="button" disabled={saveMutation.isPending} onPress={() => setConfirmDelete(true)} style={styles.deleteButton}><Ionicons name="trash-outline" size={18} color="#D92D20" /><Text style={styles.deleteText}>Hapus Pendidikan</Text></Pressable> : null}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+      )}
     </Modal>
   );
 }

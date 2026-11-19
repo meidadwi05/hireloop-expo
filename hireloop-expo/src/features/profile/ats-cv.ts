@@ -2,6 +2,7 @@ import {File, Paths} from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {Platform} from 'react-native';
 
+import {normalizeProfileDate} from './profile.mapper';
 import type {CandidateProfile} from './profile.types';
 
 const PAGE_WIDTH = 595;
@@ -97,7 +98,7 @@ function wrapText(value: string, maxWidth: number, fontSize: number, bold = fals
 
 function formatMonthYear(value: string | null): string {
   if (!value) return '';
-  const match = value.match(/^(\d{4})-(\d{2})/);
+  const match = (normalizeProfileDate(value) ?? value).match(/^(\d{4})-(\d{2})/);
   if (!match) return cleanText(value);
   const month = Number(match[2]);
   return month >= 1 && month <= 12 ? `${MONTHS[month - 1]} ${match[1]}` : match[1];
@@ -111,8 +112,8 @@ function formatPeriod(start: string | null, end: string | null, isCurrent = fals
 
 function comparableDate(value: string | null): number {
   if (!value) return 0;
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return match ? Number(`${match[1]}${match[2]}${match[3]}`) : 0;
+  const match = (normalizeProfileDate(value) ?? value).match(/^(\d{4})-(\d{2})(?:-(\d{2}))?/);
+  return match ? Number(`${match[1]}${match[2]}${match[3] ?? '01'}`) : 0;
 }
 
 function unique(values: string[]): string[] {
@@ -192,17 +193,23 @@ export function buildAtsCvDocument(profile: CandidateProfile): AtsCvDocument {
     sections.push({title: 'Pendidikan', paragraphs: [], items: educations});
   }
 
-  const profileFiles = profile.profileFiles.map(item => ({
-    title: `${item.type === 'certification' ? 'Sertifikat' : 'Dokumen'} | ${item.name || item.originalName}`,
-    period: item.type === 'certification' ? formatMonthYear(item.issuedDate) : '',
-    bullets: unique([
-      item.issuer ? `Penerbit: ${item.issuer}` : '',
-      item.credentialId ? `ID Kredensial: ${item.credentialId}` : '',
-      item.originalName && item.originalName !== item.name ? `File: ${item.originalName}` : '',
-    ]),
-  }));
-  if (profileFiles.length) {
-    sections.push({title: 'Dokumen & Sertifikat', paragraphs: [], items: profileFiles});
+  const certifications = profile.profileFiles
+    .filter(item => item.type === 'certification')
+    .sort((left, right) => comparableDate(right.issuedDate) - comparableDate(left.issuedDate))
+    .map(item => ({
+      title: [item.name, item.issuer].filter(Boolean).join(' | '),
+      period: formatPeriod(item.issuedDate, item.expiredDate, item.noExpiry),
+      bullets: [],
+    }));
+  if (certifications.length) {
+    sections.push({title: 'Sertifikasi dan Pelatihan', paragraphs: [], items: certifications});
+  }
+
+  const documents = profile.profileFiles
+    .filter(item => item.type === 'document')
+    .map(item => ({title: item.name, period: '', bullets: []}));
+  if (documents.length) {
+    sections.push({title: 'Dokumen', paragraphs: [], items: documents});
   }
 
   return {
