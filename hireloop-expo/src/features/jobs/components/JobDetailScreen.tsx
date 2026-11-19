@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {LinearGradient} from 'expo-linear-gradient';
 import {Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {StatusBar} from 'expo-status-bar';
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {router} from 'expo-router';
 
 import {CandidatePageHeader} from '../../../components/ui/CandidatePageHeader';
@@ -11,8 +12,10 @@ import {toAppApiError} from '../../../core/api/api-error';
 import {useActionFeedback} from '../../../shared/components/ActionFeedbackProvider';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {applicationsKeys} from '../../applications/applications.keys';
+import {mapUserApplications} from '../../applications/applications.mapper';
 import {candidateApplyAccessKey, useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
 import {jobsApi} from '../api/jobs.api';
+import {getAppliedJobKeys, getJobCardApplyState} from '../job-card-apply';
 import {jobsKeys} from '../jobs.keys';
 import type {CandidateJobSource} from '../jobs.types';
 import {JobApplicationRequirementsSheet, type JobApplicationRequirementsValue} from './JobApplicationRequirementsSheet';
@@ -41,10 +44,15 @@ export function JobDetailScreen({source, id}: JobDetailScreenProps) {
   const apply = useMutation({mutationFn: jobsApi.apply});
 
   const job = detail.data;
+  const userApplications = applyAccess.candidate?.job_applications;
+  const appliedJobKeys = useMemo(() => getAppliedJobKeys(mapUserApplications(userApplications ?? [])), [userApplications]);
+  const applied = Boolean(job && appliedJobKeys.has(job.key));
+  const applyButton = getJobCardApplyState(applied, applyAccess.isTier2Banned);
+  const applyDisabled = applied || !job?.active || apply.isPending || applyAccess.isTier2Banned;
   const error = detail.isError ? toAppApiError(detail.error).message : '';
 
   const submitApplication = (value: JobApplicationRequirementsValue) => {
-    if (!job || apply.isPending) return;
+    if (!job?.active || applied || apply.isPending) return;
     if (applyAccess.isTier2Banned) {
       setRequirementsVisible(false);
       setFeedback('Akun Anda masuk daftar blacklist permanen dan tidak dapat melamar pekerjaan.');
@@ -90,7 +98,7 @@ export function JobDetailScreen({source, id}: JobDetailScreenProps) {
         const nikIncomplete = apiError.status === 422 && /nik|nomor induk/i.test(apiError.message);
         setRequiresNik(nikIncomplete);
         setFeedback(apiError.message);
-        if (apiError.status === 403) void applyAccess.refetch();
+        if (apiError.status === 403 || apiError.status === 409) void applyAccess.refetch();
         else if (!nikIncomplete) setRequirementsVisible(true);
       }
     })();
@@ -172,14 +180,24 @@ export function JobDetailScreen({source, id}: JobDetailScreenProps) {
               <JobInformationSections job={job} />
 
               <Pressable
-                accessibilityLabel={applyAccess.isTier2Banned ? 'Akun terblokir untuk melamar' : 'Lamar sekarang'}
+                accessibilityLabel={applyButton.accessibilityLabel}
                 accessibilityRole="button"
-                disabled={!job.active || apply.isPending || applyAccess.isTier2Banned}
+                accessibilityState={{disabled: applyDisabled}}
+                disabled={applyDisabled}
                 onPress={() => setRequirementsVisible(true)}
-                style={[styles.applyButton, applyAccess.isTier2Banned && styles.blockedApplyButton, !job.active && styles.disabled]}
+                style={[styles.applyButton, applyButton.blocked && styles.blockedApplyButton, !job.active && !applied && styles.disabled]}
               >
-                {applyAccess.isTier2Banned && <Ionicons name="shield-checkmark-outline" size={18} color="white" />}
-                <Text style={styles.applyText}>{applyAccess.isTier2Banned ? 'Akun Terblokir' : 'Lamar sekarang'}</Text>
+                {applied && (
+                  <LinearGradient
+                    colors={applyButton.colors}
+                    start={{x: 0, y: 0}}
+                    end={{x: 1, y: 0}}
+                    style={StyleSheet.absoluteFill}
+                    testID="job-detail-applied-gradient"
+                  />
+                )}
+                {applyButton.blocked && <Ionicons name="shield-checkmark-outline" size={18} color="white" />}
+                <Text style={styles.applyText}>{applyButton.label}</Text>
               </Pressable>
 
             </>
@@ -189,7 +207,7 @@ export function JobDetailScreen({source, id}: JobDetailScreenProps) {
       {job && (
         <JobApplicationRequirementsSheet
           job={job}
-          visible={requirementsVisible && !applyAccess.isTier2Banned}
+          visible={requirementsVisible && !applyDisabled}
           submitting={apply.isPending}
           error={feedback || undefined}
           onClose={() => setRequirementsVisible(false)}
@@ -235,7 +253,7 @@ const styles = StyleSheet.create({
   feedbackText: {fontFamily: JOBS_FONTS.medium, fontSize: 11.5, lineHeight: 18, color: '#34506D'},
   profileLink: {alignSelf: 'flex-start', marginTop: 8},
   profileLinkText: {fontFamily: JOBS_FONTS.bold, fontSize: 11.5, color: JOBS_COLORS.blue},
-  applyButton: {height: 52, borderRadius: 12, backgroundColor: JOBS_COLORS.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7},
+  applyButton: {height: 52, borderRadius: 12, overflow: 'hidden', backgroundColor: JOBS_COLORS.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7},
   blockedApplyButton: {backgroundColor: '#D92D45'},
   applyText: {fontFamily: JOBS_FONTS.bold, fontSize: 13, color: 'white'},
   disabled: {opacity: 0.5},
