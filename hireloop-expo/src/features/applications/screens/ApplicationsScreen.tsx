@@ -22,6 +22,8 @@ import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {jobsApi} from '../../jobs/api/jobs.api';
 import {jobsKeys} from '../../jobs/jobs.keys';
 import type {CandidateJobDetail} from '../../jobs/jobs.types';
+import {applicationDetailRoute} from '../application-detail-route';
+import {canCompleteApplicationRequirements} from '../applications.mapper';
 import {useApplications} from '../hooks/use-applications';
 import type {ApplicationCardModel, ApplicationUiState, CandidateApplication} from '../applications.types';
 import {ApplicationCard} from '../components/ApplicationCard';
@@ -264,20 +266,26 @@ export function ApplicationsScreen() {
         style={styles.list}
         data={visibleModels}
         keyExtractor={item => item.key}
-        renderItem={({item}) => (
-          <View style={{paddingHorizontal: pagePadding}}>
-            <ApplicationCard
-              model={item}
-              onOpen={() => {
-                if (item.savedOnly) {
-                  router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: item.job.source, id: String(item.job.id)}} as never);
-                  return;
-                }
-                router.push({pathname: '/(candidate)/applications/[source]/[id]', params: {source: item.job.source, id: String(item.job.id)}} as never);
-              }}
-            />
-          </View>
-        )}
+        renderItem={({item}) => {
+          const application = item.savedOnly ? null : item.application;
+          return (
+            <View style={{paddingHorizontal: pagePadding}}>
+              <ApplicationCard
+                model={item}
+                onOpen={() => {
+                  if (!application) {
+                    router.push({pathname: '/(candidate)/jobs/[source]/[id]', params: {source: item.job.source, id: String(item.job.id)}} as never);
+                    return;
+                  }
+                  router.push(applicationDetailRoute(application));
+                }}
+                onCompleteRequirements={application && canCompleteApplicationRequirements(application)
+                  ? () => router.push(applicationDetailRoute(application, true))
+                  : undefined}
+              />
+            </View>
+          );
+        }}
         ListHeaderComponent={!!error && applications.length > 0
           ? <View style={[styles.staleBannerWrapper, {paddingHorizontal: pagePadding}]}>
               <View style={styles.staleBanner}>

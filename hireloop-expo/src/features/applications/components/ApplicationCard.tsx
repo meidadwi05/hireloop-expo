@@ -21,7 +21,11 @@ function MetadataRow({icon, children}: {icon: keyof typeof Ionicons.glyphMap; ch
   );
 }
 
-export function ApplicationCard({model, onOpen}: {model: ApplicationCardModel; onOpen: () => void}) {
+export function ApplicationCard({model, onOpen, onCompleteRequirements}: {
+  model: ApplicationCardModel;
+  onOpen: () => void;
+  onCompleteRequirements?: () => void;
+}) {
   const {application, job, savedOnly} = model;
   const presentation = application
     ? applicationStatePresentation(application.state, application.currentStageLabel)
@@ -82,6 +86,17 @@ export function ApplicationCard({model, onOpen}: {model: ApplicationCardModel; o
         </View>
       )}
 
+      {onCompleteRequirements && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Lengkapi Persyaratan ${job.title}`}
+          onPress={onCompleteRequirements}
+          style={({pressed}) => [styles.detailButton, styles.completeButton, pressed && styles.pressed]}
+        >
+          <Text style={styles.completeText}>Lengkapi Persyaratan</Text>
+          <Ionicons name="chevron-forward" size={19} color="white" />
+        </Pressable>
+      )}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${savedOnly ? 'Lihat lowongan' : 'Lihat detail lamaran'} ${job.title}`}
@@ -120,5 +135,7 @@ const styles = StyleSheet.create({
   timelineWrap: {marginTop: 17, overflow: 'hidden'},
   detailButton: {height: 46, borderRadius: 10, borderWidth: 1.5, borderColor: APPLICATION_COLORS.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 16},
   detailText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 11.5, color: APPLICATION_COLORS.blue},
+  completeButton: {backgroundColor: APPLICATION_COLORS.blue},
+  completeText: {fontFamily: APPLICATION_FONTS.bold, fontSize: 11.5, color: 'white'},
   pressed: {opacity: 0.78},
 });

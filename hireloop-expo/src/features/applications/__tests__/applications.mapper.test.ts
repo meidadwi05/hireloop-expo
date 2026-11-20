@@ -1,7 +1,9 @@
 import {
   canCancelApplication,
+  canCompleteApplicationRequirements,
   mapApplication,
   mapRecruitmentProcess,
+  mergeRecruitmentProcess,
   normalizeApplicationStatus,
 } from '../applications.mapper';
 import {rawApplicationSchema, recruitmentProcessResponseSchema} from '../applications.schemas';
@@ -120,5 +122,49 @@ describe('applications mapper', () => {
     expect(result.stages[1].schedules[0]).toMatchObject({agenda: 'Interview HRss', locationPlatform: 'Zoom'});
     expect(result.stages[1].results[0]).toMatchObject({executionStatus: 'Hadir', score: 88});
     expect(result.stages[1].histories[0]).toMatchObject({actionType: 'STAGE_MOVED', note: 'Lanjut interview'});
+  });
+
+  it.each(['screening', 'interview-user', 'medical'])('menandai lamaran ditolak pada tahap %s tanpa final_decision', stage => {
+    const application = mapApplication(rawApplicationSchema.parse({
+      id: 91,
+      job_reference_type: 'project-lowongan',
+      job_reference_id: 24,
+      current_stage_value: stage,
+    }))!;
+    const process = mapRecruitmentProcess(recruitmentProcessResponseSchema.parse({
+      success: true,
+      data: {
+        application_id: 91,
+        current_stage: {index: 2, value: 'rejected', label: 'Rejected', status: 'Not Completed'},
+        final_decision: null,
+        stages: [
+          {index: 1, value: stage, label: stage, status: 'Not Completed'},
+          {index: 2, value: 'rejected', label: 'Rejected', type: 'stage-rejection', status: 'Not Completed', is_current: true},
+        ],
+      },
+    }).data);
+
+    expect(mergeRecruitmentProcess(application, process)).toMatchObject({state: 'rejected', currentStageLabel: 'Rejected'});
+  });
+
+  it('membedakan lamaran asal, tujuan sementara, dan tujuan yang sudah diaktifkan', () => {
+    const raw = rawApplicationSchema.parse({
+      id: 91,
+      job_reference_type: 'project-lowongan',
+      job_reference_id: 24,
+      application_status: 'Applied',
+      current_stage_value: 'applied',
+      transfer_type: 'switch_position',
+      transferred_from_applicant_id: 90,
+    });
+    const original = mapApplication({...raw, application_status: 'Moved To: Posisi Baru'})!;
+    const temporary = mapApplication({...raw, is_temporary: true})!;
+    const active = mapApplication(raw)!;
+
+    expect(original.state).toBe('transferred');
+    expect(canCompleteApplicationRequirements(original)).toBe(false);
+    expect(canCompleteApplicationRequirements(temporary)).toBe(true);
+    expect(active.state).toBe('applied');
+    expect(canCompleteApplicationRequirements(active)).toBe(false);
   });
 });

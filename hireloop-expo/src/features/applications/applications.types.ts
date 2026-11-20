@@ -1,4 +1,4 @@
-import type {CandidateJobDetail, CandidateJobSource} from '../jobs/jobs.types';
+import type {CandidateApplicationUpload, CandidateJobDetail, CandidateJobSource} from '../jobs/jobs.types';
 
 export type ApplicationStorageKind = 'applicant-data' | 'legacy-job-applicant';
 export type ApplicationUiState =
@@ -145,20 +145,11 @@ export type CancelApplicationInput = {
   storageKind: ApplicationStorageKind;
 };
 
-export type RequirementUpload = {
-  label: string;
-  group: 'dokumen' | 'sertifikasi';
-  required: boolean;
-  uri?: string;
-  name?: string;
-  mimeType?: string;
-  file?: Blob;
-};
-
 export type CompleteRequirementsInput = {
   applicationId: number;
-  documents: RequirementUpload[];
-  familyDeclaration?: unknown;
-  statements?: unknown;
+  documents: CandidateApplicationUpload[];
+  familyDeclaration?: Record<string, string>;
+  statements?: Record<string, 'Ya' | 'Tidak'>;
+  referral?: string;
   agreed: true;
 };

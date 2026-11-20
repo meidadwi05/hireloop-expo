@@ -32,6 +32,13 @@ describe('applicationsApi', () => {
                 job_title: 'Legacy Job',
                 application_status: 'Applied',
               },
+              {
+                id: 12,
+                job_reference_type: 'project-lowongan',
+                job_reference_id: 93,
+                application_status: 'Menunggu Kelengkapan Persyaratan',
+                is_temporary: true,
+              },
             ],
           },
         },
@@ -69,5 +76,33 @@ describe('applicationsApi', () => {
     ]);
     expect(applications[0].currentStageLabel).toBe('Interview HR & User');
     expect(applications[1].storageKind).toBe('legacy-job-applicant');
+    expect(applications[2].state).toBe('temporary');
+  });
+
+  it('mengirim berkas, deklarasi, dan jawaban ke lamaran tujuan lalu memetakan status aktif', async () => {
+    const post = jest.mocked(httpClient.post);
+    post.mockResolvedValueOnce({
+      data: {data: {id: 12, job_reference_type: 'project-lowongan', job_reference_id: 93, application_status: 'Applied', is_temporary: false}},
+    });
+    const append = jest.spyOn(FormData.prototype, 'append');
+    const family = {nama_ayah: 'Bapak Contoh', nama_ibu: 'Ibu Contoh'};
+    const statements = {'policy-0': 'Tidak'} as const;
+    try {
+      const application = await applicationsApi.completeRequirements({
+        applicationId: 12,
+        documents: [{label: 'CV', group: 'dokumen', required: true, uri: 'file:///cv.pdf', name: 'cv.pdf', mimeType: 'application/pdf'}],
+        familyDeclaration: family,
+        statements,
+        agreed: true,
+      });
+      expect(post).toHaveBeenCalledWith('/applicant-data/12/complete-requirements', expect.any(FormData));
+      expect(append).toHaveBeenCalledWith('documents[0][file]', {uri: 'file:///cv.pdf', name: 'cv.pdf', type: 'application/pdf'});
+      expect(append).toHaveBeenCalledWith('family_declaration', JSON.stringify(family));
+      expect(append).toHaveBeenCalledWith('statements', JSON.stringify(statements));
+      expect(append).toHaveBeenCalledWith('agreed', '1');
+      expect(application).toMatchObject({applicationId: 12, state: 'applied', isTemporary: false});
+    } finally {
+      append.mockRestore();
+    }
   });
 });

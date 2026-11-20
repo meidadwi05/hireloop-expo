@@ -19,6 +19,8 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import type {CandidateUser} from '../features/auth/auth.types';
 import {isCandidateTier2Banned} from '../features/auth/candidate-apply-access';
+import {applicationDetailRoute} from '../features/applications/application-detail-route';
+import {canCompleteApplicationRequirements} from '../features/applications/applications.mapper';
 import type {CandidateApplication} from '../features/applications/applications.types';
 import {applicationStatePresentation, formatApplicationDate} from '../features/applications/components/applications.ui';
 import type {DashboardInterview} from '../features/dashboard/dashboard.types';
@@ -823,7 +825,7 @@ export default function DashboardHome({initialUser, onEvaluationClose, onNavigat
             <RecentApplicationsCard
               applications={applications}
               containerWidth={width}
-              onOpen={application => router.push({pathname: '/(candidate)/applications/[source]/[id]', params: {source: application.source, id: String(application.referenceId)}} as never)}
+              onOpen={application => router.push(applicationDetailRoute(application, canCompleteApplicationRequirements(application)))}
               onOpenAll={() => onNavigate?.('/(candidate)/(tabs)/career')}
             />
           )}

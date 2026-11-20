@@ -144,14 +144,14 @@ describe('mapJobCard', () => {
         id: 20,
         nama_lowongan: 'Operator Produksi',
         persyaratan_dokumen: JSON.stringify([
-          {dokumen: 'CV', status: 'Wajib'},
+          'CV',
           {dokumen: 'Ijazah', status: 'Opsional'},
         ]),
-        sertifikasi_list: [{sertifikasi: 'Sertifikat K3', status: 'Wajib'}],
+        sertifikasi_list: [{dokumen: 'Sertifikat K3', status: 'Wajib'}],
         cek_hubungan_keluarga: 'Ya',
         deteksi_hubungan_ayah_ibu: true,
         deteksi_hubungan_suami_istri: true,
-        kebijakan_lainnya: [{pertanyaan: 'Bersedia bekerja shift?', status: 'Wajib'}],
+        kebijakan_lainnya: [null, 'Bersedia bekerja shift?', {question: 'Bersedia kerja lembur?', status: 'Optional'}],
       },
     }, 'project-lowongan');
 
@@ -166,7 +166,8 @@ describe('mapJobCard', () => {
       {key: 'nama_pasangan', label: 'Nama Lengkap Suami/Istri', required: false},
     ]);
     expect(result.policies).toEqual([
-      {key: 'policy-0', name: 'Bersedia bekerja shift?', required: true},
+      {key: 'policy-1', name: 'Bersedia bekerja shift?', required: true},
+      {key: 'policy-2', name: 'Bersedia kerja lembur?', required: false},
     ]);
   });
 });

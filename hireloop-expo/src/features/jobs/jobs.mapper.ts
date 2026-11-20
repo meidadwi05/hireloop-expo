@@ -62,15 +62,19 @@ function asStringArray(value: unknown): string[] {
   return [];
 }
 
-function asObjectArray(value: unknown): Record<string, unknown>[] {
-  if (Array.isArray(value)) return value.map(asRecord).filter(item => Object.keys(item).length > 0);
+function requirementItems(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
   if (typeof value !== 'string' || !value.trim()) return [];
   try {
     const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.map(asRecord).filter(item => Object.keys(item).length > 0) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
+}
+
+function isRequired(item: Record<string, unknown>): boolean {
+  return !['opsional', 'optional'].includes(asText(item.status).toLowerCase()) && item.required !== false;
 }
 
 function humanize(value: unknown, fallback: string): string {
@@ -321,22 +325,22 @@ export function mapJobDetail(payload: unknown, source: CandidateJobSource): Cand
   const additionalQualifications = source === 'project-lowongan' ? productionQualifications(rawJob) : [];
   const benefits = splitBenefitList(rawJob.benefits ?? rawJob.benefit);
   const documentRequirements = [
-    ...asObjectArray(rawJob.persyaratan_dokumen).map(item => ({
-      label: asText(item.dokumen, item.label, item.nama) || 'Dokumen',
-      group: 'dokumen' as const,
-      required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
-    })),
-    ...asObjectArray(rawJob.sertifikasi_list).map(item => ({
-      label: asText(item.sertifikasi, item.label, item.nama) || 'Sertifikasi',
-      group: 'sertifikasi' as const,
-      required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
-    })),
+    ...requirementItems(rawJob.persyaratan_dokumen).flatMap(value => {
+      const item = asRecord(value);
+      const label = asText(value, item.dokumen, item.nama, item.label);
+      return label ? [{label, group: 'dokumen' as const, required: isRequired(item)}] : [];
+    }),
+    ...requirementItems(rawJob.sertifikasi_list).flatMap(value => {
+      const item = asRecord(value);
+      const label = asText(value, item.sertifikasi, item.nama, item.label, item.dokumen);
+      return label ? [{label, group: 'sertifikasi' as const, required: isRequired(item)}] : [];
+    }),
   ];
-  const policies = asObjectArray(rawJob.kebijakan_lainnya).map((item, index) => ({
-    key: `policy-${index}`,
-    name: asText(item.pertanyaan, item.nama, item.label, item.name) || 'Pernyataan',
-    required: asText(item.status).toLowerCase() !== 'opsional' && item.required !== false,
-  }));
+  const policies = requirementItems(rawJob.kebijakan_lainnya).flatMap((value, index) => {
+    const item = asRecord(value);
+    const name = asText(value, item.pertanyaan, item.nama, item.label, item.question, item.isi_pernyataan, item.name);
+    return name ? [{key: `policy-${index}`, name, required: isRequired(item)}] : [];
+  });
   const familyDeclarationRequired = asText(rawJob.cek_hubungan_keluarga).toLowerCase() !== 'tidak' && [
     rawJob.deteksi_hubungan_ayah_ibu,
     rawJob.deteksi_hubungan_saudara,

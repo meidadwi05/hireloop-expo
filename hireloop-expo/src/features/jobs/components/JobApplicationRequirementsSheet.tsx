@@ -31,13 +31,14 @@ export type JobApplicationRequirementsValue = {
 type Props = {
   visible: boolean;
   job: CandidateJobDetail;
+  completingTransfer?: boolean;
   submitting: boolean;
   error?: string;
   onClose: () => void;
   onSubmit: (value: JobApplicationRequirementsValue) => void;
 };
 
-export function JobApplicationRequirementsSheet({visible, job, submitting, error, onClose, onSubmit}: Props) {
+export function JobApplicationRequirementsSheet({visible, job, completingTransfer, submitting, error, onClose, onSubmit}: Props) {
   const {height} = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [uploads, setUploads] = useState<Record<number, CandidateApplicationUpload>>({});
@@ -123,7 +124,7 @@ export function JobApplicationRequirementsSheet({visible, job, submitting, error
           <View style={styles.handle} />
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.title}>Lengkapi Dokumen Lamaran</Text>
+              <Text style={styles.title}>{completingTransfer ? 'Lengkapi Persyaratan' : 'Lengkapi Dokumen Lamaran'}</Text>
               <Text numberOfLines={2} style={styles.subtitle}>{job.title} · {job.company}</Text>
             </View>
             <Pressable accessibilityLabel="Tutup" disabled={submitting} hitSlop={8} onPress={onClose} style={styles.closeButton}>
@@ -229,7 +230,7 @@ export function JobApplicationRequirementsSheet({visible, job, submitting, error
               <Text style={styles.cancelText}>Batal</Text>
             </Pressable>
             <Pressable accessibilityRole="button" disabled={submitting} onPress={submit} style={[styles.submitButton, submitting && styles.disabled]}>
-              <Text style={styles.submitText}>{submitting ? 'Mengirim...' : 'Kirim Lamaran'}</Text>
+              <Text style={styles.submitText}>{submitting ? 'Mengirim...' : completingTransfer ? 'Kirim Lamaran Resmi' : 'Kirim Lamaran'}</Text>
               <Ionicons color="white" name="arrow-forward" size={18} />
             </Pressable>
           </View>

@@ -20,20 +20,22 @@ import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {dashboardKeys} from '../../dashboard/dashboard.keys';
 import {jobsApi} from '../../jobs/api/jobs.api';
+import {JobApplicationRequirementsSheet} from '../../jobs/components/JobApplicationRequirementsSheet';
 import {jobsKeys} from '../../jobs/jobs.keys';
 import {useSavedJobs} from '../../jobs/saved-jobs-provider';
 import type {CandidateJobDetail, CandidateJobSource} from '../../jobs/jobs.types';
 import {useAuth} from '../../auth/auth-provider';
 import {candidateApplyAccessKey} from '../../auth/hooks/use-candidate-apply-access';
+import {profileApi} from '../../profile/api/profile.api';
+import {profileKeys} from '../../profile/profile.keys';
 import {applicationsApi} from '../api/applications.api';
 import {applicationsKeys} from '../applications.keys';
-import {canCancelApplication, mergeRecruitmentProcess} from '../applications.mapper';
+import {canCancelApplication, canCompleteApplicationRequirements, mergeRecruitmentProcess} from '../applications.mapper';
 import type {CandidateApplication} from '../applications.types';
 import {useApplications} from '../hooks/use-applications';
 import {ApplicationRecruitmentProgress} from '../components/ApplicationRecruitmentProgress';
 import {ApplicationDetailSkeleton, ApplicationTimelineSkeleton} from '../components/ApplicationSkeletons';
 import {CancelApplicationModal} from '../components/CancelApplicationModal';
-import {CompleteRequirementsModal} from '../components/CompleteRequirementsModal';
 import {
   APPLICATION_COLORS,
   APPLICATION_FONTS,
@@ -92,7 +94,7 @@ function statusHeroCopy(application: CandidateApplication) {
   switch (application.state) {
     case 'applied': return {icon: 'checkmark-circle-outline' as const, title: 'Lamaran berhasil dikirim', subtitle: 'Tim rekrutmen akan meninjau lamaran Anda.'};
     case 'hired': return {icon: 'ribbon-outline' as const, title: 'Selamat, Anda diterima', subtitle: 'Periksa informasi lanjutan dari tim rekrutmen.'};
-    case 'rejected': return {icon: 'close-circle-outline' as const, title: 'Proses seleksi telah berakhir', subtitle: 'Lamaran belum dapat dilanjutkan pada tahap ini.'};
+    case 'rejected': return {icon: 'close-circle-outline' as const, title: 'Lamaran telah berakhir', subtitle: 'Lamaran belum dapat dilanjutkan pada tahap ini.'};
     case 'canceled': return {icon: 'close-circle-outline' as const, title: 'Lamaran telah dibatalkan', subtitle: 'Status pembatalan tersimpan di HireLoop.'};
     case 'closed': return {icon: 'lock-closed-outline' as const, title: 'Lowongan telah ditutup', subtitle: 'Status ini mengikuti data proses rekrutmen HireLoop.'};
     case 'temporary': return {icon: 'document-attach-outline' as const, title: 'Lengkapi persyaratan lamaran', subtitle: 'Persyaratan perlu dilengkapi sebelum lamaran diproses.'};
@@ -101,7 +103,14 @@ function statusHeroCopy(application: CandidateApplication) {
   }
 }
 
-export function ApplicationDetailScreen({source, id}: {source: CandidateJobSource; id: number}) {
+type Props = {
+  source: CandidateJobSource;
+  id: number;
+  applicationId?: number;
+  openRequirements?: boolean;
+};
+
+export function ApplicationDetailScreen({source, id, applicationId, openRequirements = false}: Props) {
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
@@ -112,12 +121,13 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   const {isSaved, toggleSaved} = useSavedJobs();
   const applicationsQuery = useApplications();
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [requirementsOpen, setRequirementsOpen] = useState(openRequirements);
   const [shared, setShared] = useState(false);
 
   const baseApplication = useMemo(
-    () => applicationsQuery.data?.find(item => item.source === source && item.referenceId === id) ?? null,
-    [applicationsQuery.data, id, source],
+    () => applicationsQuery.data?.find(item => item.source === source && item.referenceId === id
+      && (applicationId === undefined || item.applicationId === applicationId)) ?? null,
+    [applicationId, applicationsQuery.data, id, source],
   );
 
   const jobQuery = useQuery({
@@ -139,6 +149,22 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
     return mergeRecruitmentProcess(baseApplication, processQuery.data);
   }, [baseApplication, processQuery.data]);
   const job = application ? jobQuery.data ?? fallbackJob(application) : null;
+  const canCompleteRequirements = Boolean(application && canCompleteApplicationRequirements(application));
+  const destination = jobQuery.data;
+  const needsMaritalStatus = destination?.familyRequirements.some(field => field.key === 'nama_pasangan') ?? false;
+  const profileQuery = useQuery({
+    queryKey: profileKeys.detail(),
+    queryFn: profileApi.get,
+    enabled: canCompleteRequirements && requirementsOpen && needsMaritalStatus,
+  });
+  const requirementJob = destination && (!needsMaritalStatus || profileQuery.data)
+    ? {
+      ...destination,
+      familyRequirements: destination.familyRequirements.map(field => field.key === 'nama_pasangan'
+        ? {...field, required: profileQuery.data?.maritalStatus === 'married'}
+        : field),
+    }
+    : null;
 
   const cancelMutation = useMutation({mutationFn: applicationsApi.cancel});
 
@@ -163,18 +189,25 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
   };
 
   const completeRequirements = (input: Parameters<typeof completeMutation.mutateAsync>[0]) => {
-    void (async () => {
-      try {
-        await completeMutation.mutateAsync(input);
-        await Promise.all([queryClient.invalidateQueries({queryKey: applicationsKeys.all}), queryClient.invalidateQueries({queryKey: applicationsKeys.process(baseApplication?.applicationId ?? 0)}), queryClient.invalidateQueries({queryKey: dashboardKeys.home()}), queryClient.invalidateQueries({queryKey: jobsKeys.detail(source, id)}), refreshUser()]);
+    completeMutation.mutate(input, {
+      onSuccess: completed => {
+        if (completed?.applicationId === input.applicationId && !completed.isTemporary) {
+          queryClient.setQueryData<CandidateApplication[]>(applicationsKeys.list(), previous => previous?.map(
+            item => item.applicationId === completed.applicationId && item.storageKind === completed.storageKind ? completed : item,
+          ));
+        }
         setRequirementsOpen(false);
-      } catch (error) {
-        Alert.alert('Gagal Mengirim Persyaratan', toAppApiError(error).message);
-      }
-    })();
+        void Promise.allSettled([
+          queryClient.invalidateQueries({queryKey: applicationsKeys.all}),
+          queryClient.invalidateQueries({queryKey: dashboardKeys.home()}),
+          queryClient.invalidateQueries({queryKey: candidateApplyAccessKey}),
+          refreshUser(),
+        ]);
+      },
+    });
   };
 
-  if (applicationsQuery.isPending && !application) {
+  if (!application && (applicationsQuery.isPending || applicationsQuery.isFetching)) {
     return (
       <>
         <StatusBar style="light" />
@@ -210,6 +243,8 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
     : `Lamaran dikirim pada ${formatApplicationDate(application.submittedAt)}`;
   const processError = processQuery.isError ? toAppApiError(processQuery.error).message : '';
   const jobError = jobQuery.isError ? toAppApiError(jobQuery.error).message : '';
+  const requirementsProfileError = needsMaritalStatus && profileQuery.isError && !profileQuery.data;
+  const requirementsLoading = requirementsOpen && !requirementJob && !jobError && !requirementsProfileError;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -294,6 +329,34 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
             </View>
           </View>
 
+          {canCompleteRequirements && (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{disabled: requirementsLoading, busy: requirementsLoading}}
+                disabled={requirementsLoading}
+                onPress={() => {
+                  completeMutation.reset();
+                  setRequirementsOpen(true);
+                  if (jobQuery.isError) void jobQuery.refetch();
+                  else if (requirementsProfileError) void profileQuery.refetch();
+                }}
+                style={styles.requirementsButton}
+              >
+                <Ionicons name="document-attach-outline" size={20} color="white" />
+                <Text style={styles.requirementsButtonText}>{requirementsLoading ? 'Memuat persyaratan…' : 'Lengkapi Persyaratan'}</Text>
+              </Pressable>
+              {requirementsOpen && (jobError || requirementsProfileError) ? (
+                <View style={styles.partialError}>
+                  <Ionicons name="information-circle-outline" size={19} color="#A96C00" />
+                  <Text style={styles.partialErrorText}>
+                    {jobError ? 'Persyaratan lowongan belum dapat dimuat.' : 'Data profil belum dapat dimuat.'} Ketuk Lengkapi Persyaratan untuk mencoba lagi.
+                  </Text>
+                </View>
+              ) : null}
+            </>
+          )}
+
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Tahapan Proses Rekrutmen</Text>
             {!!processError && (
@@ -308,7 +371,7 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
               : (
                 <ApplicationRecruitmentProgress
                   stages={application.stages}
-                  currentStageIndex={processQuery.data?.currentStage.index ?? application.currentStageIndex}
+                  currentStageIndex={application.currentStageIndex}
                 />
               )}
           </View>
@@ -331,13 +394,6 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
               <Pressable accessibilityRole="button" onPress={() => void jobQuery.refetch()}><Text style={styles.retryText}>Coba lagi</Text></Pressable>
             </View>
           )}
-
-          {application.state === 'temporary' && application.storageKind === 'applicant-data' ? (
-            <Pressable accessibilityRole="button" onPress={() => setRequirementsOpen(true)} style={styles.requirementsButton}>
-              <Ionicons name="document-attach-outline" size={20} color="white" />
-              <Text style={styles.requirementsButtonText}>Lengkapi Persyaratan</Text>
-            </Pressable>
-          ) : null}
 
           {canCancelApplication(application) && (
             <Pressable accessibilityRole="button" disabled={cancelMutation.isPending} onPress={() => setCancelOpen(true)} style={styles.cancelButton}>
@@ -363,14 +419,14 @@ export function ApplicationDetailScreen({source, id}: {source: CandidateJobSourc
         onClose={() => setCancelOpen(false)}
         onConfirm={cancelApplication}
       />
-      {requirementsOpen ? <CompleteRequirementsModal
-        visible={requirementsOpen}
-        applicationId={application.applicationId}
-        job={job}
-        loading={completeMutation.isPending}
+      {requirementsOpen && canCompleteRequirements && requirementJob ? <JobApplicationRequirementsSheet
+        visible
+        completingTransfer
+        job={requirementJob}
+        submitting={completeMutation.isPending}
         error={completeMutation.isError ? toAppApiError(completeMutation.error).message : undefined}
         onClose={() => setRequirementsOpen(false)}
-        onSubmit={completeRequirements}
+        onSubmit={value => completeRequirements({...value, applicationId: application.applicationId})}
       /> : null}
     </SafeAreaView>
   );

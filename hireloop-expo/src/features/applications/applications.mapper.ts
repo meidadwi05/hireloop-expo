@@ -33,7 +33,7 @@ export function normalizeApplicationStatus(value: unknown): string {
   const raw = String(value ?? '').trim().toLowerCase();
   if (!raw) return '';
   if (raw.includes('cancel') || raw.includes('batal') || raw.includes('withdraw')) return 'canceled';
-  if (raw.includes('reject') || raw.includes('tidak lolos') || raw.includes('not complete') || raw.includes('failed')) return 'rejected';
+  if (raw.includes('reject') || raw.includes('ditolak') || raw.includes('tidak lolos') || raw.includes('not complete') || raw.includes('failed')) return 'rejected';
   if (raw.includes('hired') || raw.includes('diterima') || raw === 'accepted') return 'hired';
   if (raw.includes('closed') || raw.includes('ditutup')) return 'closed';
   if (raw.includes('screen')) return 'screening';
@@ -58,17 +58,15 @@ function stateFromApplication(raw: RawApplication, currentValue: string): Applic
   ].filter(Boolean).join(' ');
 
   if (raw.deleted_at || raw.canceled_at || raw.cancelled_at || normalizeApplicationStatus(combined) === 'canceled') return 'canceled';
-  if (Boolean(raw.is_temporary)) return 'temporary';
+  if (raw.is_temporary) return 'temporary';
   if (
-    (raw.transfer_type && raw.transfer_type !== 'none')
-    || raw.transferred_from_applicant_id
-    || combined.toLowerCase().includes('moved to')
+    combined.toLowerCase().includes('moved to')
     || combined.toLowerCase().includes('dialihkan')
   ) return 'transferred';
 
   const normalized = normalizeApplicationStatus(combined || currentValue);
-  if (normalized === 'hired') return 'hired';
   if (normalized === 'rejected') return 'rejected';
+  if (normalized === 'hired') return 'hired';
   if (normalized === 'closed') return 'closed';
   if (normalized === 'applied' || !normalized) return 'applied';
   return 'in-progress';
@@ -296,16 +294,21 @@ export function mapRecruitmentProcess(raw: RawRecruitmentProcess): RecruitmentPr
 }
 
 export function mergeRecruitmentProcess(application: CandidateApplication, process: RecruitmentProcess): CandidateApplication {
+  if (application.isTemporary || application.isTransferred || application.state === 'canceled') return application;
+
   const current = process.stages.find(stage => stage.isCurrent) ?? process.stages[process.currentStage.index];
-  const finalState = process.finalDecision?.value;
-  const normalized = normalizeApplicationStatus(process.currentStage.value || process.currentStage.label);
-  const state: ApplicationUiState = finalState === 'hired'
-    ? 'hired'
-    : finalState === 'rejected'
-      ? 'rejected'
-      : normalized === 'canceled' || normalized === 'closed'
-        ? normalized
-        : normalized === 'applied' ? 'applied' : 'in-progress';
+  const terminalState = [
+    process.finalDecision?.value,
+    process.currentStage.value,
+    process.currentStage.label,
+    process.currentStage.status,
+    current?.type,
+  ].map(normalizeApplicationStatus).find(status =>
+    status === 'hired' || status === 'rejected' || status === 'canceled' || status === 'closed',
+  );
+  if (!terminalState && ['hired', 'rejected', 'closed'].includes(application.state)) return application;
+  const state: ApplicationUiState = terminalState
+    ?? (normalizeApplicationStatus(process.currentStage.value) === 'applied' ? 'applied' : 'in-progress');
 
   return {
     ...application,
@@ -316,6 +319,12 @@ export function mergeRecruitmentProcess(application: CandidateApplication, proce
     currentStageLabel: current?.label ?? process.currentStage.label,
     stageStatus: process.currentStage.status,
   };
+}
+
+export function canCompleteApplicationRequirements(application: CandidateApplication): boolean {
+  return application.source === 'project-lowongan'
+    && application.storageKind === 'applicant-data'
+    && application.state === 'temporary';
 }
 
 export function canCancelApplication(application: CandidateApplication): boolean {
