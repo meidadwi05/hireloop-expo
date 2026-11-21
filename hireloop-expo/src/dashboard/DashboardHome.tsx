@@ -138,7 +138,7 @@ function DashboardHero({user, unread, onNavigate}: {user: CandidateUser; unread:
 
   return (
     <ImageBackground
-      source={require('../assets/dashboard_home.png')}
+      source={require('../assets/dashboard_home.jpg')}
       resizeMode="cover"
       style={[styles.hero, {height: layout.heroHeight}]}
       imageStyle={styles.heroImage}

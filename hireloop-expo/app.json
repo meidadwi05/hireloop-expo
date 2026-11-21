@@ -8,6 +8,7 @@
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.provenforceindonesia.hireloop",
       "supportsTablet": true
     },
     "android": {

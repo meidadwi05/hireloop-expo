@@ -9,8 +9,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-const headerBackground = require('../../assets/up_background_new.png');
-const performanceHeaderBackground = require('../../assets/up_backgorund_performance.png');
+const headerBackground = require('../../assets/up_background_new.jpg');
+const performanceHeaderBackground = require('../../assets/up_backgorund_performance.jpg');
 
 export const BRANDED_HEADER_ARTWORK_ASPECT_RATIO = 1983 / 515;
 export const PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO = 1983 / 416;

@@ -40,3 +40,12 @@ yarn-error.*
 .env.production.example
 desain.md
 structurefile.md
+# Source artwork retained for design reference. The app uses the JPEGs.
+src/assets/dashboard_home.png
+src/assets/login_background.png
+src/assets/onboarding_experience.png
+src/assets/register_onboarding.png
+src/assets/up_backgorund_performance.png
+src/assets/up_background_new.png
+**/*.apks
+**/*.ipa

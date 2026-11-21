@@ -23,6 +23,16 @@ hireloop-expo/web-build/
 hireloop-expo/artifacts/
 hireloop-expo/**/*.apk
 hireloop-expo/**/*.aab
+hireloop-expo/**/*.apks
+hireloop-expo/**/*.ipa
+
+# Source artwork retained for design reference. The app uses the JPEGs.
+hireloop-expo/src/assets/dashboard_home.png
+hireloop-expo/src/assets/login_background.png
+hireloop-expo/src/assets/onboarding_experience.png
+hireloop-expo/src/assets/register_onboarding.png
+hireloop-expo/src/assets/up_backgorund_performance.png
+hireloop-expo/src/assets/up_background_new.png
 
 # Generated native projects and local build output.
 hireloop-expo/android/

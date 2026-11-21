@@ -8,7 +8,6 @@ const targets = [
   ['Onboarding2.png', 1440],
   ['Onboarding3.png', 1440],
   ['Onboarding4.png', 1440],
-  ['dashboard_home.png', 1200],
   ['Email_reset_succesed.png', 600],
   ['Email_reset.png', 600],
   ['reset_auth.png', 600],
@@ -20,8 +19,6 @@ const targets = [
   ['Lupasandi.png', 800],
   ['HireLoopLogo.png', 1000],
   ['register_icon.png', 960, true],
-  ['register_onboarding.png', 960, true],
-  ['onboarding_experience.png', 960, true],
 ];
 
 const requestedFilenames = new Set(process.argv.slice(2));

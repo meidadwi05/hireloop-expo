@@ -37,7 +37,7 @@ export function OnboardingHero({step, onBack}: {step: 1 | 2; onBack: () => void}
   return (
     <View testID="onboarding-hero" style={[styles.hero, {height: heroHeight}]}>
       <Image
-        source={personal ? require('../../../assets/register_onboarding.png') : require('../../../assets/onboarding_experience.png')}
+        source={personal ? require('../../../assets/register_onboarding.jpg') : require('../../../assets/onboarding_experience.jpg')}
         resizeMode="cover"
         style={styles.heroImage}
         accessibilityIgnoresInvertColors

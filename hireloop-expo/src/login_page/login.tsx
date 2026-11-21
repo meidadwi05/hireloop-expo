@@ -167,7 +167,7 @@ export default function LoginPage({
       <Image
         accessibilityIgnoresInvertColors
         resizeMode="cover"
-        source={require('../assets/login_background.png')}
+        source={require('../assets/login_background.jpg')}
         style={styles.backgroundImage}
         testID="login-background"
       />
