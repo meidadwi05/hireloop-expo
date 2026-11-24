@@ -11,7 +11,6 @@ import {DocumentsScreen} from '../screens/DocumentsScreen';
 import {PersonalDataScreen} from '../screens/PersonalDataScreen';
 import {ProfileScreen} from '../screens/ProfileScreen';
 
-jest.mock('@expo/vector-icons', () => ({Ionicons: () => null}));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('expo-router', () => ({router: {back: jest.fn()}}));
 jest.mock('react-native-safe-area-context', () => ({

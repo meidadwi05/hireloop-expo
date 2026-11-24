@@ -4,7 +4,7 @@ import {StyleSheet} from 'react-native';
 
 import {SkillMultiSelect} from '../components/SkillMultiSelect';
 
-jest.mock('@expo/vector-icons', () => ({Ionicons: () => null}));
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
 describe('SkillMultiSelect', () => {
   const props = {

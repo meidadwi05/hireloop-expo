@@ -4,9 +4,7 @@ import {Modal} from 'react-native';
 
 import {EducationModal} from '../components/EducationModal';
 
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: () => null,
-}));
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
 describe('modal pendidikan onboarding', () => {
   it('menampilkan editor dalam satu modal dan menyimpan major id dari master data', () => {

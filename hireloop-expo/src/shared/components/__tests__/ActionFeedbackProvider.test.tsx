@@ -4,7 +4,7 @@ import {Pressable, Text} from 'react-native';
 
 import {ActionFeedbackProvider, useActionFeedback} from '../ActionFeedbackProvider';
 
-jest.mock('@expo/vector-icons', () => ({Ionicons: () => null}));
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
 function ActionHarness({onExit}: {onExit: () => void}) {
   const feedback = useActionFeedback();

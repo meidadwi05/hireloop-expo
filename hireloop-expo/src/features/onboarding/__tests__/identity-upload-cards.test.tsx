@@ -19,9 +19,7 @@ jest.mock('../components/AddressFields', () => {
   };
 });
 
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: () => null,
-}));
+jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn(),

@@ -22,7 +22,7 @@ const F = {
 } as const;
 
 const C = {navy: '#050D49', blue: '#0865FF', cyan: '#00CBEA', ink: '#12224B'};
-const RESET_AUTH_ICON = require('../assets/reset_auth.png');
+const RESET_AUTH_ICON = require('../assets/reset_auth.jpg');
 
 type ForgotPasswordPageProps = {
   email: string;

@@ -300,7 +300,7 @@ export function ProfileCompletionCard({completion, containerWidth = 390, onOpenP
         accessibilityIgnoresInvertColors
         accessibilityLabel="Ilustrasi kelengkapan profil"
         resizeMode="contain"
-        source={require('../assets/profil_complete.png')}
+        source={require('../assets/profil_complete.jpg')}
         style={[styles.profileIllustration, compact && styles.profileIllustrationCompact]}
         testID="profile-completion-illustration"
       />

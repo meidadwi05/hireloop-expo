@@ -201,7 +201,7 @@ export default function RegisterRoute() {
           <View style={styles.hero}>
             <Image
               accessibilityLabel="Ilustrasi pendaftaran akun HireLoop"
-              source={require('../../assets/register_icon.png')}
+              source={require('../../assets/register_icon.jpg')}
               resizeMode="cover"
               style={styles.heroImage}
             />

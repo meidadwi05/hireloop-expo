@@ -8,7 +8,7 @@ import type {IntroSlide, WelcomePhase} from '../../features/intro/intro.types';
 const slides: IntroSlide[] = [
   {
     id: 'discover',
-    image: require('../../assets/Onboarding1.png'),
+    image: require('../../assets/Onboarding1.jpg'),
     theme: 'light',
     titleVariant: 'gradient',
     title: 'Lamar kerja lebih\ncepat & tepat sasaran',
@@ -25,7 +25,7 @@ const slides: IntroSlide[] = [
   },
   {
     id: 'multi-apply',
-    image: require('../../assets/Onboarding3.png'),
+    image: require('../../assets/Onboarding3.jpg'),
     theme: 'light',
     titleVariant: 'gradient',
     title: 'Lamar ke Banyak\nPerusahaan Sekaligus',
@@ -33,7 +33,7 @@ const slides: IntroSlide[] = [
   },
   {
     id: 'recommendation',
-    image: require('../../assets/Onboarding4.png'),
+    image: require('../../assets/Onboarding4.jpg'),
     theme: 'dark',
     titleVariant: 'solid',
     title: 'Temukan Pekerjaan\nyang Tepat',

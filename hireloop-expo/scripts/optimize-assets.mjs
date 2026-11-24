@@ -4,21 +4,16 @@ import sharp from 'sharp';
 
 const assetDirectory = path.resolve('src/assets');
 const targets = [
-  ['Onboarding1.png', 1440],
-  ['Onboarding2.png', 1440],
-  ['Onboarding3.png', 1440],
-  ['Onboarding4.png', 1440],
-  ['Email_reset_succesed.png', 600],
+  ['Onboarding2.png', 1080, true],
   ['Email_reset.png', 600],
-  ['reset_auth.png', 600],
   ['shortcut_lowongan.png', 256],
   ['shortcut_interview.png', 256],
   ['shortcut_lamaran.png', 256],
   ['shortcut_karier.png', 256],
   ['lockcheck.png', 384],
-  ['Lupasandi.png', 800],
+  ['Lupasandi.png', 800, true],
+  ['interview.png', 472, true],
   ['HireLoopLogo.png', 1000],
-  ['register_icon.png', 960, true],
 ];
 
 const requestedFilenames = new Set(process.argv.slice(2));
@@ -40,7 +35,7 @@ for (const [filename, maxDimension, usePalette = false] of selectedTargets) {
       kernel: sharp.kernel.lanczos3,
     })
     .png(usePalette
-      ? {compressionLevel: 9, adaptiveFiltering: true, palette: true, colours: 256, quality: 90, effort: 10}
+      ? {palette: true, colours: 256, quality: 98, dither: 0.8, effort: 10}
       : {compressionLevel: 9, adaptiveFiltering: true, palette: false})
     .toFile(temporary);
 

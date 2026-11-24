@@ -260,7 +260,7 @@ export default function ResetPasswordScreen({email, token}: ResetPasswordScreenP
       return (
         <View style={styles.successCard}>
           <Image
-            source={require('../../../assets/Email_reset_succesed.png')}
+            source={require('../../../assets/Email_reset_succesed.jpg')}
             style={{width: layout.successImageSize, height: layout.successImageSize}}
             resizeMode="contain"
             accessibilityLabel="Ilustrasi password berhasil diubah"
