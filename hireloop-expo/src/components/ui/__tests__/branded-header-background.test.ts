@@ -1,6 +1,7 @@
 import {
   BRANDED_HEADER_ARTWORK_ASPECT_RATIO,
   PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
+  PERFORMANCE_HEADER_ARTWORK_SCALE,
   getBrandedHeaderLayout,
   type BrandedHeaderVariant,
 } from '../BrandedHeaderBackground';
@@ -45,11 +46,19 @@ describe('getBrandedHeaderLayout', () => {
     for (const width of [320, 390, 430, 720]) {
       const layout = getBrandedHeaderLayout(variant, width, 24);
 
-      expect(layout.artworkStyle.left).toBe(0);
-      expect(layout.artworkStyle.width).toBe(width);
-      expect(layout.artworkStyle.height).toBeCloseTo(width / PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO, 5);
+      expect(layout.artworkStyle.left).toBeCloseTo(width - (width * PERFORMANCE_HEADER_ARTWORK_SCALE), 5);
+      expect(layout.artworkStyle.width).toBeCloseTo(width * PERFORMANCE_HEADER_ARTWORK_SCALE, 5);
+      expect(layout.artworkStyle.height).toBeCloseTo(
+        (width / PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO) * PERFORMANCE_HEADER_ARTWORK_SCALE,
+        5,
+      );
       expect(layout.artworkStyle.top).toBe(24);
       expect(layout.artworkAspectRatio).toBe(PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO);
+      expect((layout.artworkStyle.width as number) / (layout.artworkStyle.height as number)).toBeCloseTo(
+        PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
+        5,
+      );
+      expect((layout.artworkStyle.left as number) + (layout.artworkStyle.width as number)).toBeCloseTo(width, 5);
       expect((layout.artworkStyle.top as number) + (layout.artworkStyle.height as number)).toBeLessThanOrEqual(layout.height);
       expect(layout.resizeMode).toBe('contain');
     }

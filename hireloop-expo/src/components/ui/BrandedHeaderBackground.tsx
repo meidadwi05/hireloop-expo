@@ -14,6 +14,7 @@ const performanceHeaderBackground = require('../../assets/up_backgorund_performa
 
 export const BRANDED_HEADER_ARTWORK_ASPECT_RATIO = 1983 / 515;
 export const PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO = 1983 / 416;
+export const PERFORMANCE_HEADER_ARTWORK_SCALE = 1.4;
 
 export type BrandedHeaderVariant = 'account' | 'application-list' | 'compact-detail' | 'jobs-list' | 'notifications' | 'performance' | 'saved-list';
 
@@ -22,6 +23,7 @@ type BrandedHeaderPreset = {
   minimumContentHeight: number;
   maximumArtworkWidth: number;
   offsetArtworkBySafeArea?: boolean;
+  artworkScale?: number;
   useContainerWidth?: boolean;
   resizeMode?: ImageResizeMode;
   artworkAspectRatio?: number;
@@ -38,6 +40,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
     artworkSource: performanceHeaderBackground,
+    artworkScale: PERFORMANCE_HEADER_ARTWORK_SCALE,
   },
   'application-list': {
     backgroundColor: '#0044B9',
@@ -48,6 +51,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
     artworkSource: performanceHeaderBackground,
+    artworkScale: PERFORMANCE_HEADER_ARTWORK_SCALE,
   },
   'compact-detail': {
     backgroundColor: '#0044B9',
@@ -58,6 +62,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
     artworkSource: performanceHeaderBackground,
+    artworkScale: PERFORMANCE_HEADER_ARTWORK_SCALE,
   },
   'jobs-list': {
     backgroundColor: '#0044B9',
@@ -68,6 +73,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
     artworkSource: performanceHeaderBackground,
+    artworkScale: PERFORMANCE_HEADER_ARTWORK_SCALE,
   },
   notifications: {
     backgroundColor: '#003E9A',
@@ -84,6 +90,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
     artworkSource: performanceHeaderBackground,
+    artworkScale: PERFORMANCE_HEADER_ARTWORK_SCALE,
   },
   'saved-list': {
     backgroundColor: '#0044B9',
@@ -94,6 +101,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
     artworkSource: performanceHeaderBackground,
+    artworkScale: PERFORMANCE_HEADER_ARTWORK_SCALE,
   },
 };
 
@@ -113,9 +121,10 @@ export function getBrandedHeaderLayout(
   const preset = PRESETS[variant];
   const safeWidth = Math.max(1, containerWidth);
   const safeInset = Math.max(0, topInset);
-  const artworkWidth = preset.useContainerWidth
+  const baseArtworkWidth = preset.useContainerWidth
     ? safeWidth
     : Math.min(safeWidth, preset.maximumArtworkWidth);
+  const artworkWidth = baseArtworkWidth * (preset.artworkScale ?? 1);
   const artworkAspectRatio = preset.artworkAspectRatio ?? BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
   const artworkHeight = artworkWidth / artworkAspectRatio;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
