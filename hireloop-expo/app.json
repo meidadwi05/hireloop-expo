@@ -53,6 +53,12 @@
         "projectId": "80eeeae9-1a54-4250-af42-3251349a0804"
       }
     },
-    "owner": "axlastrs-team"
+    "owner": "axlastrs-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/80eeeae9-1a54-4250-af42-3251349a0804"
+    }
   }
 }
