@@ -22,7 +22,7 @@ type BrandedHeaderPreset = {
   backgroundColor: string;
   minimumContentHeight: number;
   maximumArtworkWidth: number;
-  offsetArtworkBySafeArea?: boolean;
+  coverEntireHeader?: boolean;
   artworkScale?: number;
   useContainerWidth?: boolean;
   resizeMode?: ImageResizeMode;
@@ -35,7 +35,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#0044B9',
     minimumContentHeight: 72,
     maximumArtworkWidth: 720,
-    offsetArtworkBySafeArea: true,
+    coverEntireHeader: true,
     useContainerWidth: true,
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
@@ -46,7 +46,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#0044B9',
     minimumContentHeight: 74,
     maximumArtworkWidth: 720,
-    offsetArtworkBySafeArea: true,
+    coverEntireHeader: true,
     useContainerWidth: true,
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
@@ -57,7 +57,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#0044B9',
     minimumContentHeight: 64,
     maximumArtworkWidth: 720,
-    offsetArtworkBySafeArea: true,
+    coverEntireHeader: true,
     useContainerWidth: true,
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
@@ -68,7 +68,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#0044B9',
     minimumContentHeight: 72,
     maximumArtworkWidth: 720,
-    offsetArtworkBySafeArea: true,
+    coverEntireHeader: true,
     useContainerWidth: true,
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
@@ -85,7 +85,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#0044B9',
     minimumContentHeight: 64,
     maximumArtworkWidth: 720,
-    offsetArtworkBySafeArea: true,
+    coverEntireHeader: true,
     useContainerWidth: true,
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
@@ -96,7 +96,7 @@ const PRESETS: Record<BrandedHeaderVariant, BrandedHeaderPreset> = {
     backgroundColor: '#0044B9',
     minimumContentHeight: 72,
     maximumArtworkWidth: 720,
-    offsetArtworkBySafeArea: true,
+    coverEntireHeader: true,
     useContainerWidth: true,
     resizeMode: 'contain',
     artworkAspectRatio: PERFORMANCE_HEADER_ARTWORK_ASPECT_RATIO,
@@ -124,15 +124,16 @@ export function getBrandedHeaderLayout(
   const baseArtworkWidth = preset.useContainerWidth
     ? safeWidth
     : Math.min(safeWidth, preset.maximumArtworkWidth);
-  const artworkWidth = baseArtworkWidth * (preset.artworkScale ?? 1);
+  const requestedArtworkWidth = baseArtworkWidth * (preset.artworkScale ?? 1);
   const artworkAspectRatio = preset.artworkAspectRatio ?? BRANDED_HEADER_ARTWORK_ASPECT_RATIO;
-  const artworkHeight = artworkWidth / artworkAspectRatio;
+  const requestedArtworkHeight = requestedArtworkWidth / artworkAspectRatio;
   const minimumContentHeight = safeInset + preset.minimumContentHeight;
-  const keepsArtworkBelowSafeArea = preset.offsetArtworkBySafeArea === true;
-  const height = Math.max(
-    minimumContentHeight,
-    artworkHeight + (keepsArtworkBelowSafeArea ? safeInset : 0),
-  );
+  const coversEntireHeader = preset.coverEntireHeader === true;
+  const height = Math.max(minimumContentHeight, requestedArtworkHeight);
+  const artworkHeight = coversEntireHeader ? height : requestedArtworkHeight;
+  const artworkWidth = coversEntireHeader
+    ? artworkHeight * artworkAspectRatio
+    : requestedArtworkWidth;
 
   return {
     height,
@@ -142,7 +143,7 @@ export function getBrandedHeaderLayout(
     artworkStyle: {
       width: artworkWidth,
       height: artworkHeight,
-      top: keepsArtworkBelowSafeArea ? safeInset : height - artworkHeight,
+      top: coversEntireHeader ? 0 : height - artworkHeight,
       left: safeWidth - artworkWidth,
     },
   };
