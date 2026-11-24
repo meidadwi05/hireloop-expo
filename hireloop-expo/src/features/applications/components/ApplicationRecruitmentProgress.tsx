@@ -265,9 +265,10 @@ function StageDetails({stage}: {stage: ApplicationStage}) {
   );
 }
 
-export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
+export function ApplicationRecruitmentProgress({stages, currentStageIndex, interviewStage}: {
   stages: ApplicationStage[];
   currentStageIndex?: number;
+  interviewStage?: string;
 }) {
   const resolvedCurrentIndex = useMemo(() => {
     const byFlag = stages.findIndex(stage => stage.isCurrent);
@@ -282,8 +283,18 @@ export function ApplicationRecruitmentProgress({stages, currentStageIndex}: {
       const selected = stages.findIndex(stage => `${stage.value}-${stage.index}` === selectedStageKey);
       if (selected >= 0) return selected;
     }
+    if (interviewStage) {
+      const target = interviewStage.trim().toLowerCase();
+      const named = stages.findIndex(stage => stage.label.trim().toLowerCase() === target
+        || stage.value.trim().toLowerCase() === target);
+      if (named >= 0) return named;
+      const current = stages[resolvedCurrentIndex];
+      if (current && stageKind(current) === 'interview') return resolvedCurrentIndex;
+      const byKind = stages.findIndex(stage => stageKind(stage) === 'interview');
+      if (byKind >= 0) return byKind;
+    }
     return resolvedCurrentIndex;
-  }, [resolvedCurrentIndex, selectedStageKey, stages]);
+  }, [interviewStage, resolvedCurrentIndex, selectedStageKey, stages]);
 
   const currentTerminalKind = stageKind(stages[resolvedCurrentIndex] ?? stages[0]);
   const terminalSourceIndex = ['canceled', 'rejected'].includes(currentTerminalKind) ? resolvedCurrentIndex - 1 : -1;

@@ -21,8 +21,8 @@ export const notificationsApi = {
     await httpClient.post('/notifications/read-all');
   },
 
-  async registerDeviceToken(token: string): Promise<void> {
-    await httpClient.post('/fcm/token', {token});
+  async registerDeviceToken(token: string, previousToken?: string): Promise<void> {
+    await httpClient.post('/fcm/token', {token, ...(previousToken && {previous_token: previousToken})});
   },
 
   async revokeDeviceToken(token: string): Promise<void> {

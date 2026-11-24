@@ -10,6 +10,10 @@ import {ActionFeedbackProvider} from '../../../shared/components/ActionFeedbackP
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('expo-router', () => ({router: {push: jest.fn()}}));
 jest.mock('../hooks/use-notifications', () => ({useNotifications: jest.fn()}));
+jest.mock('../push-notifications', () => ({
+  enableInterviewPush: jest.fn().mockResolvedValue(undefined),
+  needsInterviewPushPermission: jest.fn().mockResolvedValue(false),
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({top: 24, right: 0, bottom: 12, left: 0}),
 }));

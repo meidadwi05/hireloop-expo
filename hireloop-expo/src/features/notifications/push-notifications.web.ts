@@ -94,6 +94,18 @@ function showForegroundNotification(payload: FirebaseMessagePayload): void {
   };
 }
 
+export function offerInterviewPushPermission(): Promise<void> {
+  return Promise.resolve();
+}
+
+export function needsInterviewPushPermission(): Promise<boolean> {
+  return Promise.resolve(false);
+}
+
+export function enableInterviewPush(): Promise<void> {
+  return Promise.resolve();
+}
+
 export async function registerPushNotifications(): Promise<PushNotificationCleanup> {
   if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) return () => undefined;
 

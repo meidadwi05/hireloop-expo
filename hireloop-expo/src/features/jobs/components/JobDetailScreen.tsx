@@ -14,6 +14,7 @@ import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {applicationsKeys} from '../../applications/applications.keys';
 import {mapUserApplications} from '../../applications/applications.mapper';
 import {candidateApplyAccessKey, useCandidateApplyAccess} from '../../auth/hooks/use-candidate-apply-access';
+import {offerInterviewPushPermission} from '../../notifications/push-notifications';
 import {jobsApi} from '../api/jobs.api';
 import {getAppliedJobKeys, getJobCardApplyState} from '../job-card-apply';
 import {jobsKeys} from '../jobs.keys';
@@ -87,10 +88,13 @@ export function JobDetailScreen({source, id}: JobDetailScreenProps) {
           ]);
           return response;
         },
-        onSuccessExit: () => router.replace({
-          pathname: '/(candidate)/applications/[source]/[id]',
-          params: {source: job.source, id: String(job.id)},
-        } as never),
+        onSuccessExit: () => {
+          router.replace({
+            pathname: '/(candidate)/applications/[source]/[id]',
+            params: {source: job.source, id: String(job.id)},
+          } as never);
+          void offerInterviewPushPermission().catch(() => undefined);
+        },
       });
 
       if (!result.ok) {

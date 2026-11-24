@@ -110,7 +110,7 @@ type Props = {
   openRequirements?: boolean;
 };
 
-export function ApplicationDetailScreen({source, id, applicationId, openRequirements = false}: Props) {
+export function ApplicationDetailScreen({source, id, applicationId, openRequirements = false, interviewStage}: Props & {interviewStage?: string}) {
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const containerWidth = Math.min(width, 720);
@@ -228,8 +228,8 @@ export function ApplicationDetailScreen({source, id, applicationId, openRequirem
         <Ionicons name="document-text-outline" size={54} color="#98A8BE" />
         <Text style={styles.fullStateTitle}>Detail lamaran tidak ditemukan</Text>
         <Text style={styles.fullStateText}>Data lamaran mungkin sudah tidak tersedia.</Text>
-        <Pressable accessibilityRole="button" onPress={() => router.replace('/(candidate)/(tabs)/career')} style={styles.stateButton}>
-          <Text style={styles.stateButtonText}>Kembali ke Lamaran Saya</Text>
+        <Pressable accessibilityRole="button" onPress={() => router.replace(interviewStage ? '/(candidate)/(tabs)/notifications' : '/(candidate)/(tabs)/career')} style={styles.stateButton}>
+          <Text style={styles.stateButtonText}>{interviewStage ? 'Lihat Notifikasi' : 'Kembali ke Lamaran Saya'}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -372,6 +372,7 @@ export function ApplicationDetailScreen({source, id, applicationId, openRequirem
                 <ApplicationRecruitmentProgress
                   stages={application.stages}
                   currentStageIndex={application.currentStageIndex}
+                  interviewStage={interviewStage}
                 />
               )}
           </View>

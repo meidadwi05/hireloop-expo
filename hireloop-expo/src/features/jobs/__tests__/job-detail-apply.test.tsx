@@ -9,6 +9,7 @@ import {mapJobDetail} from '../jobs.mapper';
 
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('expo-router', () => ({router: {replace: jest.fn()}}));
+jest.mock('../../notifications/push-notifications', () => ({offerInterviewPushPermission: jest.fn().mockResolvedValue(undefined)}));
 jest.mock('expo-linear-gradient', () => ({LinearGradient: jest.requireActual('react-native').View}));
 jest.mock('react-native-safe-area-context', () => ({SafeAreaView: jest.requireActual('react-native').View}));
 jest.mock('../../../components/ui/CandidatePageHeader', () => ({CandidatePageHeader: () => null}));

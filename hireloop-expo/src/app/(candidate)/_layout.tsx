@@ -3,6 +3,7 @@ import React from 'react';
 
 import {useAuth} from '../../features/auth/auth-provider';
 import {SavedJobsProvider} from '../../features/jobs/saved-jobs-provider';
+import {InterviewPushBanner} from '../../features/notifications/components/InterviewPushBanner';
 import {FullScreenLoader} from '../../shared/components/FullScreenLoader';
 
 export default function CandidateLayout() {
@@ -15,6 +16,7 @@ export default function CandidateLayout() {
   return (
     <SavedJobsProvider>
       <Stack screenOptions={{headerShown: false}} />
+      {user && <InterviewPushBanner key={user.id} userId={String(user.id)} />}
     </SavedJobsProvider>
   );
 }

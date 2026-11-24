@@ -18,6 +18,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {toAppApiError} from '../../../core/api/api-error';
 import {goBackOrReplace} from '../../../core/navigation/go-back-or-replace';
 import {NotificationsListSkeleton} from '../components/NotificationsListSkeleton';
+import {InterviewPushPermissionButton} from '../components/InterviewPushPermissionButton';
 import {useNotifications} from '../hooks/use-notifications';
 import {resolveNotificationDestination} from '../notifications.navigation';
 import type {CandidateNotification} from '../notifications.types';
@@ -203,6 +204,7 @@ export function NotificationsScreen() {
         testID="notifications-screen"
       >
         {header}
+        <InterviewPushPermissionButton />
         {notifications.isLoading ? (
           <NotificationsListSkeleton horizontalPadding={pagePadding} />
         ) : initialError ? (

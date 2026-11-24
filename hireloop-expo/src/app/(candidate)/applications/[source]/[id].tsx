@@ -5,7 +5,7 @@ import {ApplicationDetailScreen} from '../../../../features/applications/screens
 import type {CandidateJobSource} from '../../../../features/jobs/jobs.types';
 
 export default function CandidateApplicationDetailRoute() {
-  const params = useLocalSearchParams<{source?: string; id?: string; applicationId?: string; complete?: string}>();
+  const params = useLocalSearchParams<{source?: string; id?: string; applicationId?: string; complete?: string; interviewStage?: string}>();
   const source: CandidateJobSource | null = params.source === 'job-posting' || params.source === 'project-lowongan'
     ? params.source
     : null;
@@ -18,11 +18,12 @@ export default function CandidateApplicationDetailRoute() {
 
   return (
     <ApplicationDetailScreen
-      key={`${source}:${id}:${params.applicationId ?? ''}:${params.complete ?? ''}`}
+      key={`${source}:${id}:${params.applicationId ?? ''}:${params.complete ?? ''}:${params.interviewStage ?? ''}`}
       source={source}
       id={id}
       applicationId={Number.isInteger(applicantId) && applicantId > 0 ? applicantId : undefined}
       openRequirements={params.complete === '1'}
+      interviewStage={params.interviewStage}
     />
   );
 }
