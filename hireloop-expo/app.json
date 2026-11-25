@@ -30,7 +30,12 @@
       "expo-font",
       "expo-secure-store",
       "expo-router",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "recruitment-interview"
+        }
+      ],
       "expo-splash-screen",
       "expo-web-browser",
       "@react-native-community/datetimepicker",

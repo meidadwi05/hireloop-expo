@@ -2,7 +2,7 @@ import {router} from 'expo-router';
 
 import {notificationsApi} from './api/notifications.api';
 import {resolveNotificationDestination} from './notifications.navigation';
-import type {CandidateNotification, CandidateNotificationMeta, NotificationLevel} from './notifications.types';
+import type {CandidateNotification, CandidateNotificationMeta, InterviewPushStatus, NotificationLevel} from './notifications.types';
 
 const FIREBASE_VERSION = '11.10.0';
 const TOKEN_STORAGE_KEY = 'hireloop.web-push-token';
@@ -98,8 +98,12 @@ export function offerInterviewPushPermission(): Promise<void> {
   return Promise.resolve();
 }
 
-export function needsInterviewPushPermission(): Promise<boolean> {
-  return Promise.resolve(false);
+export function getInterviewPushStatus(): InterviewPushStatus {
+  return 'unsupported';
+}
+
+export function subscribeToInterviewPushStatus(): () => void {
+  return () => undefined;
 }
 
 export function enableInterviewPush(): Promise<void> {

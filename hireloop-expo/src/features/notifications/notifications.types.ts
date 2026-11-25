@@ -31,6 +31,16 @@ export type NotificationsPage = {
   total: number;
 };
 
+export type InterviewPushStatus =
+  | 'unsupported'
+  | 'checking'
+  | 'permission-required'
+  | 'registering'
+  | 'registered'
+  | 'permission-error'
+  | 'token-error'
+  | 'server-error';
+
 export type NotificationsQuery = {
   page?: number;
   per_page?: number;

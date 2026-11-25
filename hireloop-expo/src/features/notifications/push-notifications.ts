@@ -4,17 +4,20 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import {Alert, AppState, Linking, Platform} from 'react-native';
 
+import {toAppApiError} from '../../core/api/api-error';
 import {notificationsApi} from './api/notifications.api';
-import type {CandidateNotification, CandidateNotificationMeta, NotificationLevel} from './notifications.types';
+import type {CandidateNotification, CandidateNotificationMeta, InterviewPushStatus, NotificationLevel} from './notifications.types';
 
 export type PushNotificationCleanup = () => void;
 
 const TOKEN_STORAGE_KEY = 'hireloop.native-push-token';
 const PERMISSION_OFFER_KEY = 'hireloop.native-push-permission-offered';
 const INTERVIEW_CHANNEL = 'recruitment-interview';
-let syncForSession: (() => void) | undefined;
+let syncForSession: (() => Promise<void>) | undefined;
 let registration: Promise<void> | undefined;
 let offeringPermission = false;
+let pushStatus: InterviewPushStatus = 'unsupported';
+const statusListeners = new Set<() => void>();
 
 Notifications.setNotificationHandler({
   handleNotification: async notification => ({
@@ -48,22 +51,43 @@ function supportsPush(): boolean {
   return Device.isDevice && Constants.appOwnership !== 'expo' && Platform.OS !== 'web';
 }
 
-export async function needsInterviewPushPermission(): Promise<boolean> {
-  return supportsPush() && !(await Notifications.getPermissionsAsync()).granted;
+export function getInterviewPushStatus(): InterviewPushStatus {
+  return pushStatus;
+}
+
+export function subscribeToInterviewPushStatus(listener: () => void): () => void {
+  statusListeners.add(listener);
+  return () => {statusListeners.delete(listener);};
+}
+
+function setPushStatus(status: InterviewPushStatus): void {
+  if (pushStatus === status) return;
+  pushStatus = status;
+  statusListeners.forEach(listener => listener());
 }
 
 export async function enableInterviewPush(): Promise<void> {
   if (!supportsPush() || !syncForSession) return;
   const session = syncForSession;
-  await prepareChannel();
-  const current = await Notifications.getPermissionsAsync();
-  if (syncForSession !== session) return;
-  if (!current.granted && !current.canAskAgain) {
-    await Linking.openSettings();
-    return;
+  try {
+    await prepareChannel();
+    const current = await Notifications.getPermissionsAsync();
+    if (syncForSession !== session) return;
+    if (!current.granted && !current.canAskAgain) {
+      await Linking.openSettings();
+      return;
+    }
+    const permission = current.granted ? current : await Notifications.requestPermissionsAsync();
+    if (syncForSession !== session) return;
+    if (!permission.granted) {
+      setPushStatus('permission-required');
+      return;
+    }
+    await registration;
+    if (getInterviewPushStatus() !== 'registered') await session();
+  } catch {
+    if (syncForSession === session) setPushStatus('permission-error');
   }
-  const permission = current.granted ? current : await Notifications.requestPermissionsAsync();
-  if (permission.granted) await Promise.resolve(registration).then(session);
 }
 
 async function prepareChannel(): Promise<void> {
@@ -76,35 +100,81 @@ async function prepareChannel(): Promise<void> {
   }
 }
 
+async function retryOnce<T>(
+  operation: () => Promise<T>,
+  isTransient: (error: unknown) => boolean,
+  isActive: () => boolean,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isActive() || !isTransient(error)) throw error;
+    await new Promise<void>(resolve => setTimeout(resolve, 1500));
+    if (!isActive()) throw error;
+    return operation();
+  }
+}
+
 async function syncToken(isActive: () => boolean): Promise<void> {
-  await prepareChannel();
-  const permission = await Notifications.getPermissionsAsync();
-  if (permission.status !== 'granted' || !isActive()) return;
-  const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
-  if (typeof projectId !== 'string' || !projectId) return;
-  const {data: token} = await Notifications.getExpoPushTokenAsync({projectId});
-  const previousToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-  if (!isActive()) return;
-  await notificationsApi.registerDeviceToken(token, previousToken ?? undefined);
-  await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
+  let failure: InterviewPushStatus = 'permission-error';
+  try {
+    await prepareChannel();
+    const permission = await Notifications.getPermissionsAsync();
+    if (!isActive()) return;
+    if (!permission.granted) {
+      setPushStatus('permission-required');
+      return;
+    }
+
+    setPushStatus('registering');
+    failure = 'token-error';
+    const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
+    if (typeof projectId !== 'string' || !projectId) {
+      setPushStatus(failure);
+      return;
+    }
+    const {data: token} = await retryOnce(
+      () => Notifications.getExpoPushTokenAsync({projectId}),
+      error => (error as {code?: string} | null)?.code === 'ERR_NOTIFICATIONS_NETWORK_ERROR',
+      isActive,
+    );
+    const previousToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!isActive()) return;
+
+    failure = 'server-error';
+    await retryOnce(
+      () => notificationsApi.registerDeviceToken(token, previousToken ?? undefined),
+      error => {
+        const {status} = toAppApiError(error);
+        return status === null || status === 429 || status >= 500;
+      },
+      isActive,
+    );
+    await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
+    if (isActive()) setPushStatus('registered');
+  } catch {
+    if (isActive()) setPushStatus(failure);
+  }
 }
 
 export async function registerPushNotifications(): Promise<PushNotificationCleanup> {
   if (!supportsPush()) return () => undefined;
-  const sync = () => {
-    if (syncForSession !== sync || registration) return;
+  const sync = async () => {
+    if (syncForSession !== sync) return;
+    if (registration) return registration;
     registration = syncToken(() => syncForSession === sync)
-      .catch(() => undefined)
       .finally(() => {registration = undefined;});
+    return registration;
   };
   syncForSession = sync;
+  setPushStatus('checking');
   const appState = AppState.addEventListener('change', state => {
-    if (state === 'active') sync();
+    if (state === 'active') void sync();
   });
   const tokenListener = Notifications.addPushTokenListener(sync);
   void Promise.resolve(registration).then(sync);
   return () => {
-    if (syncForSession === sync) syncForSession = undefined;
+    if (syncForSession === sync) clearLocalPushToken();
     appState.remove();
     tokenListener.remove();
   };
@@ -117,7 +187,7 @@ export async function offerInterviewPushPermission(): Promise<void> {
   try {
     await prepareChannel();
     const permission = await Notifications.getPermissionsAsync();
-    if (permission.status === 'granted' || !permission.canAskAgain
+    if (permission.granted || !permission.canAskAgain
         || await AsyncStorage.getItem(PERMISSION_OFFER_KEY)) return;
     if (!session || syncForSession !== session) return;
     await AsyncStorage.setItem(PERMISSION_OFFER_KEY, '1');
@@ -127,7 +197,7 @@ export async function offerInterviewPushPermission(): Promise<void> {
       [
         {text: 'Nanti', style: 'cancel'},
         {text: 'Aktifkan', onPress: () => {
-          if (syncForSession === session) void enableInterviewPush().catch(() => undefined);
+          if (syncForSession === session) void enableInterviewPush();
         }},
       ],
     );
@@ -137,7 +207,7 @@ export async function offerInterviewPushPermission(): Promise<void> {
 }
 
 export async function revokePushNotifications(): Promise<void> {
-  syncForSession = undefined;
+  clearLocalPushToken();
   await registration;
   const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
   if (supportsPush()) {
@@ -151,4 +221,5 @@ export async function revokePushNotifications(): Promise<void> {
 
 export function clearLocalPushToken(): void {
   syncForSession = undefined;
+  setPushStatus('unsupported');
 }
