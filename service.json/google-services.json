@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "706004825578",
+    "project_id": "hireloop-mobile-app",
+    "storage_bucket": "hireloop-mobile-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706004825578:android:4b916d2c5e3f727fe82e93",
+        "android_client_info": {
+          "package_name": "com.proven.hireloop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDplxekdEYUTVaIp_zkKvXfUebgGtWcWhU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706004825578:android:daa9e3fe5eec3370e82e93",
+        "android_client_info": {
+          "package_name": "com.provenforceindonesia.hireloop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDplxekdEYUTVaIp_zkKvXfUebgGtWcWhU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706004825578:android:77a0fc8e1319c699e82e93",
+        "android_client_info": {
+          "package_name": "com.provenforceindonesia.hireloop_proven"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDplxekdEYUTVaIp_zkKvXfUebgGtWcWhU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
